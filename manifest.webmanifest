@@ -1,0 +1,9 @@
+{
+ "name": "Painel Impressão 3D",
+ "short_name": "Impressão 3D",
+ "start_url": "painel.html",
+ "display": "standalone",
+ "background_color": "#eef2f6",
+ "theme_color": "#1d2330",
+ "icons": [{"src": "icone.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]
+}

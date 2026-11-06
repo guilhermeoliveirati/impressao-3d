@@ -1,0 +1,1307 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel Impressão 3D</title>
+<meta name="theme-color" content="#1d2330">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#eef2f6;--card:#fff;--txt:#1d2330;--mut:#6b7280;--brd:#e2e8f0;
+  --acc:#7c3aed;--acc2:#c4b5fd;--ok:#15803d;--bad:#b91c1c;--warn:#b45309;
+}
+*{box-sizing:border-box}
+html{font-size:14px}
+body{margin:0;background:var(--bg);color:var(--txt);font:1rem/1.45 system-ui,"Segoe UI",Roboto,sans-serif}
+canvas{max-width:100%}
+header{position:sticky;top:0;z-index:5;background:#1d2330;color:#fff;padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#status{font-size:0.786rem;color:#cbd5e1;margin-left:auto;transition:opacity .6s;white-space:nowrap}
+#status.sutil{opacity:.45}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{background:transparent;border:0;color:#cbd5e1;padding:8px 12px;border-radius:6px;cursor:pointer;font:inherit;white-space:nowrap}
+nav button.on{background:#334155;color:#fff}
+nav button .ico{margin-right:4px}
+@media (max-width:900px){
+  header{position:fixed;top:auto;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(8,1fr);
+    padding:6px 4px 8px;gap:1px;box-shadow:0 -4px 14px rgba(15,23,42,.18)}
+  nav{display:contents}
+  nav button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;border-radius:12px;font-size:.66rem}
+  nav button .ico{font-size:1.35rem;line-height:1;margin:0}
+  #status{position:fixed;top:8px;right:10px;background:rgba(29,35,48,.85);color:#e2e8f0;padding:3px 10px;border-radius:999px;font-size:.72rem;z-index:6}
+  #reconectar{position:fixed;top:40px;right:10px}
+  main{padding:16px 12px 96px!important}
+  body #rodape{padding-bottom:100px}
+  .kpis{grid-template-columns:1fr 1fr!important;gap:8px!important}
+  .kpi .v{font-size:1.3rem!important}
+  #tVendas{display:none}
+  #s-vendas #vCards{display:grid}
+  #tDiz input[data-k="nome"]{width:100%;min-width:0}
+  #tDiz input[data-k="valor"]{width:84px!important;padding:8px 6px}
+  #tDiz td:first-child{width:40%}
+  #tDiz td,#tDiz th{padding:6px 4px}
+  .item{grid-template-columns:1fr 1fr 1fr auto!important}
+  .item .nm{grid-column:1/-1}
+  #fProd label[style*="span 2"]{grid-column:1/-1!important}
+  #vMes{width:140px}
+  #vExcel{padding:11px 12px}
+}
+form.f>*,.item>*,.lado>*{min-width:0}
+.item input{width:100%}
+main{max-width:1200px;margin:0 auto;padding:20px 16px}
+.sec{display:none}.sec.on{display:block}
+.card{background:var(--card);border:0;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 1px 2px rgba(15,23,42,.06),0 6px 16px rgba(15,23,42,.06)}
+.card h2{font-size:1.12rem;margin:0 0 12px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card h3{font-size:.95rem;margin:14px 0 8px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border-radius:16px;box-shadow:0 1px 2px rgba(15,23,42,.06),0 6px 16px rgba(15,23,42,.06);padding:14px 16px 14px 20px;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--acc)}
+.kpi:nth-child(2)::before,.kpi:nth-child(4)::before{background:#16a34a}
+.kpi:nth-child(3)::before,.kpi:nth-child(7)::before{background:#dc2626}
+.kpi .l{font-weight:600;text-transform:uppercase;letter-spacing:.03em;font-size:.7rem;color:var(--mut)}
+.kpi .v{font-size:1.65rem;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .d{font-size:0.857rem;margin-top:2px}
+.up{color:var(--ok)}.down{color:var(--bad)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:800px){.grid2{grid-template-columns:1fr}}
+.chart{position:relative;height:300px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;border-bottom:1px solid var(--brd);text-align:left;white-space:nowrap}
+th{color:var(--mut);font-weight:600;position:sticky;top:0;background:var(--card);text-transform:uppercase;font-size:.7rem;letter-spacing:.04em}
+table tr:nth-child(even) td{background:#f8fafc}
+td.n,th.n{text-align:right}
+.scroll{overflow:auto;max-height:520px}
+form.f{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end}
+label{display:flex;flex-direction:column;gap:3px;font-size:.82rem;font-weight:600;color:#475569}
+input,select,textarea{font:inherit;min-height:44px;border-radius:10px;padding:8px 12px;font-size:1rem;border:1px solid #d7dee8;background:#fff;color:var(--txt);min-width:0}
+input:focus,select:focus{outline:2px solid var(--acc2);border-color:var(--acc)}
+.btn{background:var(--acc);color:#fff;border:0;border-radius:10px;padding:11px 18px;cursor:pointer;font:inherit;font-weight:600}
+.btn.sec2{background:#e5e7eb;color:var(--txt)}
+.btn.sm{padding:6px 10px;border-radius:8px;font-weight:500;font-size:0.857rem}
+.btn.del{background:#fee2e2;color:var(--bad)}
+.calc{background:#f5f3ff;border:1px solid #ddd6fe;border-radius:12px;padding:12px;font-size:0.929rem}
+.calc b{font-variant-numeric:tabular-nums}
+.muted{color:var(--mut);font-size:0.857rem;font-weight:400}
+#rodape{text-align:center;color:var(--mut);font-size:0.857rem;padding:18px 16px 24px}
+table.resumo td{font-size:1.071rem;padding:9px 8px}
+table.resumo tr.sub td{color:var(--bad)}
+table.resumo tr.parcial td{background:#f8fafc;font-weight:600}
+table.resumo tr.final td{font-size:1.286rem;font-weight:700;border-top:2px solid var(--txt);border-bottom:0}
+.info{flex:none;width:22px;height:22px;min-height:0;border-radius:50%;border:1.5px solid var(--acc);background:#fff;color:var(--acc);font:italic 700 .929rem/1 Georgia,serif;cursor:pointer;padding:0}
+.info[aria-expanded="true"]{background:var(--acc);color:#fff}
+.infobox{background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:10px 12px;font-size:0.929rem}
+.heat td{text-align:right}
+#gate{max-width:560px;margin:60px auto;text-align:center}
+#gate p{color:var(--mut)}
+.tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:0.8rem;background:#ede9fe;color:#5b21b6;font-weight:600}
+/* venda por voz */
+.vtopo{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.vtopo h2{margin:0}
+#vVoz{border-radius:999px;padding:6px 14px;background:#f5f3ff;color:var(--acc);border:1px solid #ddd6fe;font-weight:600}
+#vVoz.gravando{background:var(--bad);color:#fff;border-color:var(--bad);animation:pulsar 1s infinite}
+@keyframes pulsar{50%{opacity:.6}}
+.voz{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:linear-gradient(135deg,#f5f3ff,#ecfdf5);border:1px solid #ddd6fe;border-radius:14px;padding:12px;margin-bottom:12px}
+.voz input{flex:1;min-width:200px}
+.voz[hidden]{display:none!important}
+/* pagamento em botões */
+.chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chips .rot{flex-basis:100%;font-size:.82rem;font-weight:600;color:#475569}
+.chip{border:1.5px solid #d7dee8;background:#fff;border-radius:999px;padding:9px 16px;font:inherit;font-weight:600;color:#334155;cursor:pointer}
+.chip.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.chips select{min-height:40px;width:auto}
+#vChips{margin-bottom:6px}
+#vInfoLinha{padding:10px 0 8px;border-top:1px solid var(--brd)}
+/* itens da venda */
+#vItens{display:grid;gap:10px}
+.item{display:grid;grid-template-columns:2.2fr 80px 1fr 1fr auto;gap:8px;align-items:end;background:#f8fafc;border-radius:12px;padding:10px}
+.item .del{min-height:44px}
+/* vendas do mês em cartões (tablet) */
+#vCards{display:none;gap:10px}
+.vcard,.pcard{background:#fff;border:1px solid var(--brd);border-radius:14px;padding:12px 14px;display:grid;gap:4px}
+.vcard .l1,.vcard .l2,.pcard .l1{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.vcard .l1 b,.pcard .l1 b{font-size:1.05rem}
+.vcard .big{font-size:1.3rem;font-weight:700}
+.vcard .l3,.pcard .l3{color:var(--mut);font-size:.82rem}
+.lucro{color:#16a34a;font-weight:700}
+.taxa{color:#dc2626;font-weight:600}
+.acts{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+#vFiltros{flex-wrap:nowrap}
+#vFiltros label{flex:none}
+#vFiltros label.busca{flex:1;min-width:0}
+#vFiltros label.busca input{width:100%}
+/* produtos: calculadora */
+.lado{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;align-items:start}
+@media (max-width:900px){.lado{grid-template-columns:1fr}}
+.linha{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.linha select{flex:1}
+.decomp{display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;font-size:.93rem}
+.decomp .bar{height:8px;border-radius:4px;background:#ede9fe;overflow:hidden}
+.decomp .bar i{display:block;height:100%;background:var(--acc)}
+.decomp .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.destaque{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-top:1px solid var(--brd)}
+.destaque .n{font-size:1.6rem;font-weight:700;font-variant-numeric:tabular-nums}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.pcard .nums{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin:6px 0}
+.pcard .nums div{background:#f8fafc;border-radius:8px;padding:6px 8px}
+.pcard .nums small{display:block;color:var(--mut);font-size:.7rem;text-transform:uppercase;font-weight:600}
+.pcard .nums b{font-variant-numeric:tabular-nums}
+#sResultado{position:sticky;top:70px}
+.cfgtab input{min-height:38px;padding:6px 8px;width:100%}
+.cfgtab td{padding:4px}
+</style>
+</head>
+<body>
+<header>
+  <nav id="nav">
+    <button data-s="geral" class="on"><span class="ico">📊</span><span class="txt">Geral</span></button>
+    <button data-s="vendas"><span class="ico">🧾</span><span class="txt">Vendas</span></button>
+    <button data-s="produtos"><span class="ico">🧊</span><span class="txt">Produtos</span></button>
+    <button data-s="despesas"><span class="ico">💸</span><span class="txt">Despesas</span></button>
+    <button data-s="clientes"><span class="ico">👥</span><span class="txt">Clientes</span></button>
+    <button data-s="dizimo"><span class="ico">🙏</span><span class="txt">Dízimo</span></button>
+    <button data-s="resumo"><span class="ico">📈</span><span class="txt">Resumo</span></button>
+    <button data-s="config"><span class="ico">⚙️</span><span class="txt">Config</span></button>
+  </nav>
+  <span id="status">sem dados</span>
+  <button class="btn sm" id="reconectar" style="display:none;background:#fbbf24;color:#1d2330">Entrar no Google de novo</button>
+</header>
+
+<div id="gate" class="card">
+  <h2>Abrir os dados</h2>
+  <p class="orienta">Os dados ficam no arquivo <b>dados.json</b>, na pasta do painel no Google Drive. Ele é salvo automaticamente a cada alteração, e o Google Drive faz o backup.</p>
+  <div class="row" style="justify-content:center">
+    <button class="btn" id="btnReabrir" style="display:none">Continuar com dados.json</button>
+    <button class="btn" id="btnAbrir">📁 Escolher dados.json deste computador…</button>
+  </div>
+  <div id="boxDrive" style="display:none;margin-top:12px">
+    <div class="row" style="justify-content:center">
+      <button class="btn" id="btnDrive">☁️ Abrir pelo Google Drive</button>
+      <button class="btn sec2" id="btnDriveOutro" style="display:none">Escolher outro arquivo no Drive…</button>
+    </div>
+    <p class="muted orienta">Use no tablet ou celular: entra com sua conta Google e escolhe o dados.json uma vez.</p>
+  </div>
+  <p class="muted" id="gateMsg"><span class="orienta">Use Chrome ou Edge. Só na primeira vez é preciso escolher o arquivo; depois o painel abre o mesmo dados.json sozinho.</span></p>
+</div>
+
+<main id="app" style="display:none">
+
+<!-- VISÃO GERAL -->
+<section class="sec on" id="s-geral">
+  <div class="row" style="margin-bottom:12px">
+    <label>Ano <select id="gAno"></select></label>
+    <span class="muted" id="gObs"></span>
+  </div>
+  <div class="kpis" id="gKpis"></div>
+  <div class="card"><h2>📊 Faturamento e lucro por mês</h2><div class="chart"><canvas id="cMes"></canvas></div></div>
+  <div class="grid2">
+    <div class="card"><h2>🏆 Produtos mais vendidos (ano)</h2><div class="scroll" style="max-height:300px"><table id="tTopProd"></table></div></div>
+    <div class="card"><h2>Formas de pagamento (ano)</h2><div class="chart"><canvas id="cMet"></canvas></div></div>
+  </div>
+  <div class="card"><h2>Faturamento: mês × ano</h2><div class="scroll"><table class="heat" id="tHeat"></table></div>
+    <p class="muted">Cada célula tem a cor proporcional ao faturamento do mês. A última coluna é a variação do ano selecionado contra o ano anterior.</p></div>
+  <div class="card"><h2>Fechamento mensal</h2><div class="scroll"><table id="tFech"></table></div></div>
+</section>
+
+<!-- VENDAS -->
+<section class="sec" id="s-vendas">
+  <div class="card">
+    <div class="vtopo"><h2 id="vTitulo">Nova venda</h2><button type="button" class="btn sm" id="vVoz">🎤 Falar venda</button></div>
+    <div class="voz" id="vVozBox" hidden>
+      <input id="vVozTexto" placeholder="ou digite: Ana, 3 chaveiros e 1 case NFC, cobrei 80 no pix">
+      <button type="button" class="btn sec2" id="vVozIr">Preencher</button>
+      <div class="muted" id="vVozMsg" style="flex-basis:100%">Fale a venda e a Gemini preenche os campos. Você confere e salva.</div>
+    </div>
+    <form class="f" id="fVenda" autocomplete="off">
+      <input type="hidden" name="id">
+      <label>Cliente<input name="cliente" list="dlClientes" required></label>
+      <label>Data<input name="data" type="date" required></label>
+      <div style="grid-column:1/-1">
+        <div id="vItens"></div>
+        <div class="row" style="margin-top:8px;justify-content:space-between">
+          <button type="button" class="btn sm sec2" id="vAddItem">＋ Adicionar item</button>
+          <span class="muted" id="vSub"></span>
+        </div>
+      </div>
+      <label>Valor cobrado (R$)<input name="cobrado" type="number" step="0.01" min="0" value="0"></label>
+      <label>Frete / entrega cobrado (R$) <span class="muted">já incluso no valor cobrado</span><input name="frete" type="number" step="0.01" min="0" value="0"></label>
+      <label style="display:none">Pagamento<select name="metodo" id="selMetodo"></select></label>
+      <div class="chips" id="vChips" style="grid-column:1/-1"></div>
+      <div id="vInfoLinha" style="grid-column:1/-1;display:flex;gap:8px;align-items:center;cursor:pointer;color:var(--acc);font-weight:600">
+        <button type="button" class="info" id="vInfoBtn" aria-expanded="false">i</button><span>Como o lucro é calculado</span>
+      </div>
+      <div class="infobox" id="vInfo" hidden style="grid-column:1/-1">
+        <div class="calc" style="margin-bottom:10px"><b>Nesta venda:</b> <span id="vCalc"></span></div>
+        <p style="margin:6px 0"><b>Lucro = valor cobrado − custo de produção dos itens − taxa</b></p>
+        <ul style="margin:0;padding-left:18px">
+          <li><b>Valor cobrado</b>: o que o cliente paga. Vem com a soma dos itens; altere se deu desconto ou cobrou a mais.</li>
+          <li><b>Custo de produção</b>: vem da aba Produtos (filamento, energia, desgaste da impressora, perdas, mão de obra e extras). Fica gravado na venda: se o custo mudar depois, as vendas antigas não mudam.</li>
+          <li><b>Taxa</b>: o que a maquininha cobra no cartão.</li>
+        </ul>
+        <p style="margin:6px 0 0"><b>Item avulso</b> (encomenda que não está no catálogo): digite o nome e preencha o preço e o custo à mão.</p>
+        <p class="muted" style="margin:6px 0 0">Esse é o lucro de cada venda. O "Lucro final" do mês ainda desconta as despesas (MEI, manutenção, embalagens…).</p>
+      </div>
+      <div class="row" style="grid-column:1/-1;margin-top:10px">
+        <button class="btn" type="submit">Salvar venda</button>
+        <button class="btn sec2" type="button" id="vCancelar">Limpar</button>
+      </div>
+    </form>
+    <datalist id="dlClientes"></datalist>
+    <datalist id="dlProdutos"></datalist>
+  </div>
+  <div class="card">
+    <h2>📋 Vendas do mês</h2>
+    <div class="row" id="vFiltros" style="align-items:end;margin-bottom:8px">
+      <label>Mês<input type="month" id="vMes"></label><label class="busca">Buscar<input id="vBusca" placeholder="cliente ou produto"></label>
+      <button class="btn sec2" id="vExcel" title="Baixa a planilha Excel do mês">📄 Exportar</button>
+    </div>
+    <div id="vResumo" class="muted" style="margin-bottom:8px"></div>
+    <div class="scroll"><table id="tVendas"></table></div>
+    <div id="vCards"></div>
+  </div>
+</section>
+
+<!-- PRODUTOS: custo e preço de venda -->
+<section class="sec" id="s-produtos">
+  <div class="lado">
+    <div class="card">
+      <h2 id="pTitulo">🧮 Novo produto</h2>
+      <form class="f" id="fProd" autocomplete="off">
+        <input type="hidden" name="id">
+        <label style="grid-column:span 2">Nome do produto<input name="nome" required placeholder="ex.: Chaveiro personalizado"></label>
+        <label>Categoria<input name="categoria" list="dlCats" placeholder="ex.: Chaveiros"></label>
+        <label>Impressora<select name="impressoraId" id="pImp"></select></label>
+        <label>Tempo de impressão – horas<input name="horas" type="number" step="1" min="0" value="0"></label>
+        <label>minutos<input name="minutos" type="number" step="1" min="0" value="0"></label>
+        <label title="Quantas peças saem de uma impressão (mesa cheia)">Peças por impressão<input name="unidades" type="number" step="1" min="1" value="1"></label>
+        <label title="Preparar o arquivo, tirar da mesa, lixar, pintar, montar… (tempo total da impressão)">Trabalho manual (min)<input name="maoMin" type="number" step="1" min="0" value="0"></label>
+        <div style="grid-column:1/-1">
+          <h3 style="margin-top:4px">Filamento usado na impressão inteira</h3>
+          <div id="pFil"></div>
+          <button type="button" class="btn sm sec2" id="pAddFil">＋ Outra cor / filamento</button>
+          <p class="muted" style="margin:6px 0 0">O peso em gramas aparece no fatiador (Bambu Studio, Orca, Cura…) depois de fatiar.</p>
+        </div>
+        <label title="Embalagem, argola, ímã, parafuso, adesivo… valor por peça">Extras por peça (R$)<input name="extras" type="number" step="0.01" min="0" value="0"></label>
+        <label>Perda / falhas (%)<input name="falhaPct" type="number" step="1" min="0" placeholder="padrão"></label>
+        <label>Margem de lucro (%)<input name="margemPct" type="number" step="1" min="0" placeholder="padrão"></label>
+        <label>Preço de venda (R$)<input name="precoVenda" type="number" step="0.01" min="0" placeholder="sugerido"></label>
+        <label style="grid-column:1/-1">Observação<input name="obs" placeholder="ex.: STL do Printables, infill 15%, bico 0.4"></label>
+        <div class="row" style="grid-column:1/-1;margin-top:6px">
+          <button class="btn" type="submit">Salvar produto</button>
+          <button class="btn sec2" type="button" id="pCancelar">Limpar</button>
+        </div>
+      </form>
+      <datalist id="dlCats"></datalist>
+    </div>
+    <div class="card" id="sResultado">
+      <h2>💰 Custo e preço</h2>
+      <div id="pRes"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <h2 style="margin:0">🧊 Catálogo</h2>
+      <label style="flex:1;max-width:320px">Buscar<input id="pBusca" placeholder="nome ou categoria"></label>
+    </div>
+    <div class="pgrid" id="pLista"></div>
+  </div>
+</section>
+
+<!-- DESPESAS -->
+<section class="sec" id="s-despesas">
+  <div class="card">
+    <h2>💸 Lançar despesa</h2>
+    <form class="f" id="fDesp" autocomplete="off">
+      <input type="hidden" name="id">
+      <label>Data<input name="data" type="date" required></label>
+      <label>Categoria<select name="categoria" id="selCat"></select></label>
+      <label>Descrição<input name="descricao"></label>
+      <label>Valor (R$)<input name="valor" type="number" step="0.01" min="0" required></label>
+      <div class="row"><button class="btn" type="submit">Salvar</button><button class="btn sec2" type="button" id="dCancelar">Limpar</button></div>
+    </form>
+    <div class="row" style="margin-top:10px">
+      <button class="btn sec2" id="dCopiar">Copiar despesas fixas do mês anterior</button>
+      <span class="muted">Copia as despesas de categoria fixa (MEI, Aluguel, Internet) do mês anterior para o mês escolhido abaixo.</span>
+    </div>
+    <p class="muted">Compra de filamento <b>não</b> entra aqui: o custo do filamento já sai do lucro de cada venda (aba Produtos).</p>
+  </div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <h2 style="margin:0">Despesas</h2>
+      <label>Mês<input type="month" id="dMes"></label>
+    </div>
+    <div class="scroll"><table id="tDesp"></table></div>
+  </div>
+</section>
+
+<!-- CLIENTES -->
+<section class="sec" id="s-clientes">
+  <div class="grid2">
+    <div class="card"><h2>Melhores clientes</h2><div class="scroll"><table id="tTop"></table></div></div>
+    <div class="card"><h2>Clientes sumidos</h2>
+      <p class="muted">Clientes que compraram 2 vezes ou mais e não voltam há mais de <input id="cDias" type="number" value="90" style="width:80px;min-height:34px"> dias. Vale chamar no WhatsApp.</p>
+      <div class="scroll"><table id="tSumidos"></table></div></div>
+  </div>
+  <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Histórico do cliente</h2><label>Cliente<input id="cBusca" list="dlClientes"></label></div>
+    <div id="cHist" style="margin-top:10px"></div></div>
+</section>
+
+<!-- DÍZIMO -->
+<section class="sec" id="s-dizimo">
+  <div class="card" style="max-width:640px">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <h2 style="margin:0">🙏 Dízimo do mês</h2>
+      <label>Mês<input type="month" id="zMes"></label>
+    </div>
+    <table id="tDiz"></table>
+    <p class="muted" id="zLucro"></p>
+    <p class="muted">Salva automaticamente ao digitar.</p>
+  </div>
+  <div class="card"><h2>Histórico</h2><div class="scroll"><table id="tDizHist"></table></div></div>
+</section>
+
+<!-- RESUMO -->
+<section class="sec" id="s-resumo">
+  <div class="card" style="max-width:560px">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <h2 style="margin:0">📈 Resumo do mês</h2>
+      <label>Mês<input type="month" id="rMes"></label>
+    </div>
+    <table id="tResumo" class="resumo"></table>
+    <p class="muted" id="rObs"></p>
+  </div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <h2 style="margin:0">Resumo do ano</h2>
+      <label>Ano<select id="rAno"></select></label>
+    </div>
+    <div class="scroll"><table id="tResumoAno"></table></div>
+  </div>
+</section>
+
+<!-- CONFIG -->
+<section class="sec" id="s-config">
+  <div class="card"><h2>🧮 Custos de produção</h2>
+    <form class="f" id="fCfg" onsubmit="return false">
+      <label>Energia (R$ por kWh)<input data-c="energiaKwh" type="number" step="0.01" min="0"></label>
+      <label>Mão de obra (R$ por hora)<input data-c="maoDeObraHora" type="number" step="0.5" min="0"></label>
+      <label>Perda / falhas padrão (%)<input data-c="falhaPct" type="number" step="1" min="0"></label>
+      <label>Margem de lucro padrão (%)<input data-c="margemPct" type="number" step="1" min="0"></label>
+      <label>Arredondar preço sugerido<select data-c="arredondar">
+        <option value="nao">Não arredondar</option><option value="1">Para cima, R$ 1</option><option value="90">Terminar em ,90</option><option value="5">Para cima, R$ 5</option></select></label>
+    </form>
+    <p class="muted">Energia: veja na conta de luz (valor total ÷ kWh). Mão de obra: quanto vale uma hora do seu trabalho manual (coloque 0 se quiser que esse tempo conte como lucro).
+      Perdas: impressões que falham, suportes e purga. Margem: quanto somar em cima do custo (100% = preço é o dobro do custo).</p>
+  </div>
+  <div class="card"><h2>🖨️ Impressoras</h2>
+    <div class="scroll"><table class="cfgtab" id="tImp"></table></div>
+    <button class="btn sm sec2" id="cfgAddImp" style="margin-top:8px">＋ Impressora</button>
+    <p class="muted">Potência média imprimindo (não a da fonte): ~100 W para Bambu A1/P1, ~120–150 W para Ender e similares com mesa aquecida.
+      O desgaste divide o valor da impressora pela vida útil em horas; a manutenção cobre bico, correias, PEI, graxa.</p>
+  </div>
+  <div class="card"><h2>🧵 Filamentos</h2>
+    <div class="scroll"><table class="cfgtab" id="tFilCfg"></table></div>
+    <button class="btn sm sec2" id="cfgAddFil" style="margin-top:8px">＋ Filamento</button>
+    <p class="muted">Preço do rolo convertido para 1 kg, com frete. Rolo de 500 g por R$ 60 = R$ 120 o kg. Ao mudar um preço, o custo de todos os produtos que usam esse filamento é recalculado (vendas já salvas não mudam).</p>
+  </div>
+  <div class="grid2">
+    <div class="card"><h2>Taxas da maquininha</h2><table id="tTaxas"></table>
+      <p class="muted">Ao mudar uma taxa, só as vendas novas usam o valor novo.</p></div>
+    <div>
+      <div class="card"><h2>Gemini (venda por voz)</h2>
+        <label>Chave da API da Gemini<input id="cfgGemini" type="password" autocomplete="off" placeholder="cole aqui a chave da Gemini"></label>
+        <div class="row" style="margin-top:8px"><button class="btn sec2" id="cfgGemTestar">Testar chave</button><span class="muted" id="cfgGemMsg"></span></div>
+        <p class="muted">A chave fica guardada no dados.json, no seu Google Drive. Não vai para o GitHub.</p></div>
+      <div class="card"><h2>Tamanho da letra</h2>
+        <div class="row" id="cfgFonte"></div>
+        <p class="muted">Vale só para este aparelho.</p></div>
+      <div class="card"><h2>Arquivo e exportação</h2>
+        <p class="muted" id="cfgInfo"></p>
+        <div class="row">
+          <button class="btn sec2" id="xVendas">Exportar vendas (.csv)</button>
+          <button class="btn sec2" id="xProd">Exportar produtos (.csv)</button>
+          <button class="btn sec2" id="xDesp">Exportar despesas (.csv)</button>
+          <button class="btn sec2" id="xJson">Baixar cópia do dados.json</button>
+        </div>
+        <p class="muted">O CSV abre direto no Excel.</p>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer id="rodape">Criado por Guilherme Oliveira | Versão <span id="versao"></span></footer>
+
+<script>
+const MESES=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+const CATS=["MEI","Aluguel","Internet","Manutenção / peças da impressora","Embalagens","Ferramentas / acessórios","Anúncios / marketplace","Frete pago","Outros"];
+const FIXAS=["MEI","Aluguel","Internet"];
+const brl=v=>(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const brl0=v=>(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
+const pct=v=>isFinite(v)?(v*100).toLocaleString("pt-BR",{maximumFractionDigits:1})+"%":"–";
+const num=(v,d=1)=>(+v||0).toLocaleString("pt-BR",{maximumFractionDigits:d});
+const r2=v=>Math.round((+v||0)*100)/100;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nomeProprio=s=>String(s??"").trim().replace(/\s+/g," ").split(" ").map((p,i)=>
+  i>0&&/^(da|de|do|das|dos|e)$/i.test(p)?p.toLowerCase():p.charAt(0).toLocaleUpperCase("pt-BR")+p.slice(1)).join(" ");
+document.addEventListener("focusout",e=>{if(e.target.name==="cliente"&&e.target.value)e.target.value=nomeProprio(e.target.value)});
+// Campos numéricos: ao tocar num campo com 0, o zero some; se sair sem digitar, o 0 volta.
+document.addEventListener("focusin",e=>{const c=e.target;if(c.type==="number"&&c.value!==""&&+c.value===0){c.value="";c.dataset.eraZero="1"}});
+document.addEventListener("focusout",e=>{const c=e.target;if(c.dataset.eraZero){delete c.dataset.eraZero;if(c.value==="")c.value="0"}});
+const hoje=()=>new Date().toLocaleDateString("sv-SE");
+const fmtData=d=>d?d.split("-").reverse().join("/"):"";
+const norm=s=>String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim();
+const soma=(L,f)=>L.reduce((s,x)=>s+(+f(x)||0),0);
+
+// Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
+const VERSAO="1.0.0";
+document.getElementById("versao").textContent=VERSAO;
+
+let D=null, fonte=null, charts={};
+
+/* ---------- onde ficam os dados ----------
+   Igual ao Painel da Oficina: duas fontes com a mesma interface (ler / versao / gravar).
+   - local: dados.json do computador (Chrome/Edge, pasta do Google Drive sincronizada)
+   - drive: o mesmo dados.json pela API do Google Drive (tablet, celular)
+   As chaves do localStorage e o IndexedDB têm nome próprio ("p3d.", "painel-3d") para não misturar
+   com o Painel da Oficina, que fica no mesmo endereço do GitHub Pages. */
+// Projeto próprio no Google Cloud: "painel-impressao-3d" (ver LEIA-ME.md). Não são segredos:
+// o ID do cliente só funciona nas origens autorizadas e a chave é restrita à Picker API e a estes sites.
+const GOOGLE={
+  clientId:"746748382684-oh36hhoq43kleekadhalpp8kq0p52lv3.apps.googleusercontent.com",
+  apiKey:"AIzaSyB1cAO8qm1gPnGiHDwphjhjG3G8q65aF3c", // restrita à Google Picker API
+  appId:"746748382684"};
+const driveConfigurado=()=>!!(GOOGLE.clientId&&GOOGLE.apiKey&&GOOGLE.appId);
+const LS={get(k){try{return JSON.parse(localStorage.getItem("p3d."+k))}catch{return null}},set(k,v){try{localStorage.setItem("p3d."+k,JSON.stringify(v))}catch{}}};
+
+const IDB={db:null,
+  open(){return new Promise((ok,err)=>{const r=indexedDB.open("painel-3d",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>ok(this.db=r.result);r.onerror=()=>err(r.error)})},
+  async get(k){try{await this.open();return await new Promise(ok=>{const r=this.db.transaction("kv").objectStore("kv").get(k);r.onsuccess=()=>ok(r.result);r.onerror=()=>ok(null)})}catch{return null}},
+  async set(k,v){try{await this.open();this.db.transaction("kv","readwrite").objectStore("kv").put(v,k)}catch{}}
+};
+function fonteLocal(h){return{tipo:"local",nome:h.name,intervalo:5000,
+  async versao(){return String((await h.getFile()).lastModified)},
+  async ler(){const f=await h.getFile();return{dados:JSON.parse(await f.text()),versao:String(f.lastModified)}},
+  async gravar(json){const w=await h.createWritable();await w.write(json);await w.close();return this.versao()}}}
+
+/* --- Google: login (token) e seletor de arquivos --- */
+class ErroLogin extends Error{}
+const carregarScript=src=>new Promise((ok,err)=>{if(document.querySelector(`script[src="${src}"]`))return ok();const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=()=>err(new Error("sem internet ("+src+")"));document.head.appendChild(s)});
+let gToken=LS.get("gToken");
+const tokenValido=()=>gToken&&Date.now()<gToken.exp-60000;
+async function loginGoogle(){
+  await carregarScript("https://accounts.google.com/gsi/client");
+  await new Promise((ok,err)=>{
+    google.accounts.oauth2.initTokenClient({client_id:GOOGLE.clientId,scope:"https://www.googleapis.com/auth/drive.file",
+      ...(LS.get("gEmail")?{hint:LS.get("gEmail")}:{}),
+      callback:r=>{if(r.error)return err(new Error(r.error_description||r.error));gToken={t:r.access_token,exp:Date.now()+r.expires_in*1000};LS.set("gToken",gToken);ok()},
+      error_callback:e=>err(new Error(e.type==="popup_closed"?"janela do Google fechada":"login não concluído ("+e.type+")"))
+    }).requestAccessToken({prompt:LS.get("gJaAutorizou")?"":"consent"});
+  });
+  LS.set("gJaAutorizou",true);
+  if(!LS.get("gEmail"))try{const u=await (await api("https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)")).json();if(u.user?.emailAddress)LS.set("gEmail",u.user.emailAddress)}catch{}
+}
+async function api(url,op={}){
+  if(!tokenValido())throw new ErroLogin("sessão do Google expirada");
+  const r=await fetch(url,{...op,headers:{...(op.headers||{}),Authorization:"Bearer "+gToken.t}});
+  if(r.status===401){gToken=null;LS.set("gToken",null);throw new ErroLogin("sessão do Google expirada")}
+  if(!r.ok)throw new Error("Google Drive respondeu "+r.status+": "+(await r.text()).slice(0,200));
+  return r;
+}
+function fonteDrive(id,nome){const U="https://www.googleapis.com/drive/v3/files/"+id;return{tipo:"drive",nome,id,intervalo:15000,
+  async versao(){return(await (await api(U+"?fields=version")).json()).version},
+  async ler(){const v=await this.versao();const dados=await (await api(U+"?alt=media")).json();return{dados,versao:v}},
+  async gravar(json){const r=await api("https://www.googleapis.com/upload/drive/v3/files/"+id+"?uploadType=media&fields=version",
+    {method:"PATCH",headers:{"Content-Type":"application/json; charset=UTF-8"},body:json});return(await r.json()).version}}}
+async function escolherNoDrive(){
+  await carregarScript("https://apis.google.com/js/api.js");
+  await new Promise(ok=>gapi.load("picker",ok));
+  return new Promise((ok,err)=>{
+    const view=new google.picker.DocsView(google.picker.ViewId.DOCS).setMimeTypes("application/json").setIncludeFolders(true).setMode(google.picker.DocsViewMode.LIST);
+    new google.picker.PickerBuilder().addView(view).setOAuthToken(gToken.t).setDeveloperKey(GOOGLE.apiKey).setAppId(GOOGLE.appId)
+      .setTitle("Escolha o dados.json do Painel Impressão 3D").setLocale("pt-BR")
+      .setCallback(d=>{if(d.action===google.picker.Action.PICKED)ok(d.docs[0]);else if(d.action===google.picker.Action.CANCEL)err(new Error("nenhum arquivo escolhido"))})
+      .build().setVisible(true);
+  });
+}
+
+/* --- abrir --- */
+let versaoConhecida=null;
+async function abrirFonte(f){
+  const r=await f.ler();fonte=f;D=r.dados;versaoConhecida=r.versao;LS.set("jaAbriu",true);iniciar();
+}
+async function abrirLocal(h){
+  if(await h.queryPermission({mode:"readwrite"})!=="granted" && await h.requestPermission({mode:"readwrite"})!=="granted") throw new Error("Permissão negada");
+  await IDB.set("handle",h);LS.set("modo","local");await abrirFonte(fonteLocal(h));
+}
+async function abrirDrive(escolherOutro){
+  if(!tokenValido())await loginGoogle();
+  let arq=LS.get("driveArquivo");
+  if(!arq||escolherOutro){const d=await escolherNoDrive();arq={id:d.id,nome:d.name};LS.set("driveArquivo",arq)}
+  LS.set("modo","drive");await abrirFonte(fonteDrive(arq.id,arq.nome));
+}
+const erroGate=e=>{if(e.name!=="AbortError")$("#gateMsg").textContent="Erro: "+e.message};
+$("#btnAbrir").onclick=async()=>{
+  if(!window.showOpenFilePicker){
+    const i=document.createElement("input");i.type="file";i.accept=".json";
+    i.onchange=async()=>{D=JSON.parse(await i.files[0].text());iniciar();status("modo somente leitura: use Config › Baixar cópia para salvar",true)};
+    i.click();return;
+  }
+  try{const [h]=await showOpenFilePicker({types:[{description:"dados",accept:{"application/json":[".json"]}}]});await abrirLocal(h)}catch(e){erroGate(e)}
+};
+$("#btnDrive").onclick=()=>abrirDrive(false).catch(erroGate);
+$("#btnDriveOutro").onclick=()=>abrirDrive(true).catch(erroGate);
+(async()=>{
+  if(!window.showOpenFilePicker)$("#btnAbrir").style.display="none";
+  if(driveConfigurado())$("#boxDrive").style.display="";
+  if(LS.get("driveArquivo"))$("#btnDriveOutro").style.display="";
+  if(LS.get("modo")==="drive"&&driveConfigurado()&&LS.get("driveArquivo")){
+    const arq=LS.get("driveArquivo");
+    if(tokenValido()){try{await abrirFonte(fonteDrive(arq.id,arq.nome));return}catch(e){erroGate(e)}}
+    $("#gateMsg").innerHTML=`Toque em qualquer lugar para abrir <b>${esc(arq.nome)}</b> do Google Drive.`;
+    const abrir=e=>{if(e.target.closest("button"))return;document.removeEventListener("click",abrir);abrirDrive(false).catch(err=>{erroGate(err);document.addEventListener("click",abrir)})};
+    document.addEventListener("click",abrir);return;
+  }
+  const h=await IDB.get("handle");if(!h)return;
+  try{if(await h.queryPermission({mode:"readwrite"})==="granted"){await abrirLocal(h);return}}catch{}
+  const b=$("#btnReabrir");b.style.display="";$("#btnAbrir").textContent="Escolher outro arquivo…";
+  $("#gateMsg").innerHTML='Clique em qualquer lugar para abrir o <b>dados.json</b>. Quando o navegador perguntar, escolha <b>"Permitir em todas as visitas"</b>.';
+  const abrir=e=>{if(e.target.closest("button")&&e.target.id!=="btnReabrir")return;document.removeEventListener("click",abrir);
+    abrirLocal(h).catch(err=>{erroGate(err);document.addEventListener("click",abrir)})};
+  document.addEventListener("click",abrir);
+})();
+
+/* --- gravar --- */
+let fila=Promise.resolve(), pendentes=0, geracao=0;
+function salvar(){
+  D.atualizado=new Date().toISOString().slice(0,19);
+  _M=null;
+  if(!fonte){status("alterações NÃO salvas: baixe uma cópia em Config",true);return}
+  pendentes++;status("salvando…");
+  const json=JSON.stringify(D,null,1), g=geracao;
+  fila=fila.then(async()=>{
+    try{
+      if(g!==geracao)return;
+      if(await fonte.versao()!==versaoConhecida){
+        geracao++;const r=await fonte.ler();D=r.dados;normalizar();versaoConhecida=r.versao;render();
+        status("o arquivo tinha sido alterado em outro lugar: recarregado",true);
+        alert("O dados.json foi alterado em outro lugar (outro aparelho ou outra aba).\nO painel carregou a versão mais nova. Refaça a última alteração.");
+        return;
+      }
+      versaoConhecida=await fonte.gravar(json);
+      $("#reconectar").style.display="none";
+      if(pendentes===1)status("salvo às "+new Date().toLocaleTimeString("pt-BR").slice(0,5))}
+    catch(e){
+      if(e instanceof ErroLogin){status("NÃO salvo: entre de novo no Google",true);$("#reconectar").style.display=""}
+      else{status("ERRO ao salvar: "+e.message,true);alert("Não foi possível salvar no dados.json: "+e.message)}}
+    finally{pendentes--}
+  });
+}
+$("#reconectar").onclick=async()=>{try{await loginGoogle();salvar()}catch(e){status("Erro: "+e.message,true)}};
+addEventListener("beforeunload",e=>{if(pendentes>0){e.preventDefault();e.returnValue=""}});
+async function conferirArquivo(){
+  if(!fonte||pendentes>0||(fonte.tipo==="drive"&&!tokenValido()))return;
+  try{if(await fonte.versao()!==versaoConhecida){const r=await fonte.ler();D=r.dados;normalizar();versaoConhecida=r.versao;render();status("atualizado com a versão mais nova do arquivo")}}
+  catch{}
+}
+addEventListener("focus",conferirArquivo);
+let ultimaConferencia=0;
+setInterval(()=>{if(!document.hidden&&fonte&&Date.now()-ultimaConferencia>=fonte.intervalo){ultimaConferencia=Date.now();conferirArquivo()}},5000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)conferirArquivo()});
+function status(t,erro){const s=$("#status");s.textContent=t;s.style.color=erro?"#fca5a5":"";s.classList.remove("sutil");
+  clearTimeout(status.t);if(!erro)status.t=setTimeout(()=>s.classList.add("sutil"),3000)}
+const novoId=p=>p+(D.proximoId++);
+
+// Completa o que faltar no dados.json (arquivo novo ou de versão antiga).
+const TAXAS_PADRAO={"Dinheiro":0,"Pix":0,"Débito":0.0137,"Crédito 1x":0.0315,"Crédito 2x":0.0539,"Crédito 3x":0.0612,"Crédito 4x":0.0685,"Crédito 5x":0.0757,"Crédito 6x":0.0828,"Crédito 7x":0.0899,"Crédito 8x":0.0969,"Crédito 9x":0.1038,"Crédito 10x":0.1106};
+function normalizar(){
+  D.versao??=1;D.proximoId??=1;
+  D.taxas??={...TAXAS_PADRAO};
+  D.config={energiaKwh:0.95,maoDeObraHora:25,falhaPct:10,margemPct:100,arredondar:"90",...(D.config||{})};
+  for(const k of ["impressoras","filamentos","produtos","vendas","despesas"])D[k]??=[];
+  D.dizimos??={};
+}
+
+/* ---------- navegação ---------- */
+$("#nav").onclick=e=>{const b=e.target.closest("button");if(!b)return;
+  document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("on",x===b));
+  document.querySelectorAll(".sec").forEach(s=>s.classList.toggle("on",s.id==="s-"+b.dataset.s));
+  render();scrollTo({top:0});
+};
+
+/* ---------- custo do produto ----------
+   Custo de UMA impressão:
+     filamento   = gramas × preço do kg ÷ 1000
+     energia     = potência (W) ÷ 1000 × horas × R$/kWh
+     impressora  = horas × (valor ÷ vida útil em horas + manutenção por hora)
+     perdas      = (filamento + energia + impressora) × % de perda
+     mão de obra = minutos ÷ 60 × R$/hora
+   Custo por peça = custo da impressão ÷ peças por impressão + extras por peça.
+   Preço sugerido = custo por peça × (1 + margem), arredondado (Config). */
+const impressoraDe=id=>D.impressoras.find(i=>i.id===id);
+const filamentoDe=id=>D.filamentos.find(f=>f.id===id);
+const custoHoraImp=i=>i?((+i.potenciaW||0)/1000*D.config.energiaKwh)+((+i.valor||0)/Math.max(1,+i.vidaUtilH||1))+(+i.manutHora||0):0;
+function custoProduto(p){
+  const C=D.config, imp=impressoraDe(p.impressoraId)||{};
+  const h=(+p.horas||0)+(+p.minutos||0)/60, un=Math.max(1,Math.round(+p.unidades||1));
+  const gramas=soma(p.filamentos||[],f=>f.g);
+  const fil=soma(p.filamentos||[],f=>(filamentoDe(f.filamentoId)?.precoKg||0)*(+f.g||0)/1000);
+  const kwh=(+imp.potenciaW||0)/1000*h, energia=kwh*C.energiaKwh;
+  const maquina=h*((+imp.valor||0)/Math.max(1,+imp.vidaUtilH||1)+(+imp.manutHora||0));
+  const falhaPct=p.falhaPct??C.falhaPct;
+  const falha=(fil+energia+maquina)*falhaPct/100;
+  const mao=(+p.maoMin||0)/60*C.maoDeObraHora;
+  const extras=+p.extras||0;
+  const impressao=fil+energia+maquina+falha+mao;
+  return{fil,energia,maquina,falha,mao,extras,impressao,un,horas:h,gramas,kwh,falhaPct,
+    unit:impressao/un+extras};
+}
+function arredondar(v){
+  const a=D.config.arredondar;if(v<=0)return 0;
+  if(a==="1")return Math.ceil(v-0.0001);
+  if(a==="5")return Math.ceil(v/5-0.0001)*5;
+  if(a==="90")return Math.ceil(v+0.1-0.0001)-0.1;
+  return r2(v);
+}
+const margemDe=p=>p.margemPct??D.config.margemPct;
+const precoSugerido=(p,c=custoProduto(p))=>r2(arredondar(c.unit*(1+margemDe(p)/100)));
+const precoDe=p=>p.precoVenda!=null?p.precoVenda:precoSugerido(p);
+const produtoPorNome=n=>{const k=norm(n);return k?D.produtos.find(p=>norm(p.nome)===k):null};
+const fmtTempo=h=>{const t=Math.round(h*60);return t>=60?`${Math.floor(t/60)}h${String(t%60).padStart(2,"0")}`:`${t} min`};
+
+/* ---------- agregações ---------- */
+const qtdItens=v=>soma(v.itens||[],x=>x.qtd);
+function agregar(){
+  const m={};
+  const get=k=>m[k]??={fat:0,lucro:0,taxa:0,custo:0,pecas:0,n:0,desp:0};
+  for(const v of D.vendas){const a=get(v.data.slice(0,7));a.fat+=v.cobrado;a.lucro+=v.lucro;a.taxa+=v.taxa;a.custo+=v.custo||0;a.pecas+=qtdItens(v);a.n++}
+  for(const d of D.despesas){get(d.data.slice(0,7)).desp+=d.valor}
+  return m;
+}
+const anos=()=>[...new Set([...D.vendas.map(v=>+v.data.slice(0,4)),+hoje().slice(0,4)])].sort();
+
+/* ---------- visão geral ---------- */
+function renderGeral(){
+  const M=agregar(), A=anos(), sel=$("#gAno");
+  if(sel.options.length!==A.length){const v=sel.value;sel.innerHTML="";A.forEach(a=>sel.add(new Option(a,a)));sel.value=A.includes(+v)?v:A.at(-1);sel.onchange=renderGeral}
+  const ano=+sel.value, ant=ano-1;
+  const mesesAno=Object.keys(M).filter(k=>k.startsWith(ano)).map(k=>+k.slice(5));
+  const ult=Math.max(...mesesAno,0)||12;
+  const somaAno=(a,ateMes)=>{const t={fat:0,lucro:0,taxa:0,n:0,desp:0,custo:0,pecas:0};for(let i=1;i<=ateMes;i++){const x=M[`${a}-${String(i).padStart(2,"0")}`];if(x)for(const k in t)t[k]+=x[k]}return t};
+  const t=somaAno(ano,12), p=somaAno(ant,ult);
+  $("#gObs").textContent=p.n?`Comparação com ${ant} no mesmo período (jan–${MESES[ult-1].toLowerCase()})`:"";
+  const k=(l,v,vp,f=brl0,inv)=>{let d="";if(p.n&&vp){const r=v/vp-1;const bom=inv?r<0:r>0;d=`<div class="d ${bom?"up":"down"}">${r>0?"▲":"▼"} ${pct(Math.abs(r))} vs ${ant}</div>`}
+    return `<div class="kpi"><div class="l">${l}</div><div class="v">${f(v)}</div>${d}</div>`};
+  $("#gKpis").innerHTML=
+    k("Faturamento",t.fat,p.fat)+k("Lucro das vendas",t.lucro,p.lucro)+
+    k("Despesas",t.desp,p.desp,brl0,true)+k("Lucro final",t.lucro-t.desp,p.desp?p.lucro-p.desp:0)+
+    k("Vendas",t.n,p.n,x=>x)+k("Peças vendidas",t.pecas,p.pecas,x=>num(x,0))+
+    k("Custo de produção",t.custo,p.custo,brl0,true)+k("Margem",t.fat?t.lucro/t.fat:0,p.fat?p.lucro/p.fat:0,pct);
+
+  const serie=(a,c)=>MESES.map((_,i)=>M[`${a}-${String(i+1).padStart(2,"0")}`]?.[c]??null);
+  chart("cMes","bar",{labels:MESES,datasets:[
+    {label:`Faturamento ${ano}`,data:serie(ano,"fat"),backgroundColor:"#7c3aed",order:2},
+    {label:`Lucro ${ano}`,data:serie(ano,"lucro"),backgroundColor:"#c4b5fd",order:2},
+    {label:`Faturamento ${ant}`,data:serie(ant,"fat"),type:"line",borderColor:"#9ca3af",backgroundColor:"#9ca3af",borderDash:[5,4],pointRadius:3,order:1,spanGaps:true}]});
+
+  const VA=D.vendas.filter(v=>v.data.startsWith(ano));
+  const met={};VA.forEach(v=>{const g=v.metodo?.startsWith("Crédito")?(v.metodo==="Crédito 1x"?"Crédito à vista":"Crédito parcelado"):(v.metodo||"Não informado");met[g]=(met[g]||0)+v.cobrado});
+  const ks=Object.keys(met).sort((a,b)=>met[b]-met[a]);
+  chart("cMet","doughnut",{labels:ks,datasets:[{data:ks.map(x=>met[x]),backgroundColor:["#7c3aed","#0d9488","#f59e0b","#2563eb","#ef4444","#9ca3af"]}]},
+    {plugins:{legend:{position:"right"},tooltip:{callbacks:{label:c=>`${c.label}: ${brl0(c.raw)} (${pct(c.raw/ks.reduce((s,x)=>s+met[x],0))})`}}}});
+
+  // produtos mais vendidos no ano (lucro do item = (preço − custo) × qtd, antes da taxa)
+  const tp={};VA.forEach(v=>(v.itens||[]).forEach(x=>{const key=x.produtoId||"avulso:"+norm(x.nome);
+    const a=tp[key]??={nome:D.produtos.find(p=>p.id===x.produtoId)?.nome||x.nome,qtd:0,fat:0,lucro:0};a.qtd+=x.qtd;a.fat+=x.preco*x.qtd;a.lucro+=(x.preco-x.custo)*x.qtd}));
+  const TP=Object.values(tp).sort((a,b)=>b.fat-a.fat);
+  $("#tTopProd").innerHTML=TP.length?`<tr><th>Produto</th><th class="n">Qtd</th><th class="n">Vendido</th><th class="n">Lucro</th></tr>`+
+    TP.map(x=>`<tr><td>${esc(x.nome)}</td><td class="n">${num(x.qtd,0)}</td><td class="n">${brl(x.fat)}</td><td class="n">${brl(x.lucro)}</td></tr>`).join(""):`<tr><td class="muted">Nenhuma venda em ${ano}.</td></tr>`;
+
+  const mx=Math.max(1,...Object.values(M).map(x=>x.fat));
+  const tot=a=>somaAno(a,12);
+  let h=`<tr><th>Mês</th>${A.map(a=>`<th class="n">${a}</th>`).join("")}<th class="n">${ano} vs ${ant}</th></tr>`;
+  MESES.forEach((n,i)=>{const mm=String(i+1).padStart(2,"0");
+    h+=`<tr><td>${n}</td>`+A.map(a=>{const x=M[`${a}-${mm}`];if(!x||!x.fat)return`<td class="muted">–</td>`;const al=(x.fat/mx*0.75).toFixed(2);
+      return`<td style="background:rgba(124,58,237,${al});color:${al>0.45?"#fff":"inherit"}">${brl0(x.fat)}</td>`}).join("");
+    const a1=M[`${ano}-${mm}`],a0=M[`${ant}-${mm}`];const r=a1?.fat&&a0?.fat?a1.fat/a0.fat-1:null;
+    h+=`<td class="${r==null?"":r>=0?"up":"down"}">${r==null?"–":(r>0?"+":"")+pct(r)}</td></tr>`});
+  h+=`<tr><th>Total</th>${A.map(a=>`<th class="n">${brl0(tot(a).fat)}</th>`).join("")}<th></th></tr>`;
+  $("#tHeat").innerHTML=h;
+
+  let f=`<tr><th>Mês</th><th class="n">Vendas</th><th class="n">Peças</th><th class="n">Faturamento</th><th class="n">Custo produção</th><th class="n">Taxas</th><th class="n">Lucro vendas</th><th class="n">Despesas</th><th class="n">Lucro final</th><th class="n">Ticket médio</th></tr>`;
+  MESES.forEach((n,i)=>{const x=M[`${ano}-${String(i+1).padStart(2,"0")}`];if(!x)return;
+    f+=`<tr><td>${n}/${ano}</td><td class="n">${x.n}</td><td class="n">${num(x.pecas,0)}</td><td class="n">${brl(x.fat)}</td><td class="n">${brl(x.custo)}</td><td class="n">${brl(x.taxa)}</td><td class="n">${brl(x.lucro)}</td><td class="n">${x.desp?brl(x.desp):"–"}</td><td class="n"><b>${brl(x.lucro-x.desp)}</b></td><td class="n">${x.n?brl(x.fat/x.n):"–"}</td></tr>`});
+  f+=`<tr><th>Total</th><th class="n">${t.n}</th><th class="n">${num(t.pecas,0)}</th><th class="n">${brl(t.fat)}</th><th class="n">${brl(t.custo)}</th><th class="n">${brl(t.taxa)}</th><th class="n">${brl(t.lucro)}</th><th class="n">${brl(t.desp)}</th><th class="n">${brl(t.lucro-t.desp)}</th><th class="n">${t.n?brl(t.fat/t.n):"–"}</th></tr>`;
+  $("#tFech").innerHTML=f;
+}
+function chart(id,type,data,opts={}){
+  const el=document.getElementById(id);
+  if(!window.Chart){if(el)el.parentElement.innerHTML='<p class="muted">Gráfico indisponível sem internet.</p>';return}
+  charts[id]?.destroy();
+  const base={responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},
+    plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${brl0(c.raw)}`}}},
+    scales:type==="doughnut"?{}:{y:{ticks:{callback:v=>brl0(v)},grid:{color:"#eef0f3"}},x:{grid:{display:false}}}};
+  charts[id]=new Chart(el,{type,data,options:{...base,...opts,plugins:{...base.plugins,...opts.plugins}}});
+}
+
+/* ---------- produtos (calculadora de custo e preço) ---------- */
+const fP=$("#fProd");
+let prodFil=[];
+function rowsFil(){
+  if(!D.filamentos.length){$("#pFil").innerHTML='<p class="muted">Cadastre os filamentos em Config primeiro.</p>';return}
+  $("#pFil").innerHTML=prodFil.map((f,i)=>`<div class="linha">
+    <select data-i="${i}" data-k="filamentoId">${D.filamentos.map(x=>`<option value="${x.id}"${x.id===f.filamentoId?" selected":""}>${esc(x.nome)} · ${brl(x.precoKg)}/kg</option>`).join("")}</select>
+    <input data-i="${i}" data-k="g" type="number" step="0.1" min="0" value="${f.g||0}" style="width:100px" aria-label="gramas"><span class="muted">g</span>
+    ${prodFil.length>1?`<button type="button" class="btn sm del" data-rm="${i}" title="Tirar este filamento">✕</button>`:""}</div>`).join("");
+}
+const atualizaFil=e=>{const el=e.target;if(el.dataset.k==null)return;const f=prodFil[el.dataset.i];
+  f[el.dataset.k]=el.dataset.k==="g"?(+el.value||0):el.value;calcProduto()};
+$("#pFil").addEventListener("input",atualizaFil);
+$("#pFil").addEventListener("change",atualizaFil);
+$("#pFil").addEventListener("click",e=>{const i=e.target.dataset?.rm;if(i==null)return;prodFil.splice(+i,1);rowsFil();calcProduto()});
+$("#pAddFil").onclick=()=>{prodFil.push({filamentoId:D.filamentos[0]?.id||"",g:0});rowsFil();calcProduto()};
+const vazioNull=v=>v===""||v==null?null:+v;
+function lerProduto(){
+  return{id:fP.id.value,nome:fP.nome.value.trim(),categoria:fP.categoria.value.trim(),impressoraId:fP.impressoraId.value,
+    horas:+fP.horas.value||0,minutos:+fP.minutos.value||0,unidades:Math.max(1,Math.round(+fP.unidades.value||1)),maoMin:+fP.maoMin.value||0,
+    extras:r2(fP.extras.value),falhaPct:vazioNull(fP.falhaPct.value),margemPct:vazioNull(fP.margemPct.value),
+    precoVenda:fP.precoVenda.value===""?null:r2(fP.precoVenda.value),
+    filamentos:prodFil.filter(f=>f.filamentoId&&f.g>0).map(f=>({filamentoId:f.filamentoId,g:r2(f.g)})),obs:fP.obs.value.trim()};
+}
+// Preço necessário em cada forma de pagamento para receber o mesmo valor do Pix.
+function precosPorPagamento(base){
+  return["Pix","Débito","Crédito 1x","Crédito 3x","Crédito 6x","Crédito 10x"].filter(m=>D.taxas[m]!=null)
+    .map(m=>({m,taxa:D.taxas[m],preco:D.taxas[m]?r2(arredondar(base/(1-D.taxas[m]))):base}));
+}
+function calcProduto(){
+  const p=lerProduto(), c=custoProduto(p), sug=precoSugerido(p,c), preco=p.precoVenda??sug, lucro=preco-c.unit;
+  fP.precoVenda.placeholder="sugerido "+brl(sug);
+  fP.falhaPct.placeholder="padrão "+D.config.falhaPct+"%";
+  fP.margemPct.placeholder="padrão "+D.config.margemPct+"%";
+  const un=c.un, linhas=[
+    ["🧵 Filamento",c.fil/un,`${num(c.gramas)} g`],
+    ["⚡ Energia",c.energia/un,`${num(c.kwh,2)} kWh`],
+    ["🖨️ Desgaste e manutenção",c.maquina/un,fmtTempo(c.horas)],
+    ["⚠️ Perdas / falhas",c.falha/un,`${num(c.falhaPct)}%`],
+    ["✋ Mão de obra",c.mao/un,`${num(p.maoMin,0)} min`],
+    ["📦 Extras",c.extras,""]];
+  const mx=Math.max(...linhas.map(l=>l[1]),0.01);
+  $("#pRes").innerHTML=
+    (un>1?`<p class="muted" style="margin-top:0">Valores por peça (a impressão rende ${un} peças e custa ${brl(c.impressao)} no total).</p>`:"")+
+    `<div class="decomp">${linhas.map(([l,v,d])=>`<span>${l} <span class="muted">${d}</span></span><div class="bar"><i style="width:${(v/mx*100).toFixed(1)}%"></i></div><span class="v">${brl(v)}</span>`).join("")}</div>
+    <div class="destaque" style="margin-top:10px"><span>Custo por peça</span><span class="n">${brl(c.unit)}</span></div>
+    <div class="destaque"><span>Preço sugerido <span class="muted">(margem ${num(margemDe(p))}%)</span></span><span class="n" style="color:var(--acc)">${brl(sug)}</span></div>
+    ${p.precoVenda!=null?`<div class="destaque"><span>Seu preço de venda</span><span class="n">${brl(preco)}</span></div>`:""}
+    <div class="calc">Vendendo a <b>${brl(preco)}</b> no Pix: lucro <b class="${lucro>=0?"lucro":"taxa"}">${brl(lucro)}</b> por peça
+      (${pct(preco?lucro/preco:0)} do preço${c.unit?`, ${num(preco/c.unit,2)}× o custo`:""}).</div>
+    <h3>Preço por forma de pagamento <span class="muted">para receber o mesmo que no Pix</span></h3>
+    <table>${precosPorPagamento(preco).map(x=>`<tr><td>${x.m}</td><td class="n muted">${x.taxa?pct(x.taxa):""}</td><td class="n"><b>${brl(x.preco)}</b></td></tr>`).join("")}</table>`;
+}
+fP.addEventListener("input",calcProduto);
+fP.addEventListener("change",calcProduto);
+function limparProduto(){
+  fP.reset();fP.id.value="";
+  $("#pImp").innerHTML=D.impressoras.map(i=>`<option value="${i.id}">${esc(i.nome)}</option>`).join("")||'<option value="">(cadastre em Config)</option>';
+  prodFil=[{filamentoId:D.filamentos[0]?.id||"",g:0}];
+  $("#pTitulo").textContent="🧮 Novo produto";rowsFil();calcProduto();
+}
+$("#pCancelar").onclick=limparProduto;
+fP.onsubmit=e=>{e.preventDefault();
+  const p=lerProduto();p.id=p.id||novoId("p");
+  if(D.produtos.some(x=>x.id!==p.id&&norm(x.nome)===norm(p.nome))&&!confirm(`Já existe um produto chamado "${p.nome}". Salvar outro com o mesmo nome?`))return;
+  const i=D.produtos.findIndex(x=>x.id===p.id);i>=0?D.produtos[i]=p:D.produtos.push(p);
+  D.produtos.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+  salvar();limparProduto();renderProdutos();status(`produto "${p.nome}" salvo`);
+};
+function carregarProduto(p,copia){
+  limparProduto();
+  for(const k of ["id","nome","categoria","impressoraId","horas","minutos","unidades","maoMin","extras","falhaPct","margemPct","precoVenda","obs"])
+    if(fP[k])fP[k].value=p[k]??"";
+  if(copia){fP.id.value="";fP.nome.value=p.nome+" (cópia)"}
+  prodFil=p.filamentos?.length?p.filamentos.map(f=>({...f})):[{filamentoId:D.filamentos[0]?.id||"",g:0}];
+  $("#pTitulo").textContent=copia?"🧮 Novo produto (cópia)":"✏️ Editando "+p.nome;
+  rowsFil();calcProduto();scrollTo({top:0,behavior:"smooth"});
+}
+window.editarProd=id=>carregarProduto(D.produtos.find(x=>x.id===id));
+window.duplicarProd=id=>carregarProduto(D.produtos.find(x=>x.id===id),true);
+function renderProdutos(){
+  if(!fP.nome.value&&!fP.id.value)limparProduto();else{rowsFil();calcProduto()}
+  $("#dlCats").innerHTML=[...new Set(D.produtos.map(p=>p.categoria).filter(Boolean))].sort().map(c=>`<option value="${esc(c)}">`).join("");
+  const vend={};D.vendas.forEach(v=>(v.itens||[]).forEach(x=>{if(x.produtoId)vend[x.produtoId]=(vend[x.produtoId]||0)+x.qtd}));
+  const q=norm($("#pBusca").value);
+  const L=D.produtos.filter(p=>!q||norm(p.nome+" "+p.categoria).includes(q));
+  $("#pLista").innerHTML=L.length?L.map(p=>{const c=custoProduto(p),pr=precoDe(p),l=pr-c.unit;return`<div class="pcard">
+    <div class="l1"><b>${esc(p.nome)}</b>${p.categoria?`<span class="tag">${esc(p.categoria)}</span>`:""}</div>
+    <div class="l3">${fmtTempo(c.horas)} · ${num(c.gramas)} g${c.un>1?` · ${c.un} por impressão`:""} · ${esc(impressoraDe(p.impressoraId)?.nome||"sem impressora")}</div>
+    <div class="nums"><div><small>Custo</small><b>${brl(c.unit)}</b></div><div><small>Preço${p.precoVenda==null?" sug.":""}</small><b>${brl(pr)}</b></div><div><small>Lucro</small><b class="${l>=0?"lucro":"taxa"}">${brl(l)}</b></div></div>
+    <div class="l3">Margem ${pct(pr?l/pr:0)} do preço · ${vend[p.id]?`${num(vend[p.id],0)} vendidos`:"nenhum vendido"}${p.obs?` · ${esc(p.obs)}`:""}</div>
+    <div class="acts"><button class="btn sm sec2" onclick="editarProd('${p.id}')">Editar</button><button class="btn sm sec2" onclick="duplicarProd('${p.id}')">Duplicar</button><button class="btn sm del" onclick="apagar('produtos','${p.id}')">✕</button></div></div>`}).join("")
+    :`<p class="muted">${D.produtos.length?"Nenhum produto com esse nome.":"Nenhum produto cadastrado ainda. Preencha a calculadora acima e clique em Salvar produto."}</p>`;
+}
+$("#pBusca").oninput=renderProdutos;
+
+/* ---------- vendas ---------- */
+const fV=$("#fVenda");
+let itens=[];
+const itemVazio=()=>({produtoId:null,nome:"",qtd:1,preco:0,custo:0});
+function rowsItens(){
+  $("#vItens").innerHTML=itens.map((x,i)=>`<div class="item" data-i="${i}">
+    <label class="nm">Produto<input data-k="nome" list="dlProdutos" value="${esc(x.nome)}" placeholder="escolha do catálogo ou digite um item avulso"></label>
+    <label>Qtd<input data-k="qtd" type="number" min="1" step="1" value="${x.qtd}"></label>
+    <label>Preço un. (R$)<input data-k="preco" type="number" min="0" step="0.01" value="${x.preco}"></label>
+    <label title="Custo de produção por unidade (vem da aba Produtos)">Custo un. (R$)<input data-k="custo" type="number" min="0" step="0.01" value="${x.custo}"></label>
+    <button type="button" class="btn sm del" data-rm="${i}" title="Tirar item" ${itens.length<2?"disabled style='opacity:.4'":""}>✕</button></div>`).join("");
+}
+$("#vItens").addEventListener("input",e=>{
+  const el=e.target,k=el.dataset.k;if(!k)return;
+  const row=el.closest(".item"),x=itens[row.dataset.i];
+  if(k==="nome"){x.nome=el.value;const p=produtoPorNome(el.value);
+    if(p&&x.produtoId!==p.id){x.produtoId=p.id;x.nome=p.nome;x.preco=precoDe(p);x.custo=r2(custoProduto(p).unit);
+      row.querySelector('[data-k="preco"]').value=x.preco;row.querySelector('[data-k="custo"]').value=x.custo}
+    else if(!p)x.produtoId=null}
+  else x[k]=+el.value||0;
+  calcVenda();
+});
+$("#vItens").addEventListener("click",e=>{const i=e.target.dataset?.rm;if(i==null||itens.length<2)return;itens.splice(+i,1);rowsItens();calcVenda()});
+$("#vAddItem").onclick=()=>{itens.push(itemVazio());rowsItens();calcVenda();$("#vItens .item:last-child input").focus()};
+function chipsPagamento(){
+  const box=$("#vChips"),m=fV.metodo.value,cred=m.startsWith("Crédito");
+  box.innerHTML='<span class="rot">Pagamento</span>'+["Pix","Dinheiro","Débito","Crédito"].map(n=>
+    `<button type="button" class="chip${(n==="Crédito"?cred:m===n)?" on":""}" data-m="${n}">${n}</button>`).join("")+
+    (cred?`<select id="vParc">${Array.from({length:10},(_,i)=>`<option value="Crédito ${i+1}x"${m===`Crédito ${i+1}x`?" selected":""}>${i+1}x</option>`).join("")}</select>`:"");
+}
+$("#vChips").addEventListener("click",e=>{const n=e.target.dataset?.m;if(!n)return;
+  fV.metodo.value=n==="Crédito"?(fV.metodo.value.startsWith("Crédito")?fV.metodo.value:"Crédito 1x"):n;calcVenda()});
+$("#vChips").addEventListener("change",e=>{if(e.target.id==="vParc"){fV.metodo.value=e.target.value;calcVenda()}});
+let cobradoManual=false;
+function calcVenda(){
+  chipsPagamento();
+  const sub=r2(soma(itens,x=>x.qtd*x.preco)), custo=r2(soma(itens,x=>x.qtd*x.custo)), frete=+fV.frete.value||0;
+  if(!cobradoManual)fV.cobrado.value=r2(sub+frete);
+  const cob=+fV.cobrado.value||0, tx=D.taxas[fV.metodo.value]??0;
+  const taxa=r2(cob*tx), lucro=r2(cob-custo-taxa);
+  $("#vSub").innerHTML=`Itens <b>${brl(sub)}</b> · Custo <b>${brl(custo)}</b> · Lucro <b class="${lucro>=0?"lucro":"taxa"}">${brl(lucro)}</b>`;
+  $("#vCalc").innerHTML=`Lucro = cobrado ${brl(cob)} − custo de produção ${brl(custo)} − taxa ${pct(tx)} ${brl(taxa)} = <b>${brl(lucro)}</b>`+
+    (cob!==r2(sub+frete)?` · ${cob>sub+frete?"cobrado a mais":"desconto de"} ${brl(Math.abs(cob-sub-frete))}`:"")+` · Você recebe <b>${brl(cob-taxa)}</b>`;
+  return{taxa,lucro,custo};
+}
+fV.addEventListener("input",e=>{
+  if(e.target.id==="vParc"){fV.metodo.value=e.target.value;calcVenda();return}
+  if(e.target.name==="cobrado")cobradoManual=true;
+  if(e.target.name==="frete")calcVenda();
+});
+fV.cobrado.addEventListener("input",()=>calcVenda());
+$("#vInfoLinha").onclick=()=>{const box=$("#vInfo");box.hidden=!box.hidden;$("#vInfoBtn").setAttribute("aria-expanded",!box.hidden)};
+function limparVenda(){fV.reset();fV.id.value="";fV.data.value=hoje();fV.metodo.value="Pix";cobradoManual=false;itens=[itemVazio()];rowsItens();$("#vTitulo").textContent="Nova venda";calcVenda()}
+function esconderVoz(){if(!ouvindo)$("#vVozBox").hidden=true}
+$("#vCancelar").onclick=()=>{limparVenda();esconderVoz()};
+fV.onsubmit=e=>{e.preventDefault();
+  const L=itens.filter(x=>x.nome.trim());
+  if(!L.length)return alert("Coloque pelo menos um produto na venda.");
+  itens=L;const {taxa,lucro,custo}=calcVenda();
+  const v={id:fV.id.value||novoId("v"),data:fV.data.value,cliente:nomeProprio(fV.cliente.value),
+    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo)})),
+    frete:r2(fV.frete.value),cobrado:r2(fV.cobrado.value),metodo:fV.metodo.value,custo,taxa,lucro,obs:D.vendas.find(x=>x.id===fV.id.value)?.obs||""};
+  const i=D.vendas.findIndex(x=>x.id===v.id); i>=0?D.vendas[i]=v:D.vendas.push(v);
+  D.vendas.sort((a,b)=>a.data.localeCompare(b.data));
+  $("#vMes").value=v.data.slice(0,7);
+  salvar();limparVenda();esconderVoz();renderVendas();
+};
+const descItens=v=>(v.itens||[]).map(x=>`${num(x.qtd,0)}× ${x.nome}`).join(", ");
+function renderVendas(){
+  const mes=$("#vMes").value, q=norm($("#vBusca").value);
+  const L=D.vendas.filter(v=>q?norm(v.cliente+" "+descItens(v)).includes(q):v.data.startsWith(mes));
+  const s=L.reduce((t,v)=>(t.f+=v.cobrado,t.l+=v.lucro,t.t+=v.taxa,t.c+=v.custo||0,t.p+=qtdItens(v),t),{f:0,l:0,t:0,c:0,p:0});
+  $("#vResumo").innerHTML=`${L.length} vendas · ${num(s.p,0)} peças · Faturamento <b>${brl(s.f)}</b> · Custo ${brl(s.c)} · Taxas ${brl(s.t)} · Lucro <b>${brl(s.l)}</b>`+(q?" · busca em todos os meses":"");
+  $("#tVendas").innerHTML=`<tr><th>Data</th><th>Cliente</th><th>Itens</th><th class="n">Cobrado</th><th>Pagamento</th><th class="n">Custo</th><th class="n">Taxa</th><th class="n">Lucro</th><th></th></tr>`+
+    L.slice().reverse().map(v=>`<tr><td>${fmtData(v.data)}</td><td>${esc(v.cliente)}</td><td style="white-space:normal;min-width:200px">${esc(descItens(v))}${v.frete?` <span class="muted">+ frete ${brl(v.frete)}</span>`:""}</td><td class="n"><b>${brl(v.cobrado)}</b></td><td>${esc(v.metodo)}</td><td class="n">${brl(v.custo)}</td><td class="n">${brl(v.taxa)}</td><td class="n lucro">${brl(v.lucro)}</td>
+    <td><button class="btn sm sec2" onclick="editarVenda('${v.id}')">Editar</button> <button class="btn sm del" onclick="apagar('vendas','${v.id}')">✕</button></td></tr>`).join("");
+  $("#vCards").innerHTML=L.slice().reverse().map(v=>`<div class="vcard">
+    <div class="l1"><b>${esc(v.cliente)}</b><span class="muted">${fmtData(v.data)}</span></div>
+    <div class="l2"><span class="big">${brl(v.cobrado)}</span><span class="tag">${esc(v.metodo)}</span></div>
+    <div class="l3">${esc(descItens(v))}${v.frete?` · frete ${brl(v.frete)}`:""}</div>
+    <div class="l3">Custo ${brl(v.custo)}${v.taxa?` · Taxa cartão <span class="taxa">${brl(v.taxa)}</span>`:""} · Lucro <span class="lucro">${brl(v.lucro)}</span></div>
+    <div class="acts"><button class="btn sm sec2" onclick="editarVenda('${v.id}')">Editar</button><button class="btn sm del" onclick="apagar('vendas','${v.id}')">✕</button></div></div>`).join("");
+}
+window.editarVenda=id=>{const v=D.vendas.find(x=>x.id===id);
+  fV.id.value=v.id;fV.cliente.value=v.cliente;fV.data.value=v.data;fV.cobrado.value=v.cobrado;fV.frete.value=v.frete||0;fV.metodo.value=v.metodo||"Pix";
+  itens=(v.itens||[]).map(x=>({...x}));if(!itens.length)itens=[itemVazio()];
+  cobradoManual=true;rowsItens();$("#vTitulo").textContent="Editando venda de "+v.cliente;calcVenda();scrollTo({top:0,behavior:"smooth"})};
+window.apagar=(col,id)=>{
+  if(col==="produtos"){const n=D.vendas.filter(v=>(v.itens||[]).some(x=>x.produtoId===id)).length;
+    if(!confirm(n?`Este produto aparece em ${n} venda(s). As vendas continuam com o nome e o custo gravados. Apagar o produto do catálogo?`:"Apagar este produto?"))return}
+  else if(!confirm("Apagar este lançamento?"))return;
+  D[col]=D[col].filter(x=>x.id!==id);salvar();render()};
+$("#vMes").oninput=renderVendas;$("#vBusca").oninput=renderVendas;
+
+/* ---------- despesas ---------- */
+const fD=$("#fDesp");
+fD.onsubmit=e=>{e.preventDefault();
+  const d={id:fD.id.value||novoId("d"),data:fD.data.value,categoria:fD.categoria.value,descricao:fD.descricao.value.trim(),valor:r2(fD.valor.value)};
+  const i=D.despesas.findIndex(x=>x.id===d.id);i>=0?D.despesas[i]=d:D.despesas.push(d);
+  $("#dMes").value=d.data.slice(0,7);salvar();fD.reset();fD.id.value="";fD.data.value=hoje();renderDesp();
+};
+$("#dCancelar").onclick=()=>{fD.reset();fD.id.value="";fD.data.value=hoje()};
+$("#dCopiar").onclick=()=>{
+  const mes=$("#dMes").value;const [y,m]=mes.split("-").map(Number);const ant=new Date(y,m-2,1).toLocaleDateString("sv-SE").slice(0,7);
+  const fixas=D.despesas.filter(d=>d.data.startsWith(ant)&&FIXAS.includes(d.categoria));
+  if(!fixas.length)return alert("Nenhuma despesa fixa ("+FIXAS.join(", ")+") em "+ant);
+  if(D.despesas.some(d=>d.data.startsWith(mes)&&FIXAS.includes(d.categoria))&&!confirm("Este mês já tem despesas fixas. Copiar mesmo assim?"))return;
+  fixas.forEach(d=>D.despesas.push({...d,id:novoId("d"),data:mes+"-01"}));salvar();renderDesp();
+};
+window.editarDesp=id=>{const d=D.despesas.find(x=>x.id===id);for(const k in d)if(fD[k])fD[k].value=d[k];scrollTo({top:0,behavior:"smooth"})};
+function renderDesp(){
+  const mes=$("#dMes").value, L=D.despesas.filter(d=>d.data.startsWith(mes));
+  $("#tDesp").innerHTML=`<tr><th>Data</th><th>Categoria</th><th>Descrição</th><th class="n">Valor</th><th></th></tr>`+
+    L.map(d=>`<tr><td>${fmtData(d.data)}</td><td>${esc(d.categoria)}</td><td>${esc(d.descricao)}</td><td class="n">${brl(d.valor)}</td><td><button class="btn sm sec2" onclick="editarDesp('${d.id}')">Editar</button> <button class="btn sm del" onclick="apagar('despesas','${d.id}')">✕</button></td></tr>`).join("")+
+    `<tr><th colspan="3">Total do mês</th><th class="n">${brl(soma(L,d=>d.valor))}</th><th></th></tr>`;
+}
+$("#dMes").oninput=renderDesp;
+
+/* ---------- clientes ---------- */
+function porCliente(){
+  const c={};for(const v of D.vendas){const k=norm(v.cliente);const x=c[k]??={nome:v.cliente,n:0,fat:0,lucro:0,ult:"",prim:v.data};x.n++;x.fat+=v.cobrado;x.lucro+=v.lucro;if(v.data>x.ult){x.ult=v.data;x.nome=v.cliente}}
+  return Object.values(c);
+}
+function renderClientes(){
+  const C=porCliente(), hj=new Date();
+  const dias=d=>Math.round((hj-new Date(d))/864e5);
+  $("#tTop").innerHTML=`<tr><th>Cliente</th><th class="n">Compras</th><th class="n">Total gasto</th><th class="n">Lucro</th><th>Última</th></tr>`+
+    C.sort((a,b)=>b.fat-a.fat).slice(0,40).map(x=>`<tr><td>${esc(x.nome)}</td><td class="n">${x.n}</td><td class="n">${brl0(x.fat)}</td><td class="n">${brl0(x.lucro)}</td><td>${fmtData(x.ult)}</td></tr>`).join("");
+  const lim=+$("#cDias").value||90;
+  $("#tSumidos").innerHTML=`<tr><th>Cliente</th><th class="n">Compras</th><th class="n">Total gasto</th><th>Última</th><th class="n">Dias</th></tr>`+
+    C.filter(x=>x.n>=2&&dias(x.ult)>lim&&dias(x.ult)<lim+730).sort((a,b)=>b.fat-a.fat).map(x=>`<tr><td>${esc(x.nome)}</td><td class="n">${x.n}</td><td class="n">${brl0(x.fat)}</td><td>${fmtData(x.ult)}</td><td class="n">${dias(x.ult)}</td></tr>`).join("");
+  const q=norm($("#cBusca").value||"");
+  $("#cHist").innerHTML="";
+  if(q){const L=D.vendas.filter(v=>norm(v.cliente)===q);
+    $("#cHist").innerHTML=L.length?`<p>${L.length} compras · total ${brl(soma(L,v=>v.cobrado))}</p><div class="scroll"><table><tr><th>Data</th><th>Itens</th><th class="n">Cobrado</th><th>Pagamento</th><th class="n">Lucro</th></tr>`+
+      L.slice().reverse().map(v=>`<tr><td>${fmtData(v.data)}</td><td style="white-space:normal">${esc(descItens(v))}</td><td class="n">${brl(v.cobrado)}</td><td>${esc(v.metodo)}</td><td class="n">${brl(v.lucro)}</td></tr>`).join("")+"</table></div>":`<p class="muted">Nenhuma venda para esse nome.</p>`}
+}
+$("#cDias").oninput=renderClientes;$("#cBusca").oninput=renderClientes;
+
+/* ---------- venda por voz (Gemini) ----------
+   Igual ao Painel da Oficina: a fala vira texto no navegador e a Gemini transforma o texto nos campos.
+   A chave fica no dados.json (D.gemini.chave). Quem salva é sempre o usuário. */
+const GEM_API="https://generativelanguage.googleapis.com/v1beta";
+async function gemModelos(){
+  if(!gemModelos.lista){
+    const r=await fetch(`${GEM_API}/models?pageSize=200`,{headers:{"x-goog-api-key":D.gemini.chave}});
+    if(!r.ok)throw new Error("chave da Gemini recusada ("+r.status+")");
+    const ver=n=>parseFloat((n.match(/gemini-(\d+(\.\d+)?)/)||[0,0])[1]);
+    const grupo=n=>/lite/.test(n)?2:/preview/.test(n)?1:0;
+    gemModelos.lista=(await r.json()).models
+      .filter(m=>m.supportedGenerationMethods?.includes("generateContent")&&/gemini-\d.*flash/.test(m.name)&&!/image|tts|live|audio|thinking|exp|transcribe|omni/.test(m.name))
+      .map(m=>m.name.replace("models/","")).sort((a,b)=>grupo(a)-grupo(b)||ver(b)-ver(a));
+    if(!gemModelos.lista.length)throw new Error("nenhum modelo Gemini Flash disponível para esta chave");
+  }
+  const ok=D.gemini.modelo;
+  return ok&&gemModelos.lista.includes(ok)?[ok,...gemModelos.lista.filter(m=>m!==ok)]:gemModelos.lista;
+}
+const esperar=ms=>new Promise(r=>setTimeout(r,ms));
+async function gemGerar(corpo){
+  let ultimo={codigo:0,txt:""};
+  for(let rodada=0;rodada<2;rodada++){
+    if(rodada){const s=Math.min(ultimo.espera||8,20);vozStatus(`Gemini ocupada, tentando de novo em ${s} s…`);await esperar(s*1000)}
+    for(const modelo of (await gemModelos()).slice(0,6)){
+      for(const pensar of [true,false]){
+        const gc={...corpo.generationConfig,...(pensar?{thinkingConfig:{thinkingBudget:0}}:{})};
+        const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),10000);
+        try{
+          const r=await fetch(`${GEM_API}/models/${modelo}:generateContent`,{method:"POST",signal:ctl.signal,
+            headers:{"Content-Type":"application/json","x-goog-api-key":D.gemini.chave},body:JSON.stringify({...corpo,generationConfig:gc})});
+          if(r.ok){const txt=(await r.json()).candidates?.[0]?.content?.parts?.map(p=>p.text).join("")||"";
+            if(D.gemini.modelo!==modelo){D.gemini.modelo=modelo;salvar()}
+            return txt}
+          if(r.status===400&&pensar)continue;
+          if(r.status===404){gemModelos.lista=gemModelos.lista.filter(m=>m!==modelo);if(D.gemini.modelo===modelo)delete D.gemini.modelo;break}
+          if(r.status===401||r.status===403)throw new Error("chave da Gemini recusada ("+r.status+")");
+          const err=(await r.json().catch(()=>({}))).error||{};
+          const atraso=(err.details||[]).map(d=>d.retryDelay).find(Boolean);
+          ultimo={codigo:r.status,espera:atraso?Math.ceil(parseFloat(atraso)):0,txt:modelo+": "+r.status};
+        }catch(e){if(/recusada/.test(e.message))throw e;ultimo={codigo:0,txt:modelo+": "+(e.name==="AbortError"?"demorou demais":e.message)}}
+        finally{clearTimeout(t)}
+        break;
+      }
+    }
+  }
+  throw new Error(ultimo.codigo===429
+    ?"limite de uso gratuito da Gemini atingido por agora. Espere 1 minuto e toque em Preencher ("+ultimo.txt+")"
+    :"a Gemini está sobrecarregada agora. Toque em Preencher de novo em instantes ("+ultimo.txt+")");
+}
+async function gemInterpretar(frase){
+  const nomes=[...new Map(D.vendas.slice(-600).map(v=>[norm(v.cliente),v.cliente])).values()];
+  const prods=D.produtos.map(p=>`${p.nome} (R$ ${precoDe(p)})`);
+  const prompt=`Você preenche o cadastro de uma venda de peças feitas em impressora 3D a partir do que o vendedor falou.
+Hoje é ${hoje()} (formato AAAA-MM-DD).
+Campos:
+- cliente: nome do cliente (pode ter várias palavras). Se combinar com um destes clientes já cadastrados, use exatamente a grafia da lista: ${nomes.join("; ")||"(nenhum ainda)"}.
+- data: AAAA-MM-DD. Se não falar, use hoje. Entenda "ontem", "sexta passada" etc.
+- itens: lista de produtos vendidos. "produto" deve ser exatamente o nome de um produto do catálogo quando combinar (singular/plural não importam): ${prods.join("; ")||"(catálogo vazio)"}. Se não combinar, use o nome falado. "qtd" é a quantidade (1 se não falar). "preco" é o preço de UMA unidade, só se o vendedor falar; senão null.
+- cobrado: valor total cobrado do cliente. null se não falar.
+- metodo: forma de pagamento, exatamente uma destas: ${Object.keys(D.taxas).join(", ")}. "pix" = Pix; "dinheiro" = Dinheiro; "débito" = Débito; "crédito em N vezes" = Crédito Nx; crédito sem parcelas = Crédito 1x. null se não falar.
+Números falados por extenso viram números ("trinta e cinco" = 35).
+Frase do vendedor: """${frase}"""`;
+  const schema={type:"OBJECT",properties:{
+    cliente:{type:"STRING"},data:{type:"STRING"},
+    itens:{type:"ARRAY",items:{type:"OBJECT",properties:{produto:{type:"STRING"},qtd:{type:"NUMBER"},preco:{type:"NUMBER",nullable:true}},required:["produto","qtd"]}},
+    cobrado:{type:"NUMBER",nullable:true},metodo:{type:"STRING",nullable:true}},
+    required:["cliente","data","itens"]};
+  const txt=await gemGerar({contents:[{role:"user",parts:[{text:prompt}]}],
+    generationConfig:{temperature:0,responseMimeType:"application/json",responseSchema:schema}});
+  return JSON.parse(txt);
+}
+function preencherVenda(x){
+  limparVenda();
+  if(x.cliente)fV.cliente.value=nomeProprio(x.cliente);
+  if(/^\d{4}-\d{2}-\d{2}$/.test(x.data||""))fV.data.value=x.data;
+  const L=(x.itens||[]).map(it=>{const p=produtoPorNome(it.produto);
+    return{produtoId:p?.id||null,nome:p?.nome||it.produto,qtd:Math.max(1,+it.qtd||1),preco:it.preco!=null?r2(it.preco):(p?precoDe(p):0),custo:p?r2(custoProduto(p).unit):0}});
+  if(L.length)itens=L;rowsItens();
+  if(x.cobrado!=null){fV.cobrado.value=r2(x.cobrado);cobradoManual=true}
+  if(x.metodo&&D.taxas[x.metodo]!=null)fV.metodo.value=x.metodo;
+  calcVenda();
+}
+const Reconhecedor=window.SpeechRecognition||window.webkitSpeechRecognition;
+let ouvindo=null;
+function vozStatus(t,erro){const s=$("#vVozMsg");s.textContent=t;s.style.color=erro?"var(--bad)":""}
+async function processarFrase(frase){
+  frase=frase.trim();if(!frase)return;
+  $("#vVozTexto").value=frase;vozStatus("Gemini preenchendo…");
+  try{preencherVenda(await gemInterpretar(frase));vozStatus("Pronto: confira os campos e clique em Salvar venda.")}
+  catch(e){vozStatus("Erro: "+e.message,true)}
+}
+$("#vVoz").onclick=()=>{
+  $("#vVozBox").hidden=false;
+  if(!D.gemini?.chave){vozStatus("Cole a chave da Gemini em Config primeiro.",true);return}
+  if(ouvindo){ouvindo.parar();return}
+  if(!Reconhecedor){vozStatus("Este navegador não reconhece voz: digite a frase ao lado e toque em Preencher.",true);return}
+  let final="", parando=false, rec=null;
+  const inicio=Date.now();
+  const mostrar=parcial=>{$("#vVozTexto").value=(final+parcial).trim()};
+  const terminar=()=>{ouvindo=null;$("#vVoz").textContent="🎤 Falar venda";$("#vVoz").classList.remove("gravando");processarFrase($("#vVozTexto").value)};
+  const ouvir=()=>{
+    rec=new Reconhecedor();rec.lang="pt-BR";rec.interimResults=true;rec.continuous=false;
+    let trecho="";
+    rec.onresult=e=>{let parcial="";for(let i=0;i<e.results.length;i++){const t=e.results[i][0].transcript;e.results[i].isFinal?trecho=t:parcial+=t}mostrar(trecho+" "+parcial)};
+    rec.onerror=e=>{if(e.error==="not-allowed"||e.error==="service-not-allowed"){parando=true;vozStatus("Permita o uso do microfone para este site.",true)}};
+    rec.onend=()=>{if(trecho)final+=trecho+" ";mostrar("");
+      if(parando||Date.now()-inicio>120000)terminar();else{try{ouvir()}catch{terminar()}}};
+    rec.start();
+  };
+  $("#vVozTexto").value="";
+  ouvindo={parar(){parando=true;try{rec.stop()}catch{terminar()}}};
+  ouvir();
+  $("#vVoz").textContent="⏹ Parar e preencher";$("#vVoz").classList.add("gravando");
+  vozStatus("Ouvindo… fale cliente, produtos e quantidades, valor cobrado e pagamento. Toque em Parar quando terminar.");
+};
+$("#vVozIr").onclick=()=>{if(!D.gemini?.chave){vozStatus("Cole a chave da Gemini em Config primeiro.",true);return}processarFrase($("#vVozTexto").value)};
+
+/* ---------- dízimo (mesma regra da Oficina) ---------- */
+const NDIZ=4, NOME_AUTO="Impressão 3D";
+let _M=null; const MM=()=>_M??=agregar();
+const lucroMenosDesp=m=>{const x=MM()[m];return x?r2(x.lucro-x.desp):0};
+function dizMes(m){
+  const rec=D.dizimos[m], z=rec?rec.itens:[{nome:NOME_AUTO,auto:true}];
+  return Array.from({length:NDIZ},(_,i)=>{const x=z[i]||{};return{nome:x.nome||"",auto:!!x.auto,valor:x.auto?lucroMenosDesp(m):(x.valor||0)}});
+}
+const dizimoDe=m=>r2(dizMes(m).reduce((s,x)=>s+x.valor,0)*0.1);
+const mesesComDados=()=>[...new Set([...Object.keys(MM()),...Object.keys(D.dizimos)])].sort();
+function gravarDiz(mes,it){D.dizimos[mes]={itens:it.filter(x=>x.nome||x.valor||x.auto).map(x=>x.auto?{nome:x.nome,auto:true}:{nome:x.nome,valor:x.valor})};salvar()}
+function renderDizimo(){
+  const mes=$("#zMes").value, it=dizMes(mes), rec=D.dizimos[mes];
+  $("#tDiz").innerHTML=`<tr><th>Descrição</th><th class="n">Valor (R$)</th><th class="n">10%</th></tr>`+
+    it.map((x,i)=>`<tr><td><input data-i="${i}" data-k="nome" value="${esc(x.nome)}" placeholder="Valor ${i+1}"></td>
+      <td class="n">${i===0?`<label style="flex-direction:row;align-items:center;gap:4px;display:inline-flex;margin-right:6px" title="Usa o lucro − despesas do mês"><input type="checkbox" id="zAuto" style="min-height:0" ${x.auto?"checked":""}>auto</label>`:""}<input data-i="${i}" data-k="valor" type="number" step="0.01" min="0" value="${x.valor||""}" ${x.auto?"disabled":""} style="width:130px;text-align:right"></td>
+      <td class="n" id="z10-${i}">${brl(x.valor*0.1)}</td></tr>`).join("")+
+    `<tr><th>Total dos valores</th><th class="n" id="zTot"></th><th></th></tr>
+     <tr><th>Total do dízimo (10%)</th><th></th><th class="n" id="zTot10" style="font-size:1.143rem"></th></tr>`;
+  $("#zLucro").innerHTML=`Lucro das vendas − despesas neste mês: <b>${brl(lucroMenosDesp(mes))}</b>. `+
+    (!rec?"Este mês ainda não foi editado: o dízimo está no automático.":rec.itens.length?"":"O dízimo deste mês foi excluído.")+
+    ` <button class="btn sm sec2" id="zCopiar">Copiar valores do mês anterior</button> <button class="btn sm sec2" id="zReset">Voltar ao automático</button> <button class="btn sm del" id="zExcluir">Excluir dízimo do mês</button>`;
+  $("#zAuto").onchange=e=>{it[0].auto=e.target.checked;if(it[0].auto&&!it[0].nome)it[0].nome=NOME_AUTO;if(!it[0].auto)it[0].valor=lucroMenosDesp(mes);gravarDiz(mes,it);renderDizimo()};
+  $("#zReset").onclick=()=>{delete D.dizimos[mes];salvar();renderDizimo()};
+  $("#zExcluir").onclick=()=>excluirDizimo(mes);
+  $("#zCopiar").onclick=()=>copiarDizimo(mes);
+  totaisDizimo(it);renderDizHist();
+}
+function copiarDizimo(mes){
+  const [y,m]=mes.split("-").map(Number), ant=new Date(y,m-2,1).toLocaleDateString("sv-SE").slice(0,7);
+  const copiar=dizMes(ant).filter(x=>!x.auto&&(x.nome||x.valor));
+  if(!copiar.length)return alert(`Não há valores para copiar em ${MESES[+ant.slice(5)-1]}/${ant.slice(0,4)}.`);
+  const atual=dizMes(mes), auto=atual.filter(x=>x.auto), outros=atual.filter(x=>!x.auto&&(x.nome||x.valor));
+  if(outros.length&&!confirm("Este mês já tem valores lançados. Substituir pelos do mês anterior?"))return;
+  gravarDiz(mes,[...auto,...copiar].slice(0,NDIZ));renderDizimo();
+}
+window.excluirDizimo=mes=>{if(!confirm(`Excluir o dízimo de ${MESES[+mes.slice(5)-1]}/${mes.slice(0,4)}?`))return;D.dizimos[mes]={itens:[]};salvar();render()};
+const excluirDizimo=window.excluirDizimo;
+function totaisDizimo(it){const t=it.reduce((s,x)=>s+(+x.valor||0),0);$("#zTot").textContent=brl(t);$("#zTot10").textContent=brl(t*0.1)}
+$("#tDiz").addEventListener("input",e=>{
+  const el=e.target;if(!el.dataset.k)return;
+  const mes=$("#zMes").value, it=dizMes(mes);
+  it[el.dataset.i][el.dataset.k]=el.dataset.k==="valor"?r2(el.value):el.value.trim();
+  if(el.dataset.k==="valor")$("#z10-"+el.dataset.i).textContent=brl(it[el.dataset.i].valor*0.1);
+  totaisDizimo(it);gravarDiz(mes,it);renderDizHist();
+});
+function renderDizHist(){
+  const ms=mesesComDados().reverse();let ano=null,h=`<tr><th>Mês</th>${Array.from({length:NDIZ},(_,i)=>`<th class="n">Valor ${i+1}</th>`).join("")}<th class="n">Total</th><th class="n">Dízimo (10%)</th></tr>`;
+  const totAno={};ms.forEach(m=>{const t=dizMes(m).reduce((s,x)=>s+x.valor,0);totAno[m.slice(0,4)]=(totAno[m.slice(0,4)]||0)+t});
+  ms.forEach(m=>{const it=dizMes(m),t=it.reduce((s,x)=>s+x.valor,0),a=m.slice(0,4);
+    if(a!==ano){ano=a;h+=`<tr><th>${a}</th>${"<th></th>".repeat(NDIZ)}<th class="n">${brl(totAno[a])}</th><th class="n">${brl(totAno[a]*0.1)}</th></tr>`}
+    h+=`<tr style="cursor:pointer" onclick="$('#zMes').value='${m}';renderDizimo();scrollTo({top:0,behavior:'smooth'})"><td>${MESES[+m.slice(5)-1]}/${a}</td>${it.map(x=>`<td class="n">${x.valor?`<span class="muted">${esc(x.nome)}</span> ${brl(x.valor)}`:"–"}</td>`).join("")}<td class="n">${brl(t)}</td><td class="n"><b>${brl(t*0.1)}</b></td></tr>`});
+  $("#tDizHist").innerHTML=h;
+}
+$("#zMes").oninput=renderDizimo;
+
+/* ---------- resumo ---------- */
+function resumoMes(M,mes){
+  const x=M[mes]||{lucro:0,desp:0,n:0};
+  const diz=dizimoDe(mes);
+  return{lucro:x.lucro,desp:x.desp,diz,aposDesp:x.lucro-x.desp,liquido:x.lucro-x.desp-diz,n:x.n};
+}
+function renderResumo(){
+  const M=agregar(), mes=$("#rMes").value, r=resumoMes(M,mes);
+  const lin=(cls,l,v)=>`<tr class="${cls}"><td>${l}</td><td class="n">${brl(v)}</td></tr>`;
+  $("#tResumo").innerHTML=
+    lin("","Lucro das vendas",r.lucro)+
+    lin("sub","− Despesas",-r.desp)+
+    lin("parcial","Lucro − despesas",r.aposDesp)+
+    lin("sub","− Dízimo",-r.diz)+
+    lin("parcial","Lucro − despesas − dízimo",r.liquido)+
+    `<tr class="final"><td>Lucro líquido</td><td class="n" style="color:${r.liquido<0?"var(--bad)":"var(--ok)"}">${brl(r.liquido)}</td></tr>`;
+  const avisos=[];
+  if(!r.n)avisos.push("Nenhuma venda neste mês.");
+  if(!r.desp)avisos.push("Nenhuma despesa lançada neste mês.");
+  if(!r.diz)avisos.push("Nenhum dízimo neste mês.");
+  $("#rObs").textContent=avisos.join(" ");
+  const sel=$("#rAno"), A=anos();
+  if(sel.options.length!==A.length){sel.innerHTML="";A.forEach(a=>sel.add(new Option(a,a)));sel.value=mes.slice(0,4);sel.onchange=renderResumo}
+  const ano=sel.value, t={lucro:0,desp:0,aposDesp:0,diz:0,liquido:0};
+  let h=`<tr><th>Mês</th><th class="n">Lucro vendas</th><th class="n">Despesas</th><th class="n">Lucro − despesas</th><th class="n">Dízimo</th><th class="n">Lucro líquido</th><th></th></tr>`;
+  MESES.forEach((n,i)=>{const m=`${ano}-${String(i+1).padStart(2,"0")}`;if(!M[m]&&!D.dizimos[m])return;
+    const x=resumoMes(M,m);for(const k in t)t[k]+=x[k];
+    const auto=dizMes(m)[0].auto;
+    h+=`<tr><td style="cursor:pointer" onclick="$('#rMes').value='${m}';renderResumo();scrollTo({top:0,behavior:'smooth'})">${n}/${ano}</td><td class="n">${brl(x.lucro)}</td>
+      <td class="n"><a href="#" onclick="abrirMes('despesas','${m}');return false" title="Editar despesas">${x.desp?brl(x.desp):"–"}</a></td><td class="n">${brl(x.aposDesp)}</td>
+      <td class="n">${x.diz?brl(x.diz):"–"}${auto&&x.diz?' <span class="muted">auto</span>':""}</td><td class="n"><b>${brl(x.liquido)}</b></td>
+      <td><button class="btn sm sec2" onclick="abrirMes('dizimo','${m}')">Editar dízimo</button></td></tr>`});
+  h+=`<tr><th>Total ${ano}</th><th class="n">${brl(t.lucro)}</th><th class="n">${brl(t.desp)}</th><th class="n">${brl(t.aposDesp)}</th><th class="n">${brl(t.diz)}</th><th class="n">${brl(t.liquido)}</th><th></th></tr>`;
+  $("#tResumoAno").innerHTML=h;
+}
+$("#rMes").oninput=()=>{$("#rAno").value=$("#rMes").value.slice(0,4);renderResumo()};
+window.abrirMes=(aba,m)=>{const campo={dizimo:"#zMes",despesas:"#dMes"}[aba];if(campo)$(campo).value=m;
+  document.querySelector(`#nav [data-s=${aba}]`).click()};
+
+/* ---------- Excel do mês ---------- */
+const MESES_EXT=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+function planilha(linhas,larguras,colsMoeda=[],colsPct=[]){
+  const ws=XLSX.utils.aoa_to_sheet(linhas);
+  ws["!cols"]=larguras.map(w=>({wch:w}));
+  for(const ref in ws){if(ref[0]==="!")continue;const c=XLSX.utils.decode_cell(ref),cel=ws[ref];
+    if(cel.t!=="n")continue;
+    if(colsMoeda.includes(c.c))cel.z='"R$" #,##0.00';else if(colsPct.includes(c.c))cel.z="0.00%"}
+  return ws;
+}
+function montarExcel(mes){
+  const [ano,m]=mes.split("-"), nomeMes=MESES_EXT[+m-1];
+  const V=D.vendas.filter(v=>v.data.startsWith(mes)), De=D.despesas.filter(d=>d.data.startsWith(mes));
+  const wb=XLSX.utils.book_new();
+  const s=V.reduce((t,v)=>(t.f+=v.cobrado,t.l+=v.lucro,t.t+=v.taxa,t.c+=v.custo||0,t.p+=qtdItens(v),t),{f:0,l:0,t:0,c:0,p:0});
+  XLSX.utils.book_append_sheet(wb,planilha([[`${nomeMes} ${ano}`],["Data","Cliente","Itens","Peças","Custo produção","Valor cobrado","Pagamento","Porcentagem","Taxa","Lucro"],
+    ...V.map(v=>[fmtData(v.data),v.cliente,descItens(v),qtdItens(v),v.custo,v.cobrado,v.metodo,D.taxas[v.metodo]??0,v.taxa,v.lucro]),
+    [],["TOTAL","","",s.p,s.c,s.f,"","",s.t,s.l]],[11,18,40,7,14,13,14,11,11,12],[4,5,8,9],[7]),"Vendas");
+  const it={};V.forEach(v=>(v.itens||[]).forEach(x=>{const a=it[x.nome]??={q:0,f:0,c:0};a.q+=x.qtd;a.f+=x.qtd*x.preco;a.c+=x.qtd*x.custo}));
+  XLSX.utils.book_append_sheet(wb,planilha([["Produto","Qtd","Vendido","Custo","Lucro (antes da taxa)"],...Object.entries(it).map(([n,a])=>[n,a.q,a.f,a.c,a.f-a.c])],[30,7,13,13,18],[2,3,4]),"Produtos");
+  const td=soma(De,d=>d.valor);
+  XLSX.utils.book_append_sheet(wb,planilha([["Data","Categoria","Descrição","Valor"],...De.map(d=>[fmtData(d.data),d.categoria,d.descricao,d.valor]),[],["TOTAL","","",td]],[11,26,30,13],[3]),"Despesas");
+  const dz=dizMes(mes).filter(x=>x.nome||x.valor), tz=soma(dz,x=>x.valor);
+  XLSX.utils.book_append_sheet(wb,planilha([["Descrição","Valor","10%"],...dz.map(x=>[x.nome,x.valor,r2(x.valor*0.1)]),[],["Total dos valores",tz,""],["Total do dízimo (10%)","",r2(tz*0.1)]],[24,14,14],[1,2]),"Dízimo");
+  XLSX.utils.book_append_sheet(wb,planilha([[`Resumo ${nomeMes} ${ano}`,""],["Faturamento",s.f],["Custo de produção",s.c],["Taxas de cartão",s.t],["Lucro das vendas",s.l],
+    ["Despesas",td],["Lucro final",s.l-td],["Dízimo (10%)",r2(tz*0.1)],["Qtd. vendas",V.length],["Peças vendidas",s.p],[],["Gerado pelo Painel Impressão 3D em "+new Date().toLocaleString("pt-BR"),""]],
+    [30,16],[]),"Resumo");
+  const wR=wb.Sheets.Resumo;for(let i=1;i<=7;i++){const c=wR[XLSX.utils.encode_cell({r:i,c:1})];if(c)c.z='"R$" #,##0.00'}
+  return {wb,nome:`${+m} - Impressao 3D - ${nomeMes} ${ano}.xlsx`,n:V.length};
+}
+$("#vExcel").onclick=()=>{
+  if(!window.XLSX)return alert("Não foi possível carregar o gerador de Excel. Verifique a internet.");
+  const mes=$("#vMes").value;if(!mes)return alert("Escolha o mês.");
+  const {wb,nome,n}=montarExcel(mes);
+  if(!n&&!confirm("Este mês não tem vendas. Gerar mesmo assim?"))return;
+  XLSX.writeFile(wb,nome);status("Excel baixado: "+nome);
+};
+
+/* ---------- config ---------- */
+const TAMANHOS=[["Pequena",.9],["Normal",1],["Grande",1.15],["Maior",1.3],["Muito grande",1.5]];
+function aplicarFonte(z){document.documentElement.style.fontSize=(14*z)+"px";LS.set("zoom",z);charts&&Object.values(charts).forEach(c=>c.resize?.())}
+function renderFonte(){const z=LS.get("zoom")||1;
+  $("#cfgFonte").innerHTML=TAMANHOS.map(([n,v])=>`<button class="btn ${v===z?"":"sec2"}" style="font-size:${14*v}px" onclick="aplicarFonte(${v});renderFonte()">${n}</button>`).join("")}
+aplicarFonte(LS.get("zoom")||1);
+if(LS.get("jaAbriu"))document.querySelectorAll(".orienta").forEach(e=>e.remove());
+$("#fCfg").addEventListener("change",e=>{const k=e.target.dataset.c;if(!k)return;
+  D.config[k]=k==="arredondar"?e.target.value:(+e.target.value||0);salvar();renderConfig()});
+// Tabelas editáveis de impressoras e filamentos: cada campo grava ao sair dele.
+const COLS={
+  impressoras:[["nome","Nome","text"],["potenciaW","Potência (W)","number"],["valor","Valor pago (R$)","number"],["vidaUtilH","Vida útil (h)","number"],["manutHora","Manutenção (R$/h)","number"]],
+  filamentos:[["nome","Nome / cor","text"],["material","Material","text"],["precoKg","Preço por kg (R$)","number"]]};
+function tabelaCfg(col,extra){
+  const C=COLS[col];
+  return`<tr>${C.map(c=>`<th>${c[1]}</th>`).join("")}${extra?`<th class="n">${extra[0]}</th>`:""}<th class="n">Usado em</th><th></th></tr>`+
+    D[col].map((x,i)=>`<tr>${C.map(([k,,t])=>`<td><input data-t="${col}" data-i="${i}" data-k="${k}" type="${t}" ${t==="number"?'step="any" min="0" style="text-align:right;min-width:90px"':'style="min-width:140px"'} value="${esc(x[k]??"")}"></td>`).join("")}
+      ${extra?`<td class="n">${extra[1](x)}</td>`:""}<td class="n muted">${usos(col,x.id)} produtos</td><td><button class="btn sm del" onclick="apagarCfg('${col}','${x.id}')">✕</button></td></tr>`).join("");
+}
+const usos=(col,id)=>D.produtos.filter(p=>col==="impressoras"?p.impressoraId===id:(p.filamentos||[]).some(f=>f.filamentoId===id)).length;
+$("#s-config").addEventListener("change",e=>{const el=e.target,col=el.dataset.t;if(!col)return;
+  const x=D[col][el.dataset.i];x[el.dataset.k]=el.type==="number"?(+el.value||0):el.value.trim();salvar();renderConfig()});
+window.apagarCfg=(col,id)=>{const n=usos(col,id);
+  if(!confirm(n?`Isto está em ${n} produto(s); o custo deles vai ficar sem essa parte. Apagar mesmo assim?`:"Apagar?"))return;
+  D[col]=D[col].filter(x=>x.id!==id);salvar();renderConfig()};
+$("#cfgAddImp").onclick=()=>{D.impressoras.push({id:novoId("i"),nome:"Impressora "+(D.impressoras.length+1),potenciaW:120,valor:2500,vidaUtilH:4000,manutHora:0.3});salvar();renderConfig()};
+$("#cfgAddFil").onclick=()=>{D.filamentos.push({id:novoId("f"),nome:"Novo filamento",material:"PLA",precoKg:110});salvar();renderConfig()};
+$("#cfgGemini").onchange=e=>{const k=e.target.value.trim();if(k){D.gemini={chave:k}}else delete D.gemini;salvar();$("#cfgGemMsg").textContent=k?"chave salva":"chave removida"};
+$("#cfgGemTestar").onclick=async()=>{const m=$("#cfgGemMsg");if(!D.gemini?.chave){m.textContent="cole a chave primeiro";return}
+  m.textContent="testando…";try{gemModelos.lista=null;await gemGerar({contents:[{role:"user",parts:[{text:"Responda apenas: ok"}]}],generationConfig:{temperature:0}});m.textContent="funcionando, modelo "+D.gemini.modelo}catch(e){m.textContent="Erro: "+e.message}};
+function renderConfig(){
+  document.querySelectorAll("#fCfg [data-c]").forEach(el=>el.value=D.config[el.dataset.c]);
+  $("#tImp").innerHTML=tabelaCfg("impressoras",["Custo por hora",i=>brl(custoHoraImp(i))]);
+  $("#tFilCfg").innerHTML=tabelaCfg("filamentos",["R$ por grama",f=>brl((+f.precoKg||0)/1000).replace(/(\d),(\d\d)$/,"$1,$2")+" "]);
+  $("#cfgGemini").value=D.gemini?.chave||"";
+  renderFonte();
+  $("#tTaxas").innerHTML=`<tr><th>Forma</th><th class="n">Taxa (%)</th></tr>`+Object.entries(D.taxas).map(([k,v])=>
+    `<tr><td>${esc(k)}</td><td class="n"><input type="number" step="0.01" value="${r2(v*100)}" style="width:90px;text-align:right;min-height:36px" onchange="D.taxas['${k}']=this.value/100;salvar()"></td></tr>`).join("");
+  $("#cfgInfo").innerHTML=`${D.produtos.length} produtos, ${D.vendas.length} vendas, ${D.despesas.length} despesas. Última alteração: ${D.atualizado?.replace("T"," ")||"–"}.`;
+}
+function baixar(nome,conteudo,tipo){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([conteudo],{type:tipo}));a.download=nome;a.click()}
+const csv=(L,cols)=>"﻿"+cols.join(";")+"\n"+L.map(x=>cols.map(c=>typeof x[c]==="number"?String(x[c]).replace(".",","):`"${String(x[c]??"").replace(/"/g,'""')}"`).join(";")).join("\n");
+$("#xVendas").onclick=()=>baixar("vendas.csv",csv(D.vendas.map(v=>({...v,itens:descItens(v),pecas:qtdItens(v)})),["data","cliente","itens","pecas","frete","cobrado","metodo","custo","taxa","lucro"]),"text/csv");
+$("#xProd").onclick=()=>baixar("produtos.csv",csv(D.produtos.map(p=>{const c=custoProduto(p);return{nome:p.nome,categoria:p.categoria,gramas:r2(c.gramas),horas:r2(c.horas),porImpressao:c.un,custo:r2(c.unit),sugerido:precoSugerido(p,c),preco:precoDe(p)}}),
+  ["nome","categoria","gramas","horas","porImpressao","custo","sugerido","preco"]),"text/csv");
+$("#xDesp").onclick=()=>baixar("despesas.csv",csv(D.despesas,["data","categoria","descricao","valor"]),"text/csv");
+$("#xJson").onclick=()=>baixar("dados-"+hoje()+".json",JSON.stringify(D,null,1),"application/json");
+
+/* ---------- início ---------- */
+function iniciar(){
+  normalizar();
+  $("#gate").style.display="none";$("#app").style.display="";
+  if(!fonte)status("aberto sem permissão de gravar",true);else status(fonte.tipo==="drive"?"☁ Drive":"📁 arquivo local");
+  $("#selMetodo").innerHTML=Object.keys(D.taxas).map(k=>`<option>${esc(k)}</option>`).join("");
+  $("#selCat").innerHTML=CATS.map(k=>`<option>${k}</option>`).join("");
+  const mesAtual=hoje().slice(0,7);
+  $("#vMes").value=mesAtual;$("#dMes").value=mesAtual;$("#zMes").value=mesAtual;$("#rMes").value=mesAtual;
+  fD.data.value=hoje();
+  limparVenda();limparProduto();render();
+}
+function render(){
+  if(!D)return;
+  _M=null;
+  const nomes=[...new Map(D.vendas.map(v=>[norm(v.cliente),v.cliente])).values()].sort();
+  $("#dlClientes").innerHTML=nomes.map(n=>`<option value="${esc(n)}">`).join("");
+  $("#dlProdutos").innerHTML=D.produtos.map(p=>`<option value="${esc(p.nome)}">${brl(precoDe(p))}</option>`).join("");
+  const s=document.querySelector(".sec.on").id;
+  ({"s-geral":renderGeral,"s-vendas":renderVendas,"s-produtos":renderProdutos,"s-despesas":renderDesp,"s-clientes":renderClientes,"s-dizimo":renderDizimo,"s-resumo":renderResumo,"s-config":renderConfig})[s]();
+}
+</script>
+</body>
+</html>
