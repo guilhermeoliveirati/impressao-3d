@@ -14,8 +14,10 @@ e existe a aba **Produtos**, que calcula o custo de produção e o preço de ven
 Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva o código.
 
 - Pasta: `Meu Drive/Impressora 3D` do Google Drive da conta do projeto (no computador, `H:\Meu Drive\Impressora 3D`). É o repositório git.
-- Código: GitHub `guilhermeoliveirati/painel-impressao-3d` (público, branch `main`).
-- Site: `https://guilhermeoliveirati.github.io/painel-impressao-3d/painel.html` (GitHub Pages, `git push` publica em ~1 minuto).
+- Código: GitHub `guilhermeoliveirati/impressao-3d` (público, branch `main`).
+- Site: `https://guilhermeoliveirati.github.io/impressao-3d/painel.html` (GitHub Pages, `git push` publica em ~1 minuto).
+- O endereço antigo (`/painel-impressao-3d/`) foi abandonado na 1.0.4: o Chrome do Android guardou uma instalação quebrada presa a ele.
+  Se a instalação no celular travar de novo ("Não foi possível abrir o aplicativo"), a saída é a mesma: renomear o repositório.
 - Dados: `dados.json` nessa pasta do Drive, compartilhado por todos os aparelhos (computador abre pela pasta, tablet/celular pelo Google Drive). Nunca no git.
 
 ## Regras obrigatórias (iguais às da Oficina)
@@ -109,3 +111,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.0.1 | 2026-11-05 | Código e dados passam para a pasta Meu Drive › Impressora 3D (Drive da conta do projeto); tela de abertura e seletor do Drive indicam essa pasta |
 | 1.0.2 | 2026-11-05 | Atalho no celular: ícones PNG 192/512 (e maskable) no manifest, que o Chrome do Android exige para instalar; eixo do gráfico sem vendas não repete mais "R$ 1" |
 | 1.0.3 | 2026-11-05 | Manifest sem o campo `id` (igual à Oficina): a troca de identidade do app deixava o Android achar que ele já estava instalado e não abrir. Não colocar `id` de volta, nem mudar `start_url`, sem desinstalar o app dos aparelhos |
+| 1.0.4 | 2026-11-05 | Endereço novo: repositório renomeado para `impressao-3d` (site `/impressao-3d/painel.html`), para o Android instalar o app do zero, sem o registro quebrado do endereço antigo |

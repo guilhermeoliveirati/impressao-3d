@@ -459,7 +459,7 @@ const norm=s=>String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase(
 const soma=(L,f)=>L.reduce((s,x)=>s+(+f(x)||0),0);
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.0.3";
+const VERSAO="1.0.4";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
