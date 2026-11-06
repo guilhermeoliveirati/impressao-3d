@@ -5,7 +5,7 @@ Os dados ficam no arquivo `dados.json` (Google Drive › Meu Drive › Impressor
 
 ## Como abrir
 
-- **Computador (Chrome/Edge):** abrir `painel.html` direto de `H:Meu DriveImpressora 3D` e escolher o `dados.json` na primeira vez.
+- **Computador (Chrome/Edge):** abrir `painel.html` direto de `H:\Meu Drive\Impressora 3D` e escolher o `dados.json` na primeira vez.
 - **Tablet/celular:** abrir o endereço do GitHub Pages, tocar em "Abrir pelo Google Drive" e escolher o `dados.json` na primeira vez.
 
 ## Primeiros passos
