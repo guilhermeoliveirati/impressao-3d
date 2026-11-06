@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#1d2330">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icone-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -458,7 +459,7 @@ const norm=s=>String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase(
 const soma=(L,f)=>L.reduce((s,x)=>s+(+f(x)||0),0);
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.0.1";
+const VERSAO="1.0.2";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -744,7 +745,7 @@ function chart(id,type,data,opts={}){
   charts[id]?.destroy();
   const base={responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},
     plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${brl0(c.raw)}`}}},
-    scales:type==="doughnut"?{}:{y:{ticks:{callback:v=>brl0(v)},grid:{color:"#eef0f3"}},x:{grid:{display:false}}}};
+    scales:type==="doughnut"?{}:{y:{beginAtZero:true,suggestedMax:100,ticks:{callback:v=>brl0(v)},grid:{color:"#eef0f3"}},x:{grid:{display:false}}}};
   charts[id]=new Chart(el,{type,data,options:{...base,...opts,plugins:{...base.plugins,...opts.plugins}}});
 }
 
