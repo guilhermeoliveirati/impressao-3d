@@ -30,7 +30,10 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
 4. Interface em **português do Brasil**, letras em `rem`, **sem CSS `zoom`**, valores com `brl()`.
 5. A venda **nunca é salva sozinha**: voz/Gemini só preenchem o formulário.
 6. Antes de mexer no `dados.json` por fora do painel, fazer cópia de segurança.
-7. `localStorage` usa o prefixo `p3d.` e o IndexedDB se chama `painel-3d`, para não misturar com a Oficina se os dois
+7. **Toda versão ganha uma entrada no topo de `NOVIDADES`** (em `painel.html`), em linguagem simples, com `novo`
+   (o que mudou) e `uso` (como usar). O painel mostra essa janela uma vez em cada aparelho depois da atualização.
+   Se a mudança criar ou mudar um passo do uso básico, atualizar também `PASSOS` (o passo a passo do primeiro acesso).
+8. `localStorage` usa o prefixo `p3d.` e o IndexedDB se chama `painel-3d`, para não misturar com a Oficina se os dois
    ficarem no mesmo endereço do GitHub Pages.
 
 ## Formato do `dados.json`
@@ -77,6 +80,12 @@ A tabela "Preço por forma de pagamento" mostra o preço para receber o mesmo qu
 **Despesas**: compra de filamento **não** é despesa (já entra no custo de cada venda). Fixas copiáveis: MEI, Aluguel, Internet.
 **Dízimo e Resumo**: mesmas regras da Oficina; o item automático se chama "Impressão 3D" (= lucro − despesas do mês).
 
+## Boas-vindas e novidades (desde 1.1.0)
+
+- **Primeiro acesso** em cada aparelho: janela com o passo a passo (`PASSOS`): custos em Config → Produtos → Vendas → Despesas → Geral/Resumo.
+- **Depois de cada atualização**: janela com as entradas de `NOVIDADES` mais novas que a última versão vista no aparelho.
+- Guardado só no aparelho: `p3d.passosVistos` e `p3d.versaoVista`. Rever a qualquer hora: Config › Ajuda, ou tocando na versão no rodapé.
+
 ## Abas
 
 Geral (KPIs, gráfico mensal, produtos mais vendidos, formas de pagamento, mapa mês × ano, fechamento) ·
@@ -112,3 +121,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.0.2 | 2026-11-05 | Atalho no celular: ícones PNG 192/512 (e maskable) no manifest, que o Chrome do Android exige para instalar; eixo do gráfico sem vendas não repete mais "R$ 1" |
 | 1.0.3 | 2026-11-05 | Manifest sem o campo `id` (igual à Oficina): a troca de identidade do app deixava o Android achar que ele já estava instalado e não abrir. Não colocar `id` de volta, nem mudar `start_url`, sem desinstalar o app dos aparelhos |
 | 1.0.4 | 2026-11-05 | Endereço novo: repositório renomeado para `impressao-3d` (site `/impressao-3d/painel.html`), para o Android instalar o app do zero, sem o registro quebrado do endereço antigo |
+| 1.1.0 | 2026-11-06 | Passo a passo no primeiro acesso e janela de novidades a cada versão (o que mudou + como usar); Config › Ajuda e versão no rodapé abrem as duas. Regra: toda versão ganha entrada em `NOVIDADES` |

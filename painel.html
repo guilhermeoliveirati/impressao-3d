@@ -153,6 +153,28 @@ table.resumo tr.final td{font-size:1.286rem;font-weight:700;border-top:2px solid
 #sResultado{position:sticky;top:70px}
 .cfgtab input{min-height:38px;padding:6px 8px;width:100%}
 .cfgtab td{padding:4px}
+/* Janela de boas-vindas (passo a passo) e de novidades */
+#modal{position:fixed;inset:0;z-index:50;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+#modal[hidden]{display:none}
+#modal .caixa{background:#fff;border-radius:20px;max-width:520px;width:100%;max-height:90vh;overflow:auto;padding:22px 22px 18px;box-shadow:0 20px 50px rgba(15,23,42,.35);position:relative}
+#modal .fechar{position:absolute;top:10px;right:10px;border:0;background:#f1f5f9;border-radius:50%;width:34px;height:34px;font-size:1.1rem;cursor:pointer;color:#475569}
+#modal .grande{font-size:3rem;line-height:1;text-align:center;margin:6px 0 10px}
+#modal h2{font-size:1.3rem;margin:0 0 10px;text-align:center}
+#modal .texto{font-size:1.02rem;line-height:1.55;color:#334155}
+#modal .texto ol,#modal .texto ul{padding-left:20px;margin:8px 0}
+#modal .texto li{margin:4px 0}
+#modal .pontos{display:flex;gap:6px;justify-content:center;margin:16px 0 12px}
+#modal .pontos i{width:8px;height:8px;border-radius:50%;background:#ddd6fe}
+#modal .pontos i.on{background:var(--acc);width:22px;border-radius:4px}
+#modal .botoes{display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+#modal .botoes .dir{display:flex;gap:8px;margin-left:auto}
+.novidade{border:1px solid #ede9fe;background:#faf8ff;border-radius:14px;padding:12px 14px;margin-bottom:10px}
+.novidade .ver{font-size:.75rem;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:.04em}
+.novidade h3{margin:2px 0 8px;font-size:1.02rem}
+.novidade .par{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;margin:6px 0;font-size:.95rem}
+.novidade .par b{color:#475569}
+#rodape a{color:inherit}
+@media (max-width:900px){#modal{align-items:flex-end;padding:0}#modal .caixa{border-radius:20px 20px 0 0;max-height:88vh;padding-bottom:28px}}
 </style>
 </head>
 <body>
@@ -416,6 +438,12 @@ table.resumo tr.final td{font-size:1.286rem;font-weight:700;border-top:2px solid
         <label>Chave da API da Gemini<input id="cfgGemini" type="password" autocomplete="off" placeholder="cole aqui a chave da Gemini"></label>
         <div class="row" style="margin-top:8px"><button class="btn sec2" id="cfgGemTestar">Testar chave</button><span class="muted" id="cfgGemMsg"></span></div>
         <p class="muted">A chave fica guardada no dados.json, no seu Google Drive. Não vai para o GitHub.</p></div>
+      <div class="card"><h2>❓ Ajuda</h2>
+        <div class="row">
+          <button class="btn" id="ajPassos">👋 Ver passo a passo</button>
+          <button class="btn sec2" id="ajNovidades">✨ Ver todas as novidades</button>
+        </div>
+        <p class="muted">O passo a passo explica como usar o painel do começo. As novidades mostram o que mudou em cada versão e como usar.</p></div>
       <div class="card"><h2>Tamanho da letra</h2>
         <div class="row" id="cfgFonte"></div>
         <p class="muted">Vale só para este aparelho.</p></div>
@@ -434,7 +462,8 @@ table.resumo tr.final td{font-size:1.286rem;font-weight:700;border-top:2px solid
 </section>
 </main>
 
-<footer id="rodape">Criado por Guilherme Oliveira | Versão <span id="versao"></span></footer>
+<footer id="rodape">Criado por Guilherme Oliveira | <a href="#" id="linkNovidades" title="Ver as novidades">Versão <span id="versao"></span></a></footer>
+<div id="modal" hidden><div class="caixa" role="dialog" aria-modal="true"><button class="fechar" id="mFechar" aria-label="Fechar">✕</button><div id="mConteudo"></div></div></div>
 
 <script>
 const MESES=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
@@ -459,7 +488,7 @@ const norm=s=>String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase(
 const soma=(L,f)=>L.reduce((s,x)=>s+(+f(x)||0),0);
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.0.4";
+const VERSAO="1.1.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1293,6 +1322,7 @@ function iniciar(){
   $("#vMes").value=mesAtual;$("#dMes").value=mesAtual;$("#zMes").value=mesAtual;$("#rMes").value=mesAtual;
   fD.data.value=hoje();
   limparVenda();limparProduto();render();
+  setTimeout(mostrarAvisos,400);
 }
 function render(){
   if(!D)return;
@@ -1303,6 +1333,98 @@ function render(){
   const s=document.querySelector(".sec.on").id;
   ({"s-geral":renderGeral,"s-vendas":renderVendas,"s-produtos":renderProdutos,"s-despesas":renderDesp,"s-clientes":renderClientes,"s-dizimo":renderDizimo,"s-resumo":renderResumo,"s-config":renderConfig})[s]();
 }
+
+/* ---------- boas-vindas e novidades ----------
+   REGRA DO PROJETO: toda versão nova ganha uma entrada no TOPO de NOVIDADES, em linguagem simples,
+   com "novo" (o que mudou) e "uso" (como usar). Correções internas sem efeito na tela também entram,
+   dizendo o que melhorou para quem usa. Ver MEMORIA.md › Regras.
+   - Primeiro acesso no aparelho: mostra o passo a passo (PASSOS).
+   - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
+   Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
+const NOVIDADES=[
+  {v:"1.1.0",data:"2026-11-06",titulo:"Passo a passo e novidades",itens:[
+    {novo:"Na primeira vez que o painel abre em um aparelho, aparece um passo a passo explicando como usar.",
+     uso:"Ele aparece sozinho. Para ver de novo: Config › Ajuda › Ver passo a passo."},
+    {novo:"A cada melhoria do painel, aparece esta janela contando o que mudou e como usar.",
+     uso:"Aparece uma vez depois de cada atualização. Para rever todas: Config › Ajuda › Ver todas as novidades, ou toque na versão no rodapé."}]},
+  {v:"1.0.4",data:"2026-11-05",titulo:"Endereço novo do painel",itens:[
+    {novo:"O painel passou para guilhermeoliveirati.github.io/impressao-3d/painel.html.",
+     uso:"Use o app instalado na tela inicial. O endereço antigo não abre mais."}]},
+  {v:"1.0.2",data:"2026-11-05",titulo:"Instalar no celular",itens:[
+    {novo:"O painel pode ser instalado como app no celular, com o ícone do cubo roxo.",
+     uso:"No Chrome do celular: menu ⋮ › Adicionar à tela inicial › Instalar."}]},
+  {v:"1.0.0",data:"2026-11-05",titulo:"Primeira versão",itens:[
+    {novo:"Calculadora de custo e preço das peças, vendas com vários produtos, despesas, clientes, dízimo e resumo do mês.",
+     uso:"Comece pelo passo a passo: Config › Ajuda › Ver passo a passo."}]}
+];
+const PASSOS=[
+  {ico:"👋",titulo:"Bem-vindo ao Painel Impressão 3D",texto:`<p>Aqui você descobre <b>quanto custa</b> cada peça que imprime, <b>por quanto vender</b>, lança as <b>vendas</b> e vê o <b>lucro do mês</b>.</p>
+    <p>Tudo fica salvo sozinho no seu Google Drive e aparece igual no computador e no celular.</p><p>Veja em 5 passos como usar.</p>`},
+  {ico:"⚙️",titulo:"1. Ajuste seus custos",aba:"config",texto:`<p>Na aba <b>Config</b>, preencha uma vez só:</p><ol>
+    <li><b>Energia</b>: o preço do kWh da sua conta de luz.</li>
+    <li><b>Mão de obra</b>: quanto vale uma hora do seu trabalho.</li>
+    <li><b>Impressoras</b>: potência, quanto pagou e vida útil.</li>
+    <li><b>Filamentos</b>: cada cor com o preço do kg.</li></ol>`},
+  {ico:"🧊",titulo:"2. Cadastre seus produtos",aba:"produtos",texto:`<p>Na aba <b>Produtos</b>, para cada peça:</p><ol>
+    <li>Digite o <b>nome</b> e escolha a impressora.</li>
+    <li>Coloque o <b>tempo</b> e os <b>gramas</b> que o fatiador mostra.</li>
+    <li>Diga quantas <b>peças saem por impressão</b>.</li></ol>
+    <p>Ao lado aparecem o <b>custo por peça</b>, o <b>preço sugerido</b> e o lucro. Toque em <b>Salvar produto</b>.</p>`},
+  {ico:"🧾",titulo:"3. Lance cada venda",aba:"vendas",texto:`<p>Na aba <b>Vendas</b>:</p><ol>
+    <li>Digite o <b>cliente</b>.</li>
+    <li>Escolha o <b>produto</b> e a <b>quantidade</b>: preço e custo vêm sozinhos.</li>
+    <li>Toque na <b>forma de pagamento</b> e em <b>Salvar venda</b>.</li></ol>
+    <p>Dica: com a chave da Gemini em Config, dá para <b>🎤 falar a venda</b>.</p>`},
+  {ico:"💸",titulo:"4. Lance as despesas",aba:"despesas",texto:`<p>Na aba <b>Despesas</b>, coloque os gastos do mês: MEI, embalagens, manutenção da impressora…</p>
+    <p>A compra de filamento <b>não</b> entra aqui, porque já é descontada em cada venda.</p>`},
+  {ico:"📈",titulo:"5. Acompanhe o resultado",aba:"geral",texto:`<ul>
+    <li><b>Geral</b>: faturamento, lucro e produtos mais vendidos.</li>
+    <li><b>Resumo</b>: lucro − despesas − dízimo = lucro líquido do mês.</li>
+    <li><b>Vendas › Exportar</b>: planilha Excel do mês.</li></ul>`},
+  {ico:"✅",titulo:"Pronto!",texto:`<p>Você já pode começar. Os exemplos que vieram em Produtos podem ser editados ou apagados.</p>
+    <p>Para ver este passo a passo de novo: <b>Config › Ajuda</b>.</p>`}
+];
+const cmpVer=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return(x[i]||0)-(y[i]||0)}return 0};
+function abrirModal(html){$("#mConteudo").innerHTML=html;$("#modal").hidden=false;$("#modal .caixa").scrollTop=0}
+function fecharModal(){$("#modal").hidden=true;LS.set("versaoVista",VERSAO)}
+$("#mFechar").onclick=()=>{if(passoAtual!=null)LS.set("passosVistos",true);passoAtual=null;fecharModal()};
+$("#modal").addEventListener("click",e=>{if(e.target.id==="modal")$("#mFechar").click()});
+let passoAtual=null;
+function mostrarPasso(i){
+  passoAtual=i;const p=PASSOS[i],ult=i===PASSOS.length-1;
+  abrirModal(`<div class="grande">${p.ico}</div><h2>${p.titulo}</h2><div class="texto">${p.texto}</div>
+    <div class="pontos">${PASSOS.map((_,j)=>`<i class="${j===i?"on":""}"></i>`).join("")}</div>
+    <div class="botoes">${i?`<button class="btn sec2" id="pVoltar">‹ Voltar</button>`:`<button class="btn sec2" id="pPular">Pular</button>`}
+      <div class="dir">${p.aba?`<button class="btn sec2" id="pAba">Abrir ${p.aba==="geral"?"Geral":p.aba[0].toUpperCase()+p.aba.slice(1)}</button>`:""}
+      <button class="btn" id="pProx">${ult?"Começar":i?"Próximo ›":"Começar o passo a passo ›"}</button></div></div>`);
+  $("#pVoltar")&&($("#pVoltar").onclick=()=>mostrarPasso(i-1));
+  $("#pPular")&&($("#pPular").onclick=()=>$("#mFechar").click());
+  $("#pAba")&&($("#pAba").onclick=()=>{$("#mFechar").click();document.querySelector(`#nav [data-s=${p.aba}]`).click()});
+  $("#pProx").onclick=()=>ult?$("#mFechar").click():mostrarPasso(i+1);
+}
+function cartaoNovidade(n){
+  return`<div class="novidade"><div class="ver">Versão ${n.v} · ${fmtData(n.data)}</div><h3>${esc(n.titulo)}</h3>`+
+    n.itens.map(x=>`<div class="par"><b>O que mudou</b><span>${esc(x.novo)}</span><b>Como usar</b><span>${esc(x.uso)}</span></div>`).join("")+`</div>`;
+}
+function mostrarNovidades(lista,titulo){
+  passoAtual=null;
+  abrirModal(`<div class="grande">✨</div><h2>${titulo}</h2>${lista.map(cartaoNovidade).join("")}
+    <div class="botoes"><button class="btn sec2" id="nPassos">👋 Ver passo a passo</button><div class="dir"><button class="btn" id="nOk">Entendi</button></div></div>`);
+  $("#nOk").onclick=fecharModal;
+  $("#nPassos").onclick=()=>mostrarPasso(0);
+}
+// Ao abrir o painel: 1º acesso no aparelho → passo a passo; senão, novidades que este aparelho ainda não viu.
+function mostrarAvisos(){
+  if(!$("#modal").hidden)return;
+  if(!LS.get("passosVistos")){mostrarPasso(0);return}
+  const vista=LS.get("versaoVista")||"0.0.0";
+  const novas=NOVIDADES.filter(n=>cmpVer(n.v,vista)>0&&cmpVer(n.v,VERSAO)<=0);
+  if(novas.length)mostrarNovidades(novas,novas.length>1?"Novidades do painel":`Novidades da versão ${novas[0].v}`);
+  else LS.set("versaoVista",VERSAO);
+}
+$("#ajPassos").onclick=()=>mostrarPasso(0);
+$("#ajNovidades").onclick=()=>mostrarNovidades(NOVIDADES,"Todas as novidades");
+$("#linkNovidades").onclick=e=>{e.preventDefault();mostrarNovidades(NOVIDADES,"Todas as novidades")};
 </script>
 </body>
 </html>
