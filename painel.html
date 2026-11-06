@@ -172,7 +172,7 @@ table.resumo tr.final td{font-size:1.286rem;font-weight:700;border-top:2px solid
 
 <div id="gate" class="card">
   <h2>Abrir os dados</h2>
-  <p class="orienta">Os dados ficam no arquivo <b>dados.json</b>, na pasta do painel no Google Drive. Ele é salvo automaticamente a cada alteração, e o Google Drive faz o backup.</p>
+  <p class="orienta">Os dados ficam no arquivo <b>dados.json</b>, na pasta Meu Drive › Impressora 3D. Ele é salvo automaticamente a cada alteração, e o Google Drive faz o backup.</p>
   <div class="row" style="justify-content:center">
     <button class="btn" id="btnReabrir" style="display:none">Continuar com dados.json</button>
     <button class="btn" id="btnAbrir">📁 Escolher dados.json deste computador…</button>
@@ -458,7 +458,7 @@ const norm=s=>String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase(
 const soma=(L,f)=>L.reduce((s,x)=>s+(+f(x)||0),0);
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.0.0";
+const VERSAO="1.0.1";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -523,7 +523,7 @@ async function escolherNoDrive(){
   return new Promise((ok,err)=>{
     const view=new google.picker.DocsView(google.picker.ViewId.DOCS).setMimeTypes("application/json").setIncludeFolders(true).setMode(google.picker.DocsViewMode.LIST);
     new google.picker.PickerBuilder().addView(view).setOAuthToken(gToken.t).setDeveloperKey(GOOGLE.apiKey).setAppId(GOOGLE.appId)
-      .setTitle("Escolha o dados.json do Painel Impressão 3D").setLocale("pt-BR")
+      .setTitle("Escolha o dados.json (Meu Drive › Impressora 3D)").setLocale("pt-BR")
       .setCallback(d=>{if(d.action===google.picker.Action.PICKED)ok(d.docs[0]);else if(d.action===google.picker.Action.CANCEL)err(new Error("nenhum arquivo escolhido"))})
       .build().setVisible(true);
   });

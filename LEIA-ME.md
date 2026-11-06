@@ -1,11 +1,11 @@
 # Painel Impressão 3D
 
 Painel para calcular custo e preço das peças impressas, lançar vendas, despesas e dízimo, com histórico e gráficos.
-Os dados ficam no arquivo `dados.json` (pasta do painel no Google Drive), que **não** vai para o GitHub.
+Os dados ficam no arquivo `dados.json` (Google Drive › Meu Drive › Impressora 3D), que **não** vai para o GitHub.
 
 ## Como abrir
 
-- **Computador (Chrome/Edge):** abrir `painel.html` direto da pasta do Drive e escolher o `dados.json` na primeira vez.
+- **Computador (Chrome/Edge):** abrir `painel.html` direto de `H:Meu DriveImpressora 3D` e escolher o `dados.json` na primeira vez.
 - **Tablet/celular:** abrir o endereço do GitHub Pages, tocar em "Abrir pelo Google Drive" e escolher o `dados.json` na primeira vez.
 
 ## Primeiros passos

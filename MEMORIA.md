@@ -11,9 +11,12 @@ e existe a aba **Produtos**, que calcula o custo de produção e o preço de ven
 
 ## Onde fica
 
-- Código: pasta `Documents/IA/Impressora 3D/Painel` (repositório git) e GitHub `guilhermeoliveirati/painel-impressao-3d` (público, branch `main`).
+Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva o código.
+
+- Pasta: `Meu Drive/Impressora 3D` do Google Drive da conta do projeto (no computador, `H:\Meu Drive\Impressora 3D`). É o repositório git.
+- Código: GitHub `guilhermeoliveirati/painel-impressao-3d` (público, branch `main`).
 - Site: `https://guilhermeoliveirati.github.io/painel-impressao-3d/painel.html` (GitHub Pages, `git push` publica em ~1 minuto).
-- Dados: `dados.json` **só** no Google Drive da conta do projeto, compartilhado por todos os aparelhos. Nunca no git.
+- Dados: `dados.json` nessa pasta do Drive, compartilhado por todos os aparelhos (computador abre pela pasta, tablet/celular pelo Google Drive). Nunca no git.
 
 ## Regras obrigatórias (iguais às da Oficina)
 
@@ -103,3 +106,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | Versão | Data | Mudança |
 |---|---|---|
 | 1.0.0 | 2026-11-05 | Primeiro modelo, a partir do Painel da Oficina 1.9.7: aba Produtos (custo de filamento, energia, desgaste, perdas, mão de obra, extras; preço sugerido e por forma de pagamento), vendas com vários itens e custo gravado, impressoras e filamentos em Config, Geral com produtos mais vendidos |
+| 1.0.1 | 2026-11-05 | Código e dados passam para a pasta Meu Drive › Impressora 3D (Drive da conta do projeto); tela de abertura e seletor do Drive indicam essa pasta |
