@@ -27,7 +27,12 @@ nav button{background:transparent;border:0;color:#cbd5e1;padding:8px 12px;border
 nav button.on{background:#334155;color:#fff}
 nav button .ico{margin-right:4px}
 @media (max-width:900px){
-  header{position:fixed;top:auto;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(10,1fr);
+  nav button.extra{display:none}
+  header #maisBtn{display:flex}
+  header #maisMenu:not([hidden]){display:flex;flex-direction:column;gap:4px;position:fixed;right:8px;bottom:78px;background:#1d2330;border-radius:14px;padding:8px;box-shadow:0 8px 24px rgba(15,23,42,.35);z-index:7}
+  #maisMenu button{background:transparent;border:0;color:#e2e8f0;font:inherit;font-size:.95rem;padding:10px 16px;text-align:left;border-radius:10px;cursor:pointer}
+  #maisMenu button.on{background:#334155;color:#fff}
+  header{position:fixed;top:auto;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(8,1fr);
     padding:6px 4px 8px;gap:1px;box-shadow:0 -4px 14px rgba(15,23,42,.18)}
   nav{display:contents}
   nav button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;border-radius:12px;font-size:.6rem;letter-spacing:-.01em}
@@ -96,6 +101,14 @@ table.resumo tr.parcial td{background:#f8fafc;font-weight:600}
 table.resumo td{white-space:normal}table.resumo td.n{white-space:nowrap}
 table.resumo tr.sec td{padding-top:16px;font-size:.8rem;color:var(--mut);text-transform:uppercase;font-weight:700;letter-spacing:.03em;border-bottom:1px solid var(--brd)}
 table.contas td{vertical-align:middle}table.contas tr.pago td{color:var(--mut)}table.contas tr.pago td.v{text-decoration:line-through}
+.pcard.atrasado{border-color:#fca5a5}
+.pedit{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0}
+.pedit label{font-size:.75rem;min-width:0}.pedit label:first-child{grid-column:1/-1}
+.pedit input,.pedit select{min-height:34px;padding:4px 8px;font-size:.9rem;width:100%}
+.metaBar{height:12px;background:#ede9fe;border-radius:99px;overflow:hidden;margin:8px 0}
+.metaBar i{display:block;height:100%;background:var(--acc);border-radius:99px}
+.metaBar.ok i{background:var(--ok)}
+#maisBtn,#maisMenu{display:none}
 .saldoKpis{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
 .saldoKpis span{background:#f8fafc;border:1px solid var(--brd);border-radius:10px;padding:6px 10px;font-size:.9rem}
 .saldoKpis b.pos{color:var(--ok)}.saldoKpis b.neg{color:var(--bad)}
@@ -217,12 +230,18 @@ nav .ct{display:none}
     <button data-s="producao"><span class="ico">🏭</span><span class="txt"><span class="lg">Produção</span><span class="ct">Fila</span></span></button>
     <button data-s="vendas"><span class="ico">🧾</span><span class="txt">Vendas</span></button>
     <button data-s="produtos"><span class="ico">🧊</span><span class="txt">Produtos</span></button>
-    <button data-s="estoque"><span class="ico">🧵</span><span class="txt">Estoque</span></button>
+    <button data-s="estoque" class="extra"><span class="ico">🧵</span><span class="txt">Estoque</span></button>
     <button data-s="despesas"><span class="ico">💸</span><span class="txt">Despesas</span></button>
-    <button data-s="clientes"><span class="ico">👥</span><span class="txt">Clientes</span></button>
+    <button data-s="clientes" class="extra"><span class="ico">👥</span><span class="txt">Clientes</span></button>
     <button data-s="resumo"><span class="ico">📈</span><span class="txt">Resumo</span></button>
-    <button data-s="config"><span class="ico">⚙️</span><span class="txt">Config</span></button>
+    <button data-s="config" class="extra"><span class="ico">⚙️</span><span class="txt">Config</span></button>
+    <button id="maisBtn" type="button" aria-expanded="false"><span class="ico">☰</span><span class="txt">Mais</span></button>
   </nav>
+  <div id="maisMenu" hidden>
+    <button type="button" data-ir="estoque">🧵 Estoque</button>
+    <button type="button" data-ir="clientes">👥 Clientes</button>
+    <button type="button" data-ir="config">⚙️ Config</button>
+  </div>
   <span id="status">sem dados</span>
   <button class="btn sm" id="reconectar" style="display:none;background:#fbbf24;color:#1d2330">Entrar no Google de novo</button>
 </header>
@@ -253,9 +272,11 @@ nav .ct{display:none}
     <span class="muted" id="gObs"></span>
   </div>
   <div class="infobox" id="gAlerta" hidden style="margin-bottom:12px;background:#fef2f2;border-color:#fecaca"></div>
+  <div class="infobox" id="gReceber" hidden style="margin-bottom:12px"></div>
+  <div class="card" id="gMeta"></div>
   <div class="kpis" id="gKpis"></div>
   <div class="card"><h2>⚖️ No positivo ou no negativo?</h2>
-    <p class="muted" style="margin-top:0">Sobra de cada mês = lucro das vendas − outras despesas − parcelas. Barra verde: mês positivo; vermelha: negativo. A linha mostra o saldo acumulado desde o começo.</p>
+    <p class="muted" style="margin-top:0">Sobra de cada mês = lucro das vendas − outras despesas − parcelas ainda não pagas. Barra verde: mês positivo; vermelha: negativo. A linha mostra o saldo acumulado desde o começo.</p>
     <div class="saldoKpis" id="gSaldo"></div>
     <div class="chart"><canvas id="cSaldo"></canvas></div></div>
   <div class="card"><h2>📊 Faturamento e lucro por mês</h2><div class="chart"><canvas id="cMes"></canvas></div></div>
@@ -277,6 +298,7 @@ nav .ct{display:none}
       <label style="grid-column:1/-1">Cliente<span class="campoBtn"><select name="cliente" id="oCli" required></select><button type="button" class="btn sm sec2" id="oNovoCli" title="Cadastrar cliente novo">＋ Novo</button></span></label>
       <label>Data<input name="data" type="date" required></label>
       <label>Validade (dias)<input name="validade" type="number" min="1" step="1" value="7"></label>
+      <label>Entregar até <span class="muted">(opcional)</span><input name="prazo" type="date"></label>
       <div style="grid-column:1/-1">
         <div id="oItens"></div>
         <div class="row" style="margin-top:8px;justify-content:space-between">
@@ -333,6 +355,7 @@ nav .ct{display:none}
       <label>Frete / entrega cobrado (R$) <span class="muted">já incluso no valor cobrado</span><input name="frete" type="number" step="0.01" min="0" value="0"></label>
       <label style="display:none">Pagamento<select name="metodo" id="selMetodo"></select></label>
       <div class="chips" id="vChips" style="grid-column:1/-1"></div>
+      <label style="grid-column:1/-1;flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="recebido" checked style="min-height:0;width:20px;height:20px"> Já recebi tudo do cliente <span class="muted">(desmarque se ele ainda vai pagar)</span></label>
       <div id="vInfoLinha" style="grid-column:1/-1;display:flex;gap:8px;align-items:center;cursor:pointer;color:var(--acc);font-weight:600">
         <button type="button" class="info" id="vInfoBtn" aria-expanded="false">i</button><span>Como o lucro é calculado</span>
       </div>
@@ -424,12 +447,11 @@ nav .ct{display:none}
       <label>Descrição<input name="descricao"></label>
       <label>Valor (R$)<input name="valor" type="number" step="0.01" min="0" required></label>
       <label style="flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="pago" checked style="min-height:0;width:20px;height:20px"> Já está pago</label>
+      <label style="flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="repete" style="min-height:0;width:20px;height:20px"> 🔁 Repetir todo mês</label>
       <div class="row"><button class="btn" type="submit">Salvar</button><button class="btn sec2" type="button" id="dCancelar">Limpar</button></div>
     </form>
-    <div class="row" style="margin-top:10px">
-      <button class="btn sec2" id="dCopiar">Copiar despesas fixas do mês anterior</button>
-      <span class="muted">Copia as despesas de categoria fixa (MEI, Aluguel, Internet) do mês anterior para o mês escolhido abaixo.</span>
-    </div>
+    <p class="muted">Conta que vem todo mês (MEI, aluguel, internet…)? Marque <b>🔁 Repetir todo mês</b>: ela aparece sozinha nos meses seguintes, como “a pagar”.
+      Para parar, edite a do último mês e desmarque.</p>
     <p class="muted">Compra de filamento <b>não</b> entra aqui: o custo do filamento já sai do lucro de cada venda (aba Produtos).</p>
   </div>
   <div class="card">
@@ -548,6 +570,7 @@ nav .ct{display:none}
       <label>Mão de obra (R$ por hora)<input data-c="maoDeObraHora" type="number" step="0.5" min="0"></label>
       <label>Perda / falhas padrão (%)<input data-c="falhaPct" type="number" step="1" min="0"></label>
       <label>Margem de lucro padrão (%)<input data-c="margemPct" type="number" step="1" min="0"></label>
+      <label>Quanto quero sobrar por mês (R$)<input data-c="metaSobra" type="number" step="10" min="0"></label>
       <label>Arredondar preço sugerido<select data-c="arredondar">
         <option value="nao">Não arredondar</option><option value="1">Para cima, R$ 1</option><option value="90">Terminar em ,90</option><option value="5">Para cima, R$ 5</option></select></label>
     </form>
@@ -623,7 +646,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.9.0";
+const VERSAO="1.10.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -793,23 +816,32 @@ const TAXAS_PADRAO={"Dinheiro":0,"Pix":0,"Débito":0.0137,"Crédito 1x":0.0315,"
 function normalizar(){
   D.versao??=1;D.proximoId??=1;
   D.taxas??={...TAXAS_PADRAO};
-  D.config={energiaKwh:0.95,maoDeObraHora:25,falhaPct:10,margemPct:100,arredondar:"90",estoqueMinimoG:200,...(D.config||{})};
+  D.config={energiaKwh:0.95,maoDeObraHora:25,falhaPct:10,margemPct:100,arredondar:"90",estoqueMinimoG:200,metaSobra:0,...(D.config||{})};
   for(const k of ["impressoras","filamentos","produtos","clientes","orcamentos","vendas","despesas","parcelamentos","estoque"])D[k]??=[];
   delete D.dizimos; // o dízimo saiu do painel na 1.5.0
   D.proximoCliente??=1;
   D.impressoras.forEach(i=>i.preparoMin??=7);
   // desde 1.8.0 cada venda lança seus gastos de produção em Despesas (vendaId); vendas antigas ganham os lançamentos uma vez
-  D.vendas.forEach(v=>{if(!D.despesas.some(d=>d.vendaId===v.id))despesasDaVenda(v)}); // aquecer e calibrar antes de cada impressão (Bambu A1: ~7 min)
+  D.vendas.forEach(v=>{if(!D.despesas.some(d=>d.vendaId===v.id))despesasDaVenda(v)});
+  gerarRecorrentes(); // contas que se repetem todo mês // aquecer e calibrar antes de cada impressão (Bambu A1: ~7 min)
   // clientes que só existiam pelo nome em vendas/orçamentos entram no cadastro (sem telefone)
   [...D.vendas,...D.orcamentos].sort((a,b)=>a.data.localeCompare(b.data)).forEach(x=>{if(x.cliente&&!clientePorNome(x.cliente))novoCliente(x.cliente)});
 }
 
 /* ---------- navegação ---------- */
+// No celular, Estoque, Clientes e Config ficam no botão "Mais" (☰), para caber o menu de baixo.
 $("#nav").onclick=e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.id==="maisBtn"){const m=$("#maisMenu");m.hidden=!m.hidden;b.setAttribute("aria-expanded",!m.hidden);return}
+  $("#maisMenu").hidden=true;
   document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("on",x===b));
+  $("#maisBtn").classList.toggle("on",b.classList.contains("extra"));
+  document.querySelectorAll("#maisMenu button").forEach(x=>x.classList.toggle("on",x.dataset.ir===b.dataset.s));
   document.querySelectorAll(".sec").forEach(s=>s.classList.toggle("on",s.id==="s-"+b.dataset.s));
   render();scrollTo({top:0});
 };
+
+$("#maisMenu").onclick=e=>{const a=e.target.closest("button")?.dataset.ir;if(a)document.querySelector(`#nav [data-s=${a}]`).click()};
+document.addEventListener("click",e=>{if(!e.target.closest("#maisMenu,#maisBtn"))$("#maisMenu").hidden=true});
 
 /* ---------- custo do produto ----------
    Custo de UMA impressão:
@@ -861,10 +893,13 @@ const contaTempo=c=>c.tPeca==null?"":`<div class="calc" style="margin-bottom:8px
 const qtdItens=v=>soma(v.itens||[],x=>x.qtd);
 function agregar(){
   const m={};
-  const get=k=>m[k]??={fat:0,lucro:0,taxa:0,custo:0,pecas:0,n:0,desp:0,parc:0};
+  const get=k=>m[k]??={fat:0,lucro:0,taxa:0,custo:0,pecas:0,n:0,desp:0,parc:0,parcPago:0};
   for(const v of D.vendas){const a=get(v.data.slice(0,7));a.fat+=v.cobrado;a.lucro+=v.lucro;a.taxa+=v.taxa;a.custo+=v.custo||0;a.pecas+=qtdItens(v);a.n++}
   for(const d of D.despesas){if(!d.vendaId)get(d.data.slice(0,7)).desp+=d.valor} // gastos de produção (vendaId) já estão no custo de cada venda
-  for(const pc of D.parcelamentos)for(let i=0;i<pc.parcelas;i++)get(mesMais(pc.inicio,i)).parc+=r2(pc.total/pc.parcelas); // parcela inteira (todas as pessoas)
+  // parcelas: parc = partes ainda NÃO pagas (descontam da sobra); parcPago = partes já marcadas ✓ (só informativo).
+  // Parcelamento de material (filamento) fica fora: o filamento já está no custo de produção das vendas.
+  for(const pc of D.parcelamentos){if(pc.material)continue;const parte=pc.total/pc.parcelas/pc.pessoas.length;
+    for(let i=0;i<pc.parcelas;i++){const k=mesMais(pc.inicio,i),a=get(k);pc.pessoas.forEach((_,j)=>{pc.pagos?.[k]?.[j]?a.parcPago+=parte:a.parc+=parte})}}
   return m;
 }
 const anos=()=>[...new Set([...D.vendas.map(v=>+v.data.slice(0,4)),+hoje().slice(0,4)])].sort();
@@ -876,11 +911,24 @@ function renderGeral(){
   const ano=+sel.value, ant=ano-1;
   const mesesAno=Object.keys(M).filter(k=>k.startsWith(ano)).map(k=>+k.slice(5));
   const ult=Math.max(...mesesAno,0)||12;
-  const somaAno=(a,ateMes)=>{const t={fat:0,lucro:0,taxa:0,n:0,desp:0,custo:0,pecas:0,parc:0};for(let i=1;i<=ateMes;i++){const x=M[`${a}-${String(i).padStart(2,"0")}`];if(x)for(const k in t)t[k]+=x[k]}return t};
+  const somaAno=(a,ateMes)=>{const t={fat:0,lucro:0,taxa:0,n:0,desp:0,custo:0,pecas:0,parc:0,parcPago:0};for(let i=1;i<=ateMes;i++){const x=M[`${a}-${String(i).padStart(2,"0")}`];if(x)for(const k in t)t[k]+=x[k]}return t};
   const t=somaAno(ano,12), p=somaAno(ant,ult);
   $("#gObs").textContent=p.n?`Comparação com ${ant} no mesmo período (jan–${MESES[ult-1].toLowerCase()})`:"";
   const k=(l,v,vp,f=brl0,inv)=>{let d="";if(p.n&&vp){const r=v/vp-1;const bom=inv?r<0:r>0;d=`<div class="d ${bom?"up":"down"}">${r>0?"▲":"▼"} ${pct(Math.abs(r))} vs ${ant}</div>`}
     return `<div class="kpi"><div class="l">${l}</div><div class="v">${f(v)}</div>${d}</div>`};
+  // vendas a receber (cliente ainda deve)
+  const AR=D.vendas.filter(v=>v.recebido===false);$("#gReceber").hidden=!AR.length;
+  $("#gReceber").innerHTML=AR.length?`💰 <b>A receber: ${brl(soma(AR,aReceber))}</b> · ${AR.map(v=>`${esc(v.cliente)} ${brl(aReceber(v))}`).join(", ")}. <a href="#" onclick="abrirMes('vendas');return false">Ver vendas</a>`:"";
+  // meta do mês atual: cobrir outras despesas + parcelas a pagar + quanto quer sobrar (Config)
+  {const mk=hoje().slice(0,7),xm=M[mk]||{lucro:0,desp:0,parc:0},extra=+D.config.metaSobra||0;
+   const meta=r2(xm.desp+xm.parc+extra),feito=r2(xm.lucro),falta=r2(Math.max(0,meta-feito));
+   const lv=D.vendas.length?soma(D.vendas,v=>v.lucro)/D.vendas.length:0;
+   $("#gMeta").innerHTML=`<h2>🎯 Meta de ${nomeMes(mk)}</h2>
+     <div class="calc">Despesas ${brl(xm.desp)} + parcelas a pagar ${brl(xm.parc)}${extra?` + quero sobrar ${brl(extra)}`:""} = lucrar <b>${brl(meta)}</b></div>
+     <div class="metaBar${feito>=meta?" ok":""}"><i style="width:${meta>0?Math.max(0,Math.min(100,feito/meta*100)).toFixed(0):100}%"></i></div>
+     <p style="margin:0">${meta<=0?`Nenhuma conta a pagar neste mês. Em Config você pode dizer quanto quer sobrar por mês.`
+       :feito>=meta?`✅ Meta batida: lucro de ${brl(feito)} no mês.`
+       :`Lucro das vendas até agora: <b>${brl(feito)}</b> (${pct(Math.max(0,feito)/meta)}). Falta <b>${brl(falta)}</b>${lv>0?` ≈ ${Math.ceil(falta/lv)} ${Math.ceil(falta/lv)>1?"vendas":"venda"} (lucro médio de ${brl(lv)} por venda)`:""}.`}</p>`}
   const ac=acabando();$("#gAlerta").hidden=!ac.length;
   $("#gAlerta").innerHTML=ac.length?`⚠️ <b>Material acabando:</b> ${ac.map(x=>`${esc(x.f.nome)} (${fmtG(x.saldo)})`).join(", ")}. <a href="#" onclick="abrirEstoque();return false">Registrar compra</a>`:"";
   $("#gKpis").innerHTML=
@@ -1142,15 +1190,18 @@ fV.onsubmit=e=>{e.preventDefault();
   edV.set(L);const {taxa,lucro,custo}=calcVenda();
   const v={id:fV.id.value||novoId("v"),data:fV.data.value,cliente:nomeProprio(fV.cliente.value),clienteId:garantirCliente(fV.cliente.value).id,
     itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{}),...(x.partes?{partes:x.partes}:{})})),
-    frete:r2(fV.frete.value),cobrado:r2(fV.cobrado.value),metodo:fV.metodo.value,custo,taxa,lucro,obs:D.vendas.find(x=>x.id===fV.id.value)?.obs||""};
+    frete:r2(fV.frete.value),cobrado:r2(fV.cobrado.value),metodo:fV.metodo.value,custo,taxa,lucro,recebido:fV.recebido.checked,obs:D.vendas.find(x=>x.id===fV.id.value)?.obs||""};
   const i=D.vendas.findIndex(x=>x.id===v.id); i>=0?D.vendas[i]=v:D.vendas.push(v);
   D.vendas.sort((a,b)=>a.data.localeCompare(b.data));
   $("#vMes").value=v.data.slice(0,7);
   // venda feita a partir de um orçamento: o orçamento fica aprovado e ligado à venda
-  if(orcEmVenda){const o=D.orcamentos.find(x=>x.id===orcEmVenda);if(o){o.status="aprovado";o.vendaId=v.id;delete o.etapa}}
+  if(orcEmVenda){const o=D.orcamentos.find(x=>x.id===orcEmVenda);if(o){o.status="aprovado";o.vendaId=v.id;delete o.etapa;if(+o.sinal)v.sinal=o.sinal}}
   despesasDaVenda(v);
   salvar();limparVenda();renderVendas();status("venda salva · gastos de produção lançados em Despesas");
 };
+const aReceber=v=>r2(v.cobrado-(+v.sinal||0));
+const tagReceber=v=>v.recebido===false?` <span class="tag aberto">a receber ${brl(aReceber(v))}</span>`:"";
+window.recebi=id=>{D.vendas.find(x=>x.id===id).recebido=true;salvar();render();status("venda marcada como recebida")};
 const descItens=v=>(v.itens||[]).map(x=>`${num(x.qtd,0)}× ${x.nome}`).join(", ");
 function renderVendas(){
   const mes=$("#vMes").value, q=norm($("#vBusca").value);
@@ -1158,24 +1209,30 @@ function renderVendas(){
   const s=L.reduce((t,v)=>(t.f+=v.cobrado,t.l+=v.lucro,t.t+=v.taxa,t.c+=v.custo||0,t.p+=qtdItens(v),t),{f:0,l:0,t:0,c:0,p:0});
   $("#vResumo").innerHTML=`${L.length} vendas · ${num(s.p,0)} peças · Faturamento <b>${brl(s.f)}</b> · Custo ${brl(s.c)} · Taxas ${brl(s.t)} · Lucro <b>${brl(s.l)}</b>`+(q?" · busca em todos os meses":"");
   $("#tVendas").innerHTML=`<tr><th>Data</th><th>Cliente</th><th>Itens</th><th class="n">Cobrado</th><th>Pagamento</th><th class="n">Custo</th><th class="n">Taxa</th><th class="n">Lucro</th><th></th></tr>`+
-    L.slice().reverse().map(v=>`<tr><td>${fmtData(v.data)}</td><td>${esc(v.cliente)}</td><td style="white-space:normal;min-width:200px">${esc(descItens(v))}${v.frete?` <span class="muted">+ frete ${brl(v.frete)}</span>`:""}</td><td class="n"><b>${brl(v.cobrado)}</b></td><td>${esc(v.metodo)}</td><td class="n">${brl(v.custo)}</td><td class="n">${brl(v.taxa)}</td><td class="n lucro">${brl(v.lucro)}</td>
-    <td><button class="btn sm sec2" onclick="editarVenda('${v.id}')">Editar</button> <button class="btn sm del" onclick="apagar('vendas','${v.id}')">✕</button></td></tr>`).join("");
+    L.slice().reverse().map(v=>`<tr><td>${fmtData(v.data)}</td><td>${esc(v.cliente)}${tagReceber(v)}</td><td style="white-space:normal;min-width:200px">${esc(descItens(v))}${v.frete?` <span class="muted">+ frete ${brl(v.frete)}</span>`:""}</td><td class="n"><b>${brl(v.cobrado)}</b></td><td>${esc(v.metodo)}</td><td class="n">${brl(v.custo)}</td><td class="n">${brl(v.taxa)}</td><td class="n lucro">${brl(v.lucro)}</td>
+    <td>${v.recebido===false?`<button class="btn sm" onclick="recebi('${v.id}')">💰 Recebi</button> `:""}<button class="btn sm sec2" onclick="editarVenda('${v.id}')">Editar</button> <button class="btn sm del" onclick="apagar('vendas','${v.id}')">✕</button></td></tr>`).join("");
   $("#vCards").innerHTML=L.slice().reverse().map(v=>`<div class="vcard">
-    <div class="l1"><b>${esc(v.cliente)}</b><span class="muted">${fmtData(v.data)}</span></div>
+    <div class="l1"><b>${esc(v.cliente)}${tagReceber(v)}</b><span class="muted">${fmtData(v.data)}</span></div>
     <div class="l2"><span class="big">${brl(v.cobrado)}</span><span class="tag">${esc(v.metodo)}</span></div>
     <div class="l3">${esc(descItens(v))}${v.frete?` · frete ${brl(v.frete)}`:""}</div>
     <div class="l3">Custo ${brl(v.custo)}${v.taxa?` · Taxa cartão <span class="taxa">${brl(v.taxa)}</span>`:""} · Lucro <span class="lucro">${brl(v.lucro)}</span></div>
-    <div class="acts"><button class="btn sm sec2" onclick="editarVenda('${v.id}')">Editar</button><button class="btn sm del" onclick="apagar('vendas','${v.id}')">✕</button></div></div>`).join("");
+    <div class="acts">${v.recebido===false?`<button class="btn sm" onclick="recebi('${v.id}')">💰 Recebi</button>`:""}<button class="btn sm sec2" onclick="editarVenda('${v.id}')">Editar</button><button class="btn sm del" onclick="apagar('vendas','${v.id}')">✕</button></div></div>`).join("");
 }
 window.editarVenda=id=>{const v=D.vendas.find(x=>x.id===id);
   fV.id.value=v.id;fV.cliente.value=v.cliente;fV.data.value=v.data;fV.cobrado.value=v.cobrado;fV.frete.value=v.frete||0;fV.metodo.value=v.metodo||"Pix";
-  edV.set(v.itens);orcEmVenda=null;$("#vOrc").hidden=true;
+  edV.set(v.itens);orcEmVenda=null;$("#vOrc").hidden=true;fV.recebido.checked=v.recebido!==false;
   cobradoManual=true;$("#vTitulo").textContent="Editando venda de "+v.cliente;calcVenda();scrollTo({top:0,behavior:"smooth"})};
 window.apagar=async(col,id)=>{
   let msg={estoque:"Apagar esta movimentação do estoque?",vendas:"Apagar esta venda?",despesas:"Apagar esta despesa?",orcamentos:"Apagar este orçamento?",clientes:"Apagar este cliente do cadastro? As vendas e orçamentos continuam com o nome dele.",parcelamentos:"Apagar este parcelamento e todas as marcações de pago?"}[col]||"Apagar?";
   if(col==="produtos"){const n=D.vendas.filter(v=>(v.itens||[]).some(x=>x.produtoId===id)).length;
     msg=n?`Este produto aparece em ${n} venda(s). As vendas continuam com o nome e o custo gravados. Apagar o produto do catálogo?`:"Apagar este produto?"}
+  // despesa que se repete: apagar a mais recente da série para a repetição (senão ela voltaria no próximo acesso)
+  let paraSerie=null;
+  if(col==="despesas"){const d=D.despesas.find(x=>x.id===id),k=d&&(d.serie||d.id);
+    const serie=d?.repete?D.despesas.filter(x=>(x.serie||x.id)===k&&x.id!==id).sort((a,b)=>b.data.localeCompare(a.data)):[];
+    if(d?.repete&&(!serie.length||serie[0].data<d.data)){msg="Esta despesa se repete todo mês. Apagar este mês? A repetição para aqui.";paraSerie=serie[0]||null}}
   if(!await confirmar(msg,"Apagar",true))return;
+  if(paraSerie)paraSerie.repete=false;
   // venda que veio de um orçamento: o pedido volta para a fila de produção (pronto, falta lançar a venda)
   // e os gastos de produção dela saem de Despesas
   if(col==="vendas"){D.orcamentos.forEach(o=>{if(o.vendaId===id){o.status="producao";o.etapa="pronto";o.vendaId=null}});D.despesas=D.despesas.filter(d=>d.vendaId!==id)}
@@ -1212,7 +1269,7 @@ function calcOrc(){
   return{custo};
 }
 fO.addEventListener("input",e=>{if(e.target.name==="valor")valorManual=true;if(e.target.name==="valor"||e.target.name==="frete")calcOrc()});
-function limparOrc(){fO.reset();fO.id.value="";fO.data.value=hoje();valorManual=false;edO.set([]);$("#oTitulo").textContent="📝 Novo orçamento";calcOrc()}
+function limparOrc(){voltaProd=false;fO.reset();fO.id.value="";fO.data.value=hoje();valorManual=false;edO.set([]);$("#oTitulo").textContent="📝 Novo orçamento";calcOrc()}
 $("#oCancelar").onclick=limparOrc;
 fO.onsubmit=e=>{e.preventDefault();
   const cli=D.clientes.find(c=>c.id===fO.cliente.value);
@@ -1220,11 +1277,15 @@ fO.onsubmit=e=>{e.preventDefault();
   const L=edO.validos();if(!L.length)return avisar("Escolha pelo menos um produto. Se ele ainda não existe, toque em ＋ Cadastrar produto novo.");
   edO.set(L);const {custo}=calcOrc();
   const ant=D.orcamentos.find(x=>x.id===fO.id.value);
-  const o={id:fO.id.value||novoId("o"),data:fO.data.value,cliente:cli.nome,clienteId:cli.id,validade:Math.max(1,Math.round(+fO.validade.value||7)),
+  const vp=voltaProd; // veio da Produção (✏️ Editar): volta para lá
+  // ...ant mantém o que não está no formulário (etapa, ordem, sinal, data de aprovação)
+  const o={...(ant||{}),id:fO.id.value||novoId("o"),data:fO.data.value,prazo:fO.prazo.value,cliente:cli.nome,clienteId:cli.id,validade:Math.max(1,Math.round(+fO.validade.value||7)),
     itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{})})),
     frete:r2(fO.frete.value),valor:r2(fO.valor.value),custo,obs:fO.obs.value.trim(),status:ant?.status||"aberto",vendaId:ant?.vendaId||null};
   const i=D.orcamentos.findIndex(x=>x.id===o.id);i>=0?D.orcamentos[i]=o:D.orcamentos.push(o);
-  filtroOrc=o.status;salvar();limparOrc();renderOrcamentos();status(`orçamento de ${o.cliente} salvo`);
+  filtroOrc=o.status;salvar();limparOrc();
+  if(vp){abrirMes("producao");status(`pedido de ${o.cliente} atualizado`);return}
+  renderOrcamentos();status(`orçamento de ${o.cliente} salvo`);
 };
 const venceEm=o=>{const d=new Date(o.data+"T12:00");d.setDate(d.getDate()+(o.validade||7));return d.toLocaleDateString("sv-SE")};
 const ST_ORC={aberto:["Em aberto",""],producao:["Em produção",""],aprovado:["Vendido","ok"],recusado:["Recusado","aberto"]};
@@ -1251,12 +1312,12 @@ function renderOrcamentos(){
 }
 $("#oFiltro").addEventListener("click",e=>{const f=e.target.dataset?.f;if(f){filtroOrc=f;renderOrcamentos()}});
 window.editarOrc=id=>{const o=D.orcamentos.find(x=>x.id===id);
-  opcoesCli();fO.id.value=o.id;fO.cliente.value=(D.clientes.find(c=>c.id===o.clienteId)||clientePorNome(o.cliente))?.id||"";fO.data.value=o.data;fO.validade.value=o.validade||7;fO.frete.value=o.frete||0;fO.valor.value=o.valor;fO.obs.value=o.obs||"";
+  opcoesCli();fO.id.value=o.id;fO.cliente.value=(D.clientes.find(c=>c.id===o.clienteId)||clientePorNome(o.cliente))?.id||"";fO.data.value=o.data;fO.validade.value=o.validade||7;fO.frete.value=o.frete||0;fO.prazo.value=o.prazo||"";fO.valor.value=o.valor;fO.obs.value=o.obs||"";
   edO.set(o.itens);valorManual=true;$("#oTitulo").textContent="✏️ Editando orçamento de "+o.cliente;calcOrc();scrollTo({top:0,behavior:"smooth"})};
 window.recusarOrc=id=>{D.orcamentos.find(x=>x.id===id).status="recusado";salvar();renderOrcamentos()};
 window.reabrirOrc=id=>{D.orcamentos.find(x=>x.id===id).status="aberto";filtroOrc="aberto";salvar();renderOrcamentos()};
 window.aprovarOrc=id=>{const o=D.orcamentos.find(x=>x.id===id);
-  o.status="producao";o.etapa="fila";o.aprovadoEm=hoje();salvar();
+  o.status="producao";o.etapa="fila";o.aprovadoEm=hoje();o.ordem=Math.max(-1,...filaProd().map(x=>x.ordem??-1))+1;salvar();
   document.querySelector("#nav [data-s=producao]").click();status(`pedido de ${o.cliente} entrou na fila de produção`)};
 // Produção concluída: abre Vendas preenchida (a venda nunca é salva sozinha)
 window.concluirProd=id=>{const o=D.orcamentos.find(x=>x.id===id);
@@ -1266,7 +1327,8 @@ window.concluirProd=id=>{const o=D.orcamentos.find(x=>x.id===id);
   fV.cliente.value=o.cliente;fV.frete.value=o.frete||0;edV.set(o.itens);fV.cobrado.value=o.valor;cobradoManual=true;
   $("#vTitulo").textContent="Venda do orçamento de "+o.cliente;
   $("#vOrc").hidden=false;
-  $("#vOrc").innerHTML=`🏭 Produção concluída: pedido de <b>${esc(o.cliente)}</b> (orçamento de ${fmtData(o.data)}). Confira a data e a forma de pagamento e toque em <b>Salvar venda</b>. Os gastos de produção entram em Despesas.`;
+  $("#vOrc").innerHTML=`🏭 Produção concluída: pedido de <b>${esc(o.cliente)}</b> (orçamento de ${fmtData(o.data)}). Confira a data e a forma de pagamento e toque em <b>Salvar venda</b>. Os gastos de produção entram em Despesas.`+
+    (+o.sinal?` <br>💰 O cliente já pagou <b>${brl(o.sinal)}</b> de sinal; falta receber <b>${brl(r2(o.valor-o.sinal))}</b>. Se ele ainda não pagou o resto, desmarque “Já recebi tudo”.`:"");
   calcVenda();scrollTo({top:0,behavior:"smooth"})};
 window.verVendaOrc=id=>{const o=D.orcamentos.find(x=>x.id===id),v=D.vendas.find(x=>x.id===o.vendaId);if(!v)return;
   document.querySelector("#nav [data-s=vendas]").click();$("#vMes").value=v.data.slice(0,7);renderVendas();editarVenda(v.id)};
@@ -1285,37 +1347,67 @@ window.enviarOrc=async id=>{const o=D.orcamentos.find(x=>x.id===id);
    Tempo estimado de cada item = impressões necessárias (qtd ÷ peças por impressão, para cima) × tempo da impressão. */
 const ETAPA={fila:["Na fila",""],imprimindo:["Imprimindo","ok"],pronto:["Pronto · falta a venda","ok"]};
 function tempoItem(x){const p=x.produtoId&&D.produtos.find(q=>q.id===x.produtoId);if(!p)return 0;const c=custoProduto(p);return Math.ceil((+x.qtd||1)/c.un)*c.horas}
+// ordem da fila: "ordem" (▲▼), depois a data de aprovação
+const filaProd=()=>D.orcamentos.filter(o=>o.status==="producao").sort((a,b)=>(a.ordem??1e9)-(b.ordem??1e9)||(a.aprovadoEm||a.data).localeCompare(b.aprovadoEm||b.data)||a.id.localeCompare(b.id,"pt-BR",{numeric:true}));
+var voltaProd=false;
 function renderProducao(){
-  const L=D.orcamentos.filter(o=>o.status==="producao").sort((a,b)=>(a.aprovadoEm||a.data).localeCompare(b.aprovadoEm||b.data)||a.id.localeCompare(b.id,"pt-BR",{numeric:true}));
-  const E=estoques(), precisa={};
+  const L=filaProd(), E=estoques(), precisa={}, hj=hoje();
   const cards=L.map((o,n)=>{
     const h=soma(o.itens||[],tempoItem), g={};
     (o.itens||[]).forEach(x=>matDoItem(x).forEach(m=>{g[m.f]=(g[m.f]||0)+m.g*(+x.qtd||0)}));
     if(o.etapa!=="pronto")for(const f in g)precisa[f]=(precisa[f]||0)+g[f];
     const mats=Object.entries(g).map(([f,q])=>`${fmtG(q)} ${esc(filamentoDe(f)?.nome||"?")}`).join(" + ");
-    const et=ETAPA[o.etapa||"fila"];
-    return`<div class="pcard">
-    <div class="l1"><b>${n+1}. ${esc(o.cliente)}</b><span class="tag ${et[1]}">${et[0]}</span></div>
-    <div class="l3">Aprovado em ${fmtData(o.aprovadoEm||o.data)}</div>
+    const et=o.etapa||"fila", atras=!!o.prazo&&o.prazo<hj, falta=r2(o.valor-(+o.sinal||0));
+    return`<div class="pcard${atras?" atrasado":""}">
+    <div class="l1"><b>${n+1}. ${esc(o.cliente)}</b><span class="tag ${ETAPA[et][1]}">${ETAPA[et][0]}</span></div>
+    <div class="l3">Aprovado em ${fmtData(o.aprovadoEm||o.data)}${o.prazo?` · <span class="${atras?"taxa":""}">📅 entrega ${fmtData(o.prazo)}${atras?" · atrasado":""}</span>`:""}</div>
     <div class="l3">${esc(descItens(o))}</div>
     <div class="l3">${h?`⏱️ ${fmtTempo(h)} de impressão`:""}${h&&mats?" · ":""}${mats?`🧵 ${mats}`:""}</div>
     <div class="nums"><div><small>Valor</small><b>${brl(o.valor)}</b></div><div><small>Custo</small><b>${brl(o.custo)}</b></div><div><small>Lucro</small><b class="lucro">${brl(o.valor-(o.custo||0))}</b></div></div>
+    ${+o.sinal?`<div class="l3">💰 Sinal recebido ${brl(o.sinal)} · falta <b>${brl(falta)}</b> na entrega</div>`:""}
     ${o.obs?`<div class="l3">${esc(o.obs)}</div>`:""}
-    <div class="acts">${o.etapa==="imprimindo"?`<button class="btn sm" onclick="concluirProd('${o.id}')">✅ Concluir</button>`
-      :o.etapa==="pronto"?`<button class="btn sm" onclick="concluirProd('${o.id}')">🧾 Lançar a venda</button>`
-      :`<button class="btn sm" onclick="etapaProd('${o.id}','imprimindo')">▶ Começar</button><button class="btn sm sec2" onclick="concluirProd('${o.id}')">✅ Concluir</button>`}
-      ${o.etapa==="imprimindo"?`<button class="btn sm sec2" onclick="etapaProd('${o.id}','fila')">↩ Voltar para a fila</button>`:""}
-      ${o.etapa!=="pronto"?`<button class="btn sm sec2" onclick="tirarProd('${o.id}')">Tirar da produção</button>`:""}</div></div>`});
+    <div class="pedit">
+      <label>Etapa<select data-o="${o.id}" data-k="etapa">${Object.entries(ETAPA).map(([k,[t]])=>`<option value="${k}"${et===k?" selected":""}>${t}</option>`).join("")}</select></label>
+      <label>Entregar até<input type="date" data-o="${o.id}" data-k="prazo" value="${o.prazo||""}"></label>
+      <label>Sinal recebido (R$)<input type="number" step="0.01" min="0" data-o="${o.id}" data-k="sinal" value="${+o.sinal||""}" placeholder="0,00"></label>
+    </div>
+    <div class="acts">${et==="fila"?`<button class="btn sm" onclick="etapaProd('${o.id}','imprimindo')">▶ Começar</button>`
+        :et==="imprimindo"?`<button class="btn sm" onclick="concluirProd('${o.id}')">✅ Concluir</button>`
+        :`<button class="btn sm" onclick="concluirProd('${o.id}')">🧾 Lançar a venda</button>`}
+      <button class="btn sm sec2" onclick="avisarCli('${o.id}')">📲 Avisar cliente</button>
+      <button class="btn sm sec2" onclick="editarProd('${o.id}')">✏️ Editar</button>
+      ${n>0?`<button class="btn sm sec2" onclick="moverProd('${o.id}',-1)" title="Subir na fila">▲</button>`:""}${n<L.length-1?`<button class="btn sm sec2" onclick="moverProd('${o.id}',1)" title="Descer na fila">▼</button>`:""}
+      <button class="btn sm sec2" onclick="tirarProd('${o.id}')">Tirar da produção</button></div></div>`});
   $("#prLista").innerHTML=cards.join("")||'<p class="muted">Nada na fila. Aprove um orçamento (aba Orçamentos › ✅ Aprovar) e ele aparece aqui.</p>';
   const falta=Object.entries(precisa).filter(([f,q])=>E[f]?.registrado&&E[f].saldo<q).map(([f,q])=>`${esc(filamentoDe(f)?.nome||"?")} (precisa ${fmtG(q)}, tem ${fmtG(E[f].saldo)})`);
-  const H=soma(L.filter(o=>o.etapa!=="pronto"),o=>soma(o.itens||[],tempoItem));
-  $("#prResumo").innerHTML=L.length?`${L.length} ${L.length>1?"pedidos":"pedido"} · ⏱️ ${fmtTempo(H)} de impressão pela frente`+(falta.length?` · <span class="taxa">⚠️ falta material: ${falta.join(", ")}</span>`:""):"";
+  const H=soma(L.filter(o=>o.etapa!=="pronto"),o=>soma(o.itens||[],tempoItem)), atrasados=L.filter(o=>o.prazo&&o.prazo<hj).length;
+  $("#prResumo").innerHTML=L.length?`${L.length} ${L.length>1?"pedidos":"pedido"} · ⏱️ ${fmtTempo(H)} de impressão pela frente`+
+    (atrasados?` · <span class="taxa">📅 ${atrasados} ${atrasados>1?"atrasados":"atrasado"}</span>`:"")+(falta.length?` · <span class="taxa">⚠️ falta material: ${falta.join(", ")}</span>`:""):"";
   $("#prResumo").hidden=!L.length;
 }
+// etapa, data de entrega e sinal mudam direto no cartão
+$("#prLista").addEventListener("change",e=>{const el=e.target,o=D.orcamentos.find(x=>x.id===el.dataset.o);if(!o)return;
+  const k=el.dataset.k;if(k==="sinal")o.sinal=r2(el.value)||0;else if(k==="prazo")o.prazo=el.value;else if(k==="etapa")o.etapa=el.value;else return;
+  salvar();setTimeout(renderProducao,200)});
 window.etapaProd=(id,et)=>{D.orcamentos.find(x=>x.id===id).etapa=et;salvar();renderProducao()};
+window.moverProd=(id,d)=>{const L=filaProd();L.forEach((o,i)=>o.ordem=i);const i=L.findIndex(o=>o.id===id),j=i+d;if(j<0||j>=L.length)return;
+  [L[i].ordem,L[j].ordem]=[L[j].ordem,L[i].ordem];salvar();renderProducao()};
+// ✏️ Editar: abre o pedido no formulário de Orçamentos; ao salvar, volta para a Produção (continua na fila)
+window.editarProd=id=>{const o=D.orcamentos.find(x=>x.id===id);abrirMes("orcamentos");editarOrc(id);voltaProd=true;
+  $("#oTitulo").textContent="✏️ Editando pedido da produção de "+o.cliente};
 window.tirarProd=async id=>{const o=D.orcamentos.find(x=>x.id===id);
   if(!await confirmar(`Tirar o pedido de ${o.cliente} da produção? O orçamento volta para "Em aberto".`,"Tirar"))return;
-  o.status="aberto";delete o.etapa;delete o.aprovadoEm;salvar();renderProducao()};
+  o.status="aberto";delete o.etapa;delete o.aprovadoEm;delete o.ordem;salvar();renderProducao()};
+// Mensagem para o cliente pelo WhatsApp: pedido pronto (com o que falta pagar) ou em produção (com a data de entrega)
+window.avisarCli=async id=>{const o=D.orcamentos.find(x=>x.id===id),nome=o.cliente.split(" ")[0],falta=r2(o.valor-(+o.sinal||0));
+  const txt=o.etapa==="pronto"
+    ?`Olá, ${nome}! Seu pedido está pronto: ${descItens(o)}.`+(falta>0?` Valor a pagar na entrega: ${brl(falta)}.`:"")+` Qual o melhor horário para entregar?`
+    :`Olá, ${nome}! Seu pedido (${descItens(o)}) está ${o.etapa==="imprimindo"?"sendo impresso":"na fila de produção"}`+(o.prazo?`, com entrega prevista para ${fmtData(o.prazo)}`:"")+`. Aviso assim que ficar pronto!`;
+  const cli=D.clientes.find(c=>c.id===o.clienteId)||clientePorNome(o.cliente);
+  if(cli?.telefone){window.open(linkZap(cli.telefone)+"?text="+encodeURIComponent(txt),"_blank");return}
+  if(navigator.share){try{await navigator.share({text:txt});return}catch(e){if(e.name==="AbortError")return}}
+  try{await navigator.clipboard.writeText(txt);avisar("Mensagem copiada. Cole no WhatsApp do cliente (cadastre o telefone em Clientes para abrir direto).")}
+  catch{avisar(txt)}};
 
 /* ---------- gastos de produção em Despesas ----------
    Ao salvar uma venda, o custo de produção dela é lançado em Despesas, separado por tipo (filamento, energia…),
@@ -1366,8 +1458,10 @@ function renderParcelas(){
         <label>Parcelas<select data-pc="${ip}" data-k="parcelas">${Array.from({length:Math.max(36,pc.parcelas)},(_,i)=>`<option value="${i+1}"${pc.parcelas===i+1?" selected":""}>${i+1}x</option>`).join("")}</select></label>
         <label>1ª parcela<input data-pc="${ip}" data-k="inicio" type="month" value="${pc.inicio}"></label>
         <label style="flex:2;min-width:200px">Pessoas (separe por vírgula)<input data-pc="${ip}" data-k="pessoas" value="${esc(pc.pessoas.join(", "))}"></label>
+        <label style="flex:2;min-width:200px">É compra de filamento?<select data-pc="${ip}" data-k="material"><option value="">Não (impressora, ferramenta, outro)</option>${D.filamentos.map(f=>`<option value="${f.id}"${pc.material===f.id?" selected":""}>Sim: ${esc(f.nome)}</option>`).join("")}</select></label>
+        ${pc.material?`<label>Quantidade comprada (g)<input data-pc="${ip}" data-k="materialG" type="number" step="1" min="0" value="${+pc.materialG||0}"></label>`:""}
       </div>
-      <div class="calc" style="margin:10px 0">Parcela <b>${brl(parc)}</b> · cada pessoa paga <b>${brl(parte)}</b> por mês · ${pc.parcelas}x, de ${nomeMes(meses[0])} a ${nomeMes(meses.at(-1))}</div>
+      <div class="calc" style="margin:10px 0">Parcela <b>${brl(parc)}</b> · cada pessoa paga <b>${brl(parte)}</b> por mês · ${pc.parcelas}x, de ${nomeMes(meses[0])} a ${nomeMes(meses.at(-1))}${pc.material?`<br>🧵 Compra de filamento: ${fmtG(+pc.materialG||0)} entram no Estoque e as parcelas não descontam da sobra (o filamento já está no custo das vendas).`:""}</div>
       <div class="scroll"><table class="ptab"><tr><th>Parcela</th><th>Mês</th><th class="n">Valor</th>${pc.pessoas.map(n=>`<th class="n">${esc(n)}</th>`).join("")}</tr>`+
       meses.map((m,i)=>`<tr class="${m===atual?"agora":""}${pc.pessoas.every((_,j)=>pago(m,j))?" quitado":""}"><td>${i+1}/${pc.parcelas}</td><td>${nomeMes(m)}${m===atual?' <span class="tag">este mês</span>':""}</td><td class="n">${brl(parc)}</td>`+
         pc.pessoas.map((n,j)=>`<td class="n"><input type="checkbox" class="tick" data-pc="${ip}" data-m="${m}" data-j="${j}" ${pago(m,j)?"checked":""} aria-label="${esc(n)} pagou ${nomeMes(m)}"></td>`).join("")+`</tr>`).join("")+
@@ -1379,7 +1473,7 @@ function renderParcelas(){
 $("#pcLista").addEventListener("change",e=>{const el=e.target,pc=D.parcelamentos[el.dataset.pc];if(!pc)return;
   if(el.classList.contains("tick")){const a=((pc.pagos??={})[el.dataset.m]??=pc.pessoas.map(()=>false));a[+el.dataset.j]=el.checked;salvar();setTimeout(renderParcelas,200);return}
   const k=el.dataset.k;if(!k)return;
-  pc[k]=k==="pessoas"?el.value.split(",").map(x=>x.trim()).filter(Boolean):k==="total"?r2(el.value):k==="parcelas"?Math.max(1,Math.round(+el.value||1)):el.value.trim();
+  pc[k]=k==="pessoas"?el.value.split(",").map(x=>x.trim()).filter(Boolean):k==="material"?(el.value||null):k==="materialG"?(+el.value||0):k==="total"?r2(el.value):k==="parcelas"?Math.max(1,Math.round(+el.value||1)):el.value.trim();
   if(!pc.pessoas.length)pc.pessoas=["Eu"];if(!pc.inicio)pc.inicio=hoje().slice(0,7);
   salvar();setTimeout(renderParcelas,250)});
 $("#pcNovo").onclick=()=>{D.parcelamentos.push({id:novoId("pc"),descricao:"Novo parcelamento",total:0,parcelas:10,inicio:hoje().slice(0,7),pessoas:["Eu"],pagos:{}});salvar();renderParcelas()};
@@ -1387,24 +1481,17 @@ $("#pcNovo").onclick=()=>{D.parcelamentos.push({id:novoId("pc"),descricao:"Novo 
 /* ---------- despesas ---------- */
 const fD=$("#fDesp");
 fD.onsubmit=e=>{e.preventDefault();
-  const d={id:fD.id.value||novoId("d"),data:fD.data.value,categoria:fD.categoria.value,descricao:fD.descricao.value.trim(),valor:r2(fD.valor.value),pago:fD.pago.checked};
+  const d={id:fD.id.value||novoId("d"),data:fD.data.value,categoria:fD.categoria.value,descricao:fD.descricao.value.trim(),valor:r2(fD.valor.value),pago:fD.pago.checked,repete:fD.repete.checked,serie:D.despesas.find(x=>x.id===fD.id.value)?.serie};
   const i=D.despesas.findIndex(x=>x.id===d.id);i>=0?D.despesas[i]=d:D.despesas.push(d);
-  $("#dMes").value=d.data.slice(0,7);salvar();fD.reset();fD.id.value="";fD.data.value=hoje();renderDesp();
+  gerarRecorrentes();$("#dMes").value=d.data.slice(0,7);salvar();fD.reset();fD.id.value="";fD.data.value=hoje();renderDesp();
 };
 $("#dCancelar").onclick=()=>{fD.reset();fD.id.value="";fD.data.value=hoje()};
-$("#dCopiar").onclick=async()=>{
-  const mes=$("#dMes").value;const [y,m]=mes.split("-").map(Number);const ant=new Date(y,m-2,1).toLocaleDateString("sv-SE").slice(0,7);
-  const fixas=D.despesas.filter(d=>d.data.startsWith(ant)&&FIXAS.includes(d.categoria));
-  if(!fixas.length)return avisar("Nenhuma despesa fixa ("+FIXAS.join(", ")+") em "+ant);
-  if(D.despesas.some(d=>d.data.startsWith(mes)&&FIXAS.includes(d.categoria))&&!await confirmar("Este mês já tem despesas fixas. Copiar mesmo assim?"))return;
-  fixas.forEach(d=>D.despesas.push({...d,id:novoId("d"),data:mes+"-01",pago:false})); // conta nova do mês: ainda não pagasalvar();renderDesp();
-};
-window.editarDesp=id=>{const d=D.despesas.find(x=>x.id===id);for(const k in d)if(fD[k]&&k!=="pago")fD[k].value=d[k];fD.pago.checked=d.pago!==false;scrollTo({top:0,behavior:"smooth"})};
+window.editarDesp=id=>{const d=D.despesas.find(x=>x.id===id);for(const k in d)if(fD[k]&&k!=="pago"&&k!=="repete")fD[k].value=d[k];fD.pago.checked=d.pago!==false;fD.repete.checked=!!d.repete;scrollTo({top:0,behavior:"smooth"})};
 function renderDesp(){
   renderParcelas();
   const mes=$("#dMes").value, L=D.despesas.filter(d=>d.data.startsWith(mes));
   $("#tDesp").innerHTML=`<tr><th>Data</th><th>Categoria</th><th>Descrição</th><th class="n">Valor</th><th></th></tr>`+
-    L.map(d=>`<tr><td>${fmtData(d.data)}</td><td>${esc(d.categoria)}${d.vendaId?' <span class="tag">da venda</span>':""}</td><td style="white-space:normal">${esc(d.descricao)}</td><td class="n">${brl(d.valor)}${d.vendaId?"":d.pago===false?' <span class="tag aberto">a pagar</span>':' <span class="tag ok">pago</span>'}</td><td>${d.vendaId
+    L.map(d=>`<tr><td>${fmtData(d.data)}</td><td>${esc(d.categoria)}${d.vendaId?' <span class="tag">da venda</span>':""}${d.repete?' <span title="Repete todo mês">🔁</span>':""}</td><td style="white-space:normal">${esc(d.descricao)}</td><td class="n">${brl(d.valor)}${d.vendaId?"":d.pago===false?' <span class="tag aberto">a pagar</span>':' <span class="tag ok">pago</span>'}</td><td>${d.vendaId
       ?`<button class="btn sm sec2" onclick="verVendaDesp('${d.vendaId}')" title="Esses valores vêm da venda: edite ou apague a venda">Ver venda</button>`
       :`<button class="btn sm sec2" onclick="editarDesp('${d.id}')">Editar</button> <button class="btn sm del" onclick="apagar('despesas','${d.id}')">✕</button>`}</td></tr>`).join("")+
     `<tr><th colspan="3">Total do mês</th><th class="n">${brl(soma(L,d=>d.valor))}</th><th></th></tr>`;
@@ -1412,6 +1499,16 @@ function renderDesp(){
   $("#dObs").innerHTML=prod?`Gastos de produção das vendas: <b>${brl(prod)}</b> (já descontados no lucro de cada venda) · Outras despesas: <b>${brl(soma(L.filter(d=>!d.vendaId),d=>d.valor))}</b>`:"";
 }
 $("#dMes").oninput=renderDesp;
+
+/* Despesas que se repetem: cada série (serie = id da primeira) continua enquanto a mais recente tiver repete:true.
+   Cria, como "a pagar", os meses que faltam até o mês atual (nunca meses futuros). */
+function gerarRecorrentes(){
+  const ate=hoje().slice(0,7), ult={};
+  D.despesas.forEach(d=>{if(d.vendaId)return;const k=d.serie||d.id;if(!ult[k]||d.data>ult[k].data)ult[k]=d});
+  for(const d of Object.values(ult)){if(!d.repete)continue;
+    const dia=d.data.slice(8)>"28"?"28":d.data.slice(8);let m=d.data.slice(0,7);
+    while((m=mesMais(m,1))<=ate)D.despesas.push({id:novoId("d"),data:`${m}-${dia}`,categoria:d.categoria,descricao:d.descricao,valor:d.valor,pago:false,repete:true,serie:d.serie||d.id})}
+}
 
 /* ---------- cadastro de clientes ----------
    Código automático em sequência (D.proximoCliente), mostrado como #001. Telefone guardado só com os números.
@@ -1476,8 +1573,8 @@ $("#cDias").oninput=renderClientes;$("#cBusca").oninput=renderClientes;
 
 /* ---------- resumo ---------- */
 function resumoMes(M,mes){
-  const x=M[mes]||{fat:0,taxa:0,custo:0,lucro:0,desp:0,parc:0,n:0};
-  return{fat:x.fat,taxa:x.taxa,custo:x.custo,lucro:x.lucro,desp:x.desp,liquido:x.lucro-x.desp,parc:x.parc,sobra:x.lucro-x.desp-x.parc,n:x.n};
+  const x=M[mes]||{fat:0,taxa:0,custo:0,lucro:0,desp:0,parc:0,parcPago:0,n:0};
+  return{fat:x.fat,taxa:x.taxa,custo:x.custo,lucro:x.lucro,desp:x.desp,liquido:x.lucro-x.desp,parc:x.parc,parcPago:x.parcPago,sobra:x.lucro-x.desp-x.parc,n:x.n};
 }
 function renderResumo(){
   const M=agregar(), mes=$("#rMes").value, r=resumoMes(M,mes);
@@ -1490,18 +1587,19 @@ function renderResumo(){
     lin("sub","− Custos de produção (filamento, energia, desgaste…)",r.custo)+
     lin("sub","− Outras despesas",r.desp)+
     `<tr class="parcial"><td>= Lucro líquido</td><td class="n" ${cor(r.liquido)}>${brl(r.liquido)}</td></tr>`+
-    lin("sub","− Parcelas do mês (parcelamentos)",r.parc)+
+    lin("sub","− Parcelas a pagar",r.parc)+
+    (r.parcPago?`<tr><td class="muted">Parcelas já pagas ✓ (não descontam)</td><td class="n muted">${brl(r.parcPago)}</td></tr>`:"")+
     `<tr class="final"><td>Sobra no mês</td><td class="n" ${cor(r.sobra)}>${brl(r.sobra)}</td></tr>`;
   const avisos=[];
   if(!r.n)avisos.push("Nenhuma venda neste mês.");
   if(!r.desp)avisos.push("Nenhuma outra despesa lançada neste mês.");
-  if(r.parc)avisos.push("Parcelas: valor inteiro da parcela do mês, somando todas as pessoas.");
+  if(r.parc||r.parcPago)avisos.push("Parcelas: só as partes ainda não marcadas como pagas (✓ em Contas do mês) descontam da sobra. Parcelamento de filamento não entra: ele já está no custo das vendas.");
   $("#rObs").textContent=avisos.join(" ");
   renderContas(mes);
   const sel=$("#rAno"), A=anos();
   if(sel.options.length!==A.length){sel.innerHTML="";A.forEach(a=>sel.add(new Option(a,a)));sel.value=mes.slice(0,4);sel.onchange=renderResumo}
-  const ano=sel.value, t={fat:0,taxa:0,custo:0,lucro:0,desp:0,liquido:0,parc:0,sobra:0,n:0};
-  let h=`<tr><th>Mês</th><th class="n">Lucro vendas</th><th class="n">Outras despesas</th><th class="n">Lucro líquido</th><th class="n">Parcelas</th><th class="n">Sobra</th></tr>`;
+  const ano=sel.value, t={fat:0,taxa:0,custo:0,lucro:0,desp:0,liquido:0,parc:0,parcPago:0,sobra:0,n:0};
+  let h=`<tr><th>Mês</th><th class="n">Lucro vendas</th><th class="n">Outras despesas</th><th class="n">Lucro líquido</th><th class="n">Parcelas a pagar</th><th class="n">Sobra</th></tr>`;
   MESES.forEach((n,i)=>{const m=`${ano}-${String(i+1).padStart(2,"0")}`;if(!M[m])return;
     const x=resumoMes(M,m);for(const k in t)t[k]+=x[k];
     h+=`<tr><td style="cursor:pointer" onclick="$('#rMes').value='${m}';renderResumo();scrollTo({top:0,behavior:'smooth'})">${n}/${ano}</td><td class="n">${brl(x.lucro)}</td>
@@ -1517,7 +1615,7 @@ function renderContas(mes){
     .forEach(d=>L.push({nome:`${esc(d.categoria)}${d.descricao?` <span class="muted">· ${esc(d.descricao)}</span>`:""}`,quando:fmtData(d.data),v:d.valor,pago:d.pago!==false,attr:`data-d="${d.id}"`}));
   D.parcelamentos.forEach((pc,ip)=>{for(let i=0;i<pc.parcelas;i++){if(mesMais(pc.inicio,i)!==mes)continue;
     const parte=r2(pc.total/pc.parcelas/pc.pessoas.length);
-    pc.pessoas.forEach((n,j)=>L.push({nome:`💳 ${esc(pc.descricao)} ${i+1}/${pc.parcelas} <span class="muted">· ${esc(n)}</span>`,quando:"parcela",v:parte,pago:!!pc.pagos?.[mes]?.[j],attr:`data-pc="${ip}" data-m="${mes}" data-j="${j}"`}))}});
+    pc.pessoas.forEach((n,j)=>L.push({nome:`${pc.material?"🧵":"💳"} ${esc(pc.descricao)} ${i+1}/${pc.parcelas} <span class="muted">· ${esc(n)}</span>`,quando:"parcela",v:parte,pago:!!pc.pagos?.[mes]?.[j],attr:`data-pc="${ip}" data-m="${mes}" data-j="${j}"`}))}});
   const prod=soma(D.despesas.filter(d=>d.vendaId&&d.data.startsWith(mes)),d=>d.valor);
   const pago=soma(L.filter(x=>x.pago),x=>x.v), falta=soma(L.filter(x=>!x.pago),x=>x.v);
   $("#rContasSt").innerHTML=!L.length?"":falta>0.004?`<span class="tag aberto">Falta pagar ${brl(falta)}</span>`:'<span class="tag ok">✅ Tudo pago</span>';
@@ -1585,9 +1683,11 @@ $("#fCfg").addEventListener("change",e=>{const k=e.target.dataset.c;if(!k)return
    tirados do produto (gramas ÷ peças por impressão) ou da peça sob medida. Item antigo sem "mat" usa o produto atual. */
 const matDeProduto=p=>p?(p.filamentos||[]).filter(f=>f.filamentoId&&+f.g>0).map(f=>({f:f.filamentoId,g:r2(p.porPeca?+f.g:(+f.g)/Math.max(1,Math.round(+p.unidades||1)))})):[];
 const matDoItem=x=>x.mat||(x.produtoId?matDeProduto(D.produtos.find(p=>p.id===x.produtoId)):[]);
+// movimentações do estoque + compras de filamento parceladas (Despesas › Parcelamentos), que entram no mês da 1ª parcela
+const movsEstoque=()=>[...D.estoque,...D.parcelamentos.filter(pc=>pc.material&&+pc.materialG>0).map(pc=>({id:null,data:pc.inicio+"-01",filamentoId:pc.material,tipo:"parcelada",g:+pc.materialG,valor:pc.total}))];
 function estoques(){
   const e={};D.filamentos.forEach(f=>e[f.id]={entrou:0,perdas:0,usado:0});
-  D.estoque.forEach(m=>{const a=e[m.filamentoId];if(a)m.tipo==="perda"?a.perdas+=m.g:a.entrou+=m.g});
+  movsEstoque().forEach(m=>{const a=e[m.filamentoId];if(a)m.tipo==="perda"?a.perdas+=m.g:a.entrou+=m.g});
   D.vendas.forEach(v=>(v.itens||[]).forEach(x=>matDoItem(x).forEach(m=>{if(e[m.f])e[m.f].usado+=m.g*(+x.qtd||0)})));
   for(const k in e){const a=e[k];a.saldo=r2(a.entrou-a.perdas-a.usado);a.registrado=!!(a.entrou||a.perdas)}
   return e;
@@ -1600,7 +1700,7 @@ let _E={};
 const estCel=f=>{const a=_E[f.id];if(!a||(!a.registrado&&!a.usado))return'<span class="muted">sem registro</span>';
   const baixo=a.saldo<minimoG();return`<b class="${baixo?"taxa":""}">${fmtG(a.saldo)}</b>${baixo?' <span class="tag aberto">acabando</span>':""}<br><span class="muted">vendas usaram ${fmtG(a.usado)}</span>`};
 const fE=$("#fEst");
-const TIPO_EST={compra:"Compra",inicial:"Estoque que já tinha",perda:"Perda / teste"};
+const TIPO_EST={compra:"Compra",inicial:"Estoque que já tinha",perda:"Perda / teste",parcelada:"Compra parcelada"};
 fE.tipo.onchange=()=>document.querySelectorAll("#fEst .soCompra").forEach(el=>el.style.display=fE.tipo.value==="compra"?"":"none");
 fE.onsubmit=e=>{e.preventDefault();
   const g=r2(fE.g.value);if(!(g>0))return avisar("Coloque a quantidade em gramas.");
@@ -1623,11 +1723,11 @@ function renderEstoque(){
   $("#estResumo").innerHTML=D.filamentos.map(f=>{const a=_E[f.id],reg=a&&(a.registrado||a.usado),baixo=reg&&a.saldo<minimoG();
     return`<div class="m${baixo?" baixo":""}"><small>${esc(f.nome)}</small><b class="${baixo?"taxa":""}">${reg?fmtG(a.saldo):"–"}</b>
       <small>${reg?(baixo?"⚠️ acabando":"em estoque"):"sem registro"}</small>${reg?`<div class="barra"><i style="width:${Math.max(0,Math.min(100,a.saldo/10)).toFixed(0)}%"></i></div>`:""}</div>`}).join("");
-  const L=D.estoque.slice().sort((a,b)=>b.data.localeCompare(a.data));
+  const L=movsEstoque().sort((a,b)=>b.data.localeCompare(a.data));
   $("#tEst").innerHTML=L.length?`<tr><th>Data</th><th>Material</th><th>O que foi</th><th class="n">Quantidade</th><th class="n">Valor</th><th></th></tr>`+
     L.map(m=>`<tr><td>${fmtData(m.data)}</td><td>${esc(filamentoDe(m.filamentoId)?.nome||"(apagado)")}</td><td>${TIPO_EST[m.tipo]||m.tipo}</td>
       <td class="n ${m.tipo==="perda"?"taxa":"lucro"}">${m.tipo==="perda"?"−":"+"}${fmtG(m.g)}</td><td class="n">${m.valor?brl(m.valor):"–"}</td>
-      <td><button class="btn sm del" onclick="apagar('estoque','${m.id}')">✕</button></td></tr>`).join("")
+      <td>${m.id?`<button class="btn sm del" onclick="apagar('estoque','${m.id}')">✕</button>`:`<span class="muted" title="Mude em Despesas › Parcelamentos">parcelamento</span>`}</td></tr>`).join("")
     :'<tr><td class="muted">Nada registrado ainda. Comece registrando o que você já tem em casa ("Estoque que já tenho").</td></tr>';
 }
 
@@ -1684,6 +1784,7 @@ function render(){
     .map(c=>`<option value="${esc(c.nome)}">${fmtCod(c)}${c.telefone?" · "+esc(fmtTel(c.telefone)):""}</option>`).join("");
   $("#dlProdutos").innerHTML=D.produtos.map(p=>`<option value="${esc(p.nome)}">${brl(precoDe(p))}</option>`).join("");
   const s=document.querySelector(".sec.on").id;
+  $("#maisBtn").classList.toggle("on",!!document.querySelector("#nav button.extra.on"));
   if(s==="s-orcamentos")retorno=null; // voltou ao orçamento: acaba a ida e volta
   document.querySelectorAll(".voltaOrc").forEach(b=>b.hidden=!(retorno&&b.closest(".sec").id===(retorno.tipo==="cliente"?"s-clientes":"s-produtos")));
   ({"s-geral":renderGeral,"s-orcamentos":renderOrcamentos,"s-producao":renderProducao,"s-vendas":renderVendas,"s-produtos":renderProdutos,"s-despesas":renderDesp,"s-clientes":renderClientes,"s-estoque":renderEstoque,"s-resumo":renderResumo,"s-config":renderConfig})[s]();
@@ -1697,6 +1798,25 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.10.0",data:"2026-11-07",titulo:"Produção editável, contas que se repetem, meta do mês e mais",itens:[
+    {novo:"Parcela marcada como paga (✓) não desconta mais da Sobra no mês: só as partes ainda não pagas descontam.",
+     uso:"Resumo › Contas do mês › marque ✓. A linha “Parcelas a pagar” e a Sobra mudam na hora."},
+    {novo:"A fila de produção agora pode ser editada: etapa, data de entrega, sinal recebido, ordem (▲▼) e o próprio pedido (✏️ Editar).",
+     uso:"Produção › no cartão do pedido. ✏️ Editar abre o pedido em Orçamentos; ao salvar, volta para a Produção."},
+    {novo:"📲 Avisar cliente: manda pelo WhatsApp que o pedido está pronto (com o que falta pagar) ou que está na produção (com a data de entrega).",
+     uso:"Produção › 📲 Avisar cliente. Com o telefone cadastrado em Clientes, abre a conversa direto."},
+    {novo:"Data de entrega no orçamento e aviso de pedido atrasado na Produção.",
+     uso:"Orçamentos › Entregar até (opcional), ou direto no cartão da Produção."},
+    {novo:"Sinal e vendas a receber: a venda tem “Já recebi tudo do cliente”. Se desmarcar, ela aparece como “a receber” e em Geral.",
+     uso:"Vendas › desmarque “Já recebi tudo”. Quando receber, toque em 💰 Recebi na lista de vendas."},
+    {novo:"Despesas que se repetem: marque 🔁 Repetir todo mês e a conta aparece sozinha nos meses seguintes como “a pagar”. Saiu o botão de copiar despesas fixas.",
+     uso:"Despesas › Lançar despesa › 🔁 Repetir todo mês. Para parar, edite a do último mês e desmarque."},
+    {novo:"Parcelamento de filamento: escolha o filamento e os gramas; eles entram no Estoque e as parcelas não descontam da sobra (o filamento já está no custo das vendas).",
+     uso:"Despesas › Parcelamentos › É compra de filamento? › escolha o filamento e a quantidade em gramas."},
+    {novo:"🎯 Meta do mês em Geral: quanto precisa lucrar para pagar as despesas e parcelas do mês, quanto já lucrou e quantas vendas faltam.",
+     uso:"Geral, no topo. Em Config › Quanto quero sobrar por mês, some um valor extra à meta."},
+    {novo:"No celular, Estoque, Clientes e Config foram para o botão ☰ Mais, no menu de baixo.",
+     uso:"Toque em ☰ Mais e escolha a aba."}]},
   {v:"1.9.0",data:"2026-11-07",titulo:"Positivo × negativo, parcelas e contas do mês",itens:[
     {novo:"Em Geral, gráfico “No positivo ou no negativo?”: cada mês em verde (sobrou) ou vermelho (faltou), com o saldo acumulado.",
      uso:"Geral › primeiro gráfico. Sobra do mês = lucro das vendas − outras despesas − parcelas."},
@@ -1797,17 +1917,19 @@ const PASSOS=[
     <p>Cliente ou produto ainda não cadastrado? Toque em <b>＋ Novo</b> / <b>＋ Cadastrar produto novo</b>: o painel abre o cadastro e, ao salvar, volta para o orçamento.</p>
     <p>Toque em <b>📤 Enviar</b> para mandar ao cliente pelo WhatsApp.</p>
     <p>Quando o cliente aprovar, toque em <b>✅ Aprovar</b>: o pedido vai para a fila da aba <b>Produção</b>.</p>
-    <p>Na <b>Produção</b>, toque em <b>▶ Começar</b> ao imprimir e em <b>✅ Concluir</b> quando ficar pronto: a venda abre preenchida.</p>`},
+    <p>Na <b>Produção</b>, toque em <b>▶ Começar</b> ao imprimir e em <b>✅ Concluir</b> quando ficar pronto: a venda abre preenchida.
+      Lá você também muda a ordem (▲▼), a etapa, a data de entrega e o sinal, edita o pedido e avisa o cliente pelo WhatsApp.</p>`},
   {ico:"🧾",titulo:"4. Lance cada venda",aba:"vendas",texto:`<p>Na aba <b>Vendas</b>:</p><ol>
     <li>Escolha o <b>cliente</b> (cliente novo é cadastrado sozinho; o telefone fica em Clientes).</li>
     <li>Escolha o <b>produto</b> e a <b>quantidade</b>: preço e custo vêm sozinhos.</li>
     <li>Toque na <b>forma de pagamento</b> e em <b>Salvar venda</b>.</li></ol>
     <p>Venda que veio da produção já chega preenchida. Ao salvar, os gastos (filamento, energia, desgaste…) entram sozinhos em <b>Despesas</b>.</p>`},
   {ico:"💸",titulo:"5. Lance as despesas",aba:"despesas",texto:`<p>Na aba <b>Despesas</b>, coloque os gastos do mês: MEI, embalagens, manutenção da impressora…</p>
+    <p>Conta que vem todo mês? Marque <b>🔁 Repetir todo mês</b>.</p>
     <p>Os gastos de produção de cada venda aparecem aqui sozinhos, marcados “da venda”. A compra do rolo de filamento <b>não</b> entra aqui (ela vai em Estoque).</p>`},
   {ico:"📈",titulo:"6. Acompanhe o resultado",aba:"geral",texto:`<ul>
     <li><b>Geral</b>: faturamento, lucro e produtos mais vendidos.</li>
-    <li><b>Geral</b>: gráfico de meses no positivo e no negativo.</li>
+    <li><b>Geral</b>: meta do mês, quem ainda deve e gráfico de meses no positivo e no negativo.</li>
     <li><b>Resumo</b>: lucro líquido, parcelas e a sobra do mês, e as <b>contas do mês</b> com ✓ de pago.</li>
     <li><b>Vendas › Exportar</b>: planilha Excel do mês.</li></ul>`},
   {ico:"✅",titulo:"Pronto!",texto:`<p>Você já pode começar. Os exemplos que vieram em Produtos podem ser editados ou apagados.</p>

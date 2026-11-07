@@ -59,25 +59,28 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
 {
   "versao": 1, "atualizado": "…", "proximoId": 10,     // ids: v vendas, d despesas, p produtos, i impressoras, f filamentos, o orçamentos, c clientes, e estoque, pc parcelamentos
   "taxas": { "Pix": 0, "Débito": 0.0137, "Crédito 1x": 0.0315, … },
-  "config": { "energiaKwh": 0.95, "maoDeObraHora": 25, "falhaPct": 10, "margemPct": 100, "arredondar": "90", "estoqueMinimoG": 200 },  // arredondar: nao | 1 | 90 | 5
+  "config": { "energiaKwh": 0.95, "maoDeObraHora": 25, "falhaPct": 10, "margemPct": 100, "arredondar": "90", "estoqueMinimoG": 200, "metaSobra": 0 },  // arredondar: nao | 1 | 90 | 5
   "impressoras": [ { "id", "nome", "preparoMin" /* aquecer e calibrar, 1x por impressão */, "potenciaW", "valor", "vidaUtilH", "manutHora" } ],
   "filamentos":  [ { "id", "nome", "material", "precoKg" } ],
   "proximoCliente": 3,                // próximo código de cliente (#001, #002…)
   "clientes": [ { "id", "codigo", "nome", "telefone" /* só números */ } ],
-  "parcelamentos": [ { "id", "descricao", "total", "parcelas", "inicio": "AAAA-MM", "pessoas": ["Eu", …], "pagos": { "AAAA-MM": [true, false, …] } } ],
+  "parcelamentos": [ { "id", "descricao", "total", "parcelas", "inicio": "AAAA-MM", "pessoas": ["Eu", …], "pagos": { "AAAA-MM": [true, false, …] },
+                     "material": filamentoId | null, "materialG" /* compra de filamento parcelada: entra no estoque */ } ],
   "estoque": [ { "id", "data", "filamentoId", "tipo": "compra" | "inicial" | "perda", "g", "valor" } ],
   "orcamentos": [ { "id", "data", "cliente", "validade" /* dias */, "itens": [ …iguais aos da venda… ], "frete", "valor", "custo", "obs",
                     "status": "aberto" | "producao" | "aprovado" /* vendido */ | "recusado", "vendaId": null, "clienteId",
-                    "etapa": "fila" | "imprimindo" | "pronto" /* só em producao */, "aprovadoEm": "AAAA-MM-DD" } ],   // item pode ter "detalhe" (peça sob medida)
+                    "etapa": "fila" | "imprimindo" | "pronto" /* só em producao */, "aprovadoEm": "AAAA-MM-DD",
+                    "ordem" /* posição na fila */, "prazo": "AAAA-MM-DD" /* entregar até */, "sinal" /* R$ já recebido */ } ],   // item pode ter "detalhe" (peça sob medida)
   "produtos": [ { "id", "nome", "categoria", "impressoraId", "horas", "minutos", "unidades", "maoMin", "extras",
                   "falhaPct": null, "margemPct": null, "precoVenda": null,   // null = usa o padrão de Config / o preço sugerido
                   "porPeca": true,   // desde 1.7.0: horas/minutos e filamentos.g são de 1 peça (sem: da impressão inteira)
                   "filamentos": [ { "filamentoId", "g" } ], "obs" } ],
   "vendas": [ { "id", "data", "cliente", "itens": [ { "produtoId"|null, "nome", "qtd", "preco", "custo" } ],
-                "frete", "cobrado", "metodo", "custo", "taxa", "lucro", "obs", "clienteId" } ],
+                "frete", "cobrado", "metodo", "custo", "taxa", "lucro", "obs", "clienteId",
+                "recebido": false /* cliente ainda deve; sem o campo = recebido */, "sinal" } ],
                 // cada item pode ter "mat": [ { "f": filamentoId, "g": gramas POR UNIDADE } ] — usado pelo estoque
                 // e "partes": custo de 1 unidade por tipo { fil, energia, maquina, falha, mao, extras | outros } — usado nas despesas de produção
-  "despesas": [ { "id", "data", "categoria", "descricao", "valor", "pago" /* false = a pagar; sem o campo = paga */, "vendaId" /* só nos gastos de produção, lançados pela venda */ } ],
+  "despesas": [ { "id", "data", "categoria", "descricao", "valor", "pago" /* false = a pagar; sem o campo = paga */, "repete" /* 🔁 todo mês */, "serie" /* id da primeira da série */, "vendaId" /* só nos gastos de produção, lançados pela venda */ } ],
 }
 ```
 
@@ -142,8 +145,16 @@ Atenção: o desgaste da impressora também está no custo das peças, então en
 
 **Despesas**: compra do rolo de filamento **não** é despesa (vai em Estoque; o filamento usado entra pelos gastos de produção da venda). Fixas copiáveis: MEI, Aluguel, Internet.
 **Resumo**: lucro líquido = faturamento − taxas − custos de produção − outras despesas (= lucro das vendas − despesas sem `vendaId`);
-sobra no mês = lucro líquido − parcelas do mês. **Contas do mês** (1.9.0): despesas sem `vendaId` (✓ = `pago`) e a parte de cada pessoa nas parcelas
+sobra no mês = lucro líquido − parcelas **a pagar** (1.10.0: partes marcadas ✓ não descontam; parcelamento de filamento nunca desconta). **Contas do mês** (1.9.0): despesas sem `vendaId` (✓ = `pago`) e a parte de cada pessoa nas parcelas
 (✓ = o mesmo `pc.pagos` da aba Despesas); mostra "Tudo pago" ou quanto falta. Despesas fixas copiadas do mês anterior entram com `pago:false`.
+**Geral › Meta do mês** (1.10.0): lucrar despesas + parcelas a pagar do mês atual + `metaSobra`; mostra quanto falta e ≈ quantas vendas (lucro médio).
+Geral também avisa **vendas a receber** (`recebido:false`, valor = cobrado − sinal; botão 💰 Recebi em Vendas).
+**Despesas que se repetem** (1.10.0): `gerarRecorrentes()` (no `normalizar` e ao salvar) cria, como a pagar, os meses que faltam até o mês atual para cada série
+cuja despesa mais recente tem `repete`. Apagar a mais recente para a série (`repete=false` na anterior). Saiu o botão "copiar despesas fixas".
+**Parcelamento de filamento** (1.10.0): `material` + `materialG` → entra no estoque (`movsEstoque()`, no mês da 1ª parcela) e não entra na sobra.
+**Produção editável** (1.10.0): no cartão, etapa, prazo (atrasado em vermelho) e sinal mudam direto; ▲▼ mudam `ordem`; ✏️ Editar abre o pedido em Orçamentos
+(`voltaProd`) e volta à Produção ao salvar (o save mantém os campos que não estão no formulário: `{...ant}`); 📲 Avisar cliente manda texto pelo WhatsApp.
+**Menu no celular** (1.10.0): Estoque, Clientes e Config (`class="extra"`) ficam no botão ☰ Mais.
 **Geral › No positivo ou no negativo?** (1.9.0): barra por mês da sobra (verde/vermelha) e linha do saldo acumulado desde o primeiro mês com movimento. **Sem dízimo** (removido na 1.5.0; `normalizar()` apaga `D.dizimos` de arquivos antigos).
 
 ## Boas-vindas e novidades (desde 1.1.0)
@@ -177,7 +188,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-07, versão 1.9.0)
+## Estado atual (2026-11-07, versão 1.10.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -190,6 +201,8 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.7.2: saiu a peça sob medida do orçamento; produto novo só pelo cadastro de Produtos.
 - 1.8.0: aba Produção (fila dos orçamentos aprovados) e gastos de produção lançados em Despesas pela venda.
 - 1.9.0: gráfico positivo × negativo em Geral; parcelas, sobra e contas do mês (✓ pago) no Resumo; despesas com "Já está pago".
+- 1.10.0: parcela paga não desconta da sobra; produção editável; avisar cliente; prazo de entrega; sinal e vendas a receber; despesas que se repetem; filamento parcelado no estoque; meta do mês; menu ☰ Mais no celular.
+- Para o dono: marcar o parcelamento "Filamento Branco" como compra de filamento (Despesas › Parcelamentos) e dizer os gramas.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -215,3 +228,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.7.2 | 2026-11-07 | Saiu a calculadora de peça sob medida do orçamento (botão, painel e código); itens antigos com `detalhe` continuam aparecendo |
 | 1.8.0 | 2026-11-07 | Aba Produção: orçamento aprovado entra na fila (fila → imprimindo → pronto), concluir abre a venda; ao salvar a venda, os gastos de produção (filamento, energia, desgaste…) entram em Despesas com `vendaId`, sem desconto duplo; Resumo mostra faturamento − taxas − custos de produção − outras despesas |
 | 1.9.0 | 2026-11-07 | Geral: gráfico de meses positivos/negativos e saldo acumulado; Resumo: parcelas do mês, sobra, contas do mês com ✓ de pago (despesas ganham `pago`); valores com “−” sem sinal duplicado; tabelas do Resumo e de Geral não alargam mais a tela do celular |
+| 1.10.0 | 2026-11-07 | Sobra desconta só parcelas a pagar; Produção editável (etapa, prazo, sinal, ordem, editar pedido, avisar cliente no WhatsApp); prazo de entrega no orçamento; vendas a receber; despesas que se repetem todo mês (sai o copiar fixas); filamento parcelado entra no estoque e fora da sobra; meta do mês em Geral (`metaSobra` em Config); menu ☰ Mais no celular; salvar orçamento mantém campos da produção |
