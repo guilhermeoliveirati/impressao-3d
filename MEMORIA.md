@@ -103,7 +103,13 @@ A tabela "Preço por forma de pagamento" mostra o preço para receber o mesmo qu
 (`orcEmVenda`); ao salvar a venda, o orçamento vira `aprovado` com `vendaId`. Apagar essa venda devolve o orçamento para `aberto`.
 "📤 Enviar" monta um texto para WhatsApp (compartilhar do celular ou copiar).
 
-**Clientes**: código automático em sequência (`proximoCliente`). Venda ou orçamento com nome novo cadastra o cliente sozinho
+**Orçamento escolhe da lista (1.6.0)**: cliente é um `<select>` do cadastro (obrigatório) e cada item é um `<select>` do catálogo
+(`editorItens(..., catalogo=true)`); não se digita item avulso. "＋ Novo" / "＋ Cadastrar produto novo…" chamam `irCadastrar(tipo, linha)`:
+guarda `retorno`, abre Clientes/Produtos com o aviso "Voltar ao orçamento"; ao salvar, volta ao orçamento com o novo já escolhido
+(`edO.colocar`). Voltar à aba Orçamentos por qualquer caminho encerra o `retorno`. A peça sob medida é salva em Produtos ao entrar no orçamento.
+Itens antigos fora do catálogo aparecem como "(fora do catálogo)". Vendas continuam aceitando digitação livre.
+
+**Clientes**: código automático em sequência (`proximoCliente`). Venda com nome novo cadastra o cliente sozinho
 (`garantirCliente`, sem telefone) e guarda `clienteId`. Ao abrir, nomes antigos sem cadastro também entram. Trocar o nome no cadastro
 atualiza vendas e orçamentos. Com telefone, "📤 Enviar" do orçamento abre a conversa no WhatsApp (`wa.me/55…`).
 
@@ -154,13 +160,14 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-07, versão 1.5.0)
+## Estado atual (2026-11-07, versão 1.6.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
 - Para o dono fazer: conferir preço por kg dos filamentos e o valor da hora de trabalho em Config; registrar o estoque inicial
   dos materiais; trocar os 3 produtos "(exemplo)" pelos de verdade.
 - 1.5.0: materiais e estoque viraram a aba Estoque; dízimo removido (aba, Resumo e Excel).
+- 1.6.0: orçamento só com cliente e produtos do cadastro (listas), com ida e volta para cadastrar.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -179,3 +186,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.3.1 | 2026-11-07 | Aviso falso de “alterado em outro lugar”: o painel compara o conteúdo do arquivo, não só a data (o Google Drive do computador muda a data ao sincronizar); nomes das pessoas do parcelamento |
 | 1.4.0 | 2026-11-07 | Estoque de materiais (compras, estoque inicial, perdas; vendas descontam os gramas; aviso de material acabando em Geral e resumo com barras); parcelas escolhidas numa lista de 1x a 36x |
 | 1.5.0 | 2026-11-07 | Materiais e estoque saem de Config para a aba própria Estoque (no lugar do Dízimo no menu); dízimo removido do painel (aba, Resumo, Excel, `dados.json`) |
+| 1.6.0 | 2026-11-07 | Orçamento escolhe cliente e produtos em listas do cadastro; se não existir, leva para Clientes/Produtos e volta ao orçamento com o novo escolhido; peça sob medida vira produto ao entrar no orçamento |

@@ -43,12 +43,17 @@ nav button .ico{margin-right:4px}
   #s-vendas #vCards{display:grid}
   .item{grid-template-columns:1fr 1fr 1fr auto!important}
   .item .nm{grid-column:1/-1}
+  .item.cat{grid-template-columns:1fr 1fr auto!important}
   #fProd label[style*="span 2"]{grid-column:1/-1!important}
   #vMes{width:140px}
   #vExcel{padding:11px 12px}
 }
 form.f>*,.item>*,.lado>*{min-width:0}
-.item input{width:100%}
+.item input,.item select{width:100%}
+.item.cat{grid-template-columns:2.2fr 80px 1fr auto}
+.voltaOrc{margin-bottom:12px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.voltaOrc[hidden]{display:none}
+.campoBtn{display:flex;gap:6px;align-items:end}.campoBtn select{flex:1;min-width:0}
 main{max-width:1200px;margin:0 auto;padding:20px 16px}
 .sec{display:none}.sec.on{display:block}
 .card{background:var(--card);border:0;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 1px 2px rgba(15,23,42,.06),0 6px 16px rgba(15,23,42,.06)}
@@ -262,13 +267,13 @@ nav .ct{display:none}
     <h2 id="oTitulo">📝 Novo orçamento</h2>
     <form class="f" id="fOrc" autocomplete="off">
       <input type="hidden" name="id">
-      <label>Cliente<input name="cliente" list="dlClientes" required></label>
+      <label style="grid-column:1/-1">Cliente<span class="campoBtn"><select name="cliente" id="oCli" required></select><button type="button" class="btn sm sec2" id="oNovoCli" title="Cadastrar cliente novo">＋ Novo</button></span></label>
       <label>Data<input name="data" type="date" required></label>
       <label>Validade (dias)<input name="validade" type="number" min="1" step="1" value="7"></label>
       <div style="grid-column:1/-1">
         <div id="oItens"></div>
         <div class="row" style="margin-top:8px;justify-content:space-between">
-          <button type="button" class="btn sm sec2" id="oAddItem">＋ Adicionar item</button>
+          <span class="row" style="gap:6px"><button type="button" class="btn sm sec2" id="oAddItem">＋ Adicionar produto</button><button type="button" class="btn sm sec2" id="oNovoProd">＋ Cadastrar produto novo</button></span>
           <span class="muted" id="oSub"></span>
         </div>
       </div>
@@ -289,11 +294,10 @@ nav .ct{display:none}
           <h3>Materiais usados (total de todas as peças)</h3>
           <div id="ocFil"></div>
           <button type="button" class="btn sm sec2" id="ocAddFil">＋ Outro material</button>
-          <p class="muted" style="margin:6px 0 0">Tempo e gramas: o total que o fatiador mostra para todas as peças juntas.</p>
+          <p class="muted" style="margin:6px 0 0">Tempo e gramas: o total que o fatiador mostra para todas as peças juntas. A peça fica salva em Produtos (categoria “Sob medida”) para poder ser escolhida de novo.</p>
           <div id="ocRes" style="margin-top:12px"></div>
           <div class="row" style="margin-top:10px">
-            <button type="button" class="btn" id="ocAdd">＋ Adicionar ao orçamento</button>
-            <button type="button" class="btn sec2" id="ocSalvarProd">Salvar também em Produtos</button>
+            <button type="button" class="btn" id="ocAdd">＋ Salvar em Produtos e adicionar ao orçamento</button>
             <button type="button" class="btn sec2" id="ocFechar">Fechar</button>
           </div>
         </div>
@@ -372,6 +376,7 @@ nav .ct{display:none}
 
 <!-- PRODUTOS: custo e preço de venda -->
 <section class="sec" id="s-produtos">
+  <div class="infobox voltaOrc" hidden><span>📝 Você veio do <b>orçamento</b>. Ao salvar, o painel volta para ele com o produto já escolhido.</span><button type="button" class="btn sm sec2" onclick="voltarOrc()">‹ Voltar ao orçamento</button></div>
   <div class="lado">
     <div class="card">
       <h2 id="pTitulo">🧮 Novo produto</h2>
@@ -454,6 +459,7 @@ nav .ct{display:none}
 
 <!-- CLIENTES -->
 <section class="sec" id="s-clientes">
+  <div class="infobox voltaOrc" hidden><span>📝 Você veio do <b>orçamento</b>. Ao salvar, o painel volta para ele com o cliente já escolhido.</span><button type="button" class="btn sm sec2" onclick="voltarOrc()">‹ Voltar ao orçamento</button></div>
   <div class="card">
     <h2 id="clTitulo">👤 Cadastrar cliente</h2>
     <form class="f" id="fCli" autocomplete="off">
@@ -613,7 +619,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.5.0";
+const VERSAO="1.6.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -983,6 +989,7 @@ fP.onsubmit=async e=>{e.preventDefault();
   const i=D.produtos.findIndex(x=>x.id===p.id);i>=0?D.produtos[i]=p:D.produtos.push(p);
   D.produtos.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
   salvar();limparProduto();renderProdutos();status(`produto "${p.nome}" salvo`);
+  if(retorno?.tipo==="produto"){const l=retorno.linha;voltarOrc();edO.colocar(l,p);status(`"${p.nome}" cadastrado e colocado no orçamento: confira a quantidade`)}
 };
 function carregarProduto(p,copia){
   limparProduto();
@@ -1015,9 +1022,20 @@ $("#pBusca").oninput=renderProdutos;
 const fV=$("#fVenda");
 const itemVazio=()=>({produtoId:null,nome:"",qtd:1,preco:0,custo:0});
 // Lista de itens (produto, qtd, preço e custo por unidade), usada em Vendas e em Orçamentos.
-function editorItens(box,aoMudar){
+// catalogo=true (Orçamentos): o produto é escolhido numa lista do que já está em Produtos; "＋ Cadastrar produto novo…" leva à aba Produtos.
+function editorItens(box,aoMudar,catalogo=false){
   let itens=[itemVazio()];
-  const rowsItens=()=>{box.innerHTML=itens.map((x,i)=>`<div class="item" data-i="${i}">
+  const opcoesProd=x=>{const existe=D.produtos.some(p=>p.id===x.produtoId);
+    return'<option value="">— escolha o produto —</option>'+
+      (!existe&&x.nome?`<option value="${x.produtoId?esc(x.produtoId):"avulso"}" selected>${esc(x.nome)} (fora do catálogo)</option>`:"")+
+      D.produtos.map(p=>`<option value="${p.id}"${p.id===x.produtoId?" selected":""}>${esc(p.nome)} · ${brl(precoDe(p))}</option>`).join("")+
+      '<option value="__novo">＋ Cadastrar produto novo…</option>'};
+  const linhaCat=(x,i)=>`<div class="item cat" data-i="${i}">
+    <label class="nm">Produto<select data-k="prod">${opcoesProd(x)}</select></label>
+    <label>Qtd<input data-k="qtd" type="number" min="1" step="1" value="${x.qtd}"></label>
+    <label title="Vem da aba Produtos; mude se quiser dar desconto">Preço un. (R$)<input data-k="preco" type="number" min="0" step="0.01" value="${x.preco}"></label>
+    <button type="button" class="btn sm del" data-rm="${i}" title="Tirar item" ${itens.length<2?"disabled style='opacity:.4'":""}>✕</button></div>`;
+  const rowsItens=()=>{box.innerHTML=itens.map((x,i)=>catalogo?linhaCat(x,i):`<div class="item" data-i="${i}">
     <label class="nm">Produto<input data-k="nome" list="dlProdutos" value="${esc(x.nome)}" placeholder="escolha do catálogo ou digite um item avulso"></label>
     <label>Qtd<input data-k="qtd" type="number" min="1" step="1" value="${x.qtd}"></label>
     <label>Preço un. (R$)<input data-k="preco" type="number" min="0" step="0.01" value="${x.preco}"></label>
@@ -1026,7 +1044,12 @@ function editorItens(box,aoMudar){
   box.addEventListener("input",e=>{
   const el=e.target,k=el.dataset.k;if(!k)return;
   const row=el.closest(".item"),x=itens[row.dataset.i];
-  if(k==="nome"){x.nome=el.value;const p=produtoPorNome(el.value);
+  if(k==="prod"){
+    if(el.value==="__novo"){rowsItens();irCadastrar("produto",+row.dataset.i);return}
+    const p=D.produtos.find(y=>y.id===el.value);
+    if(p){x.produtoId=p.id;x.nome=p.nome;x.preco=precoDe(p);x.custo=r2(custoProduto(p).unit);x.mat=matDeProduto(p);delete x.detalhe;row.querySelector('[data-k="preco"]').value=x.preco}
+    else if(!el.value){Object.assign(x,itemVazio(),{qtd:x.qtd});delete x.mat;delete x.detalhe;row.querySelector('[data-k="preco"]').value=0}}
+  else if(k==="nome"){x.nome=el.value;const p=produtoPorNome(el.value);
     if(p&&x.produtoId!==p.id){x.produtoId=p.id;x.nome=p.nome;x.preco=precoDe(p);x.custo=r2(custoProduto(p).unit);x.mat=matDeProduto(p);
       row.querySelector('[data-k="preco"]').value=x.preco;row.querySelector('[data-k="custo"]').value=x.custo}
     else if(!p){x.produtoId=null;delete x.mat}}
@@ -1036,7 +1059,11 @@ function editorItens(box,aoMudar){
   box.addEventListener("click",e=>{const i=e.target.dataset?.rm;if(i==null||itens.length<2)return;itens.splice(+i,1);rowsItens();aoMudar()});
   return{get itens(){return itens},
     set(v){itens=(v||[]).map(x=>({...x}));if(!itens.length)itens=[itemVazio()];rowsItens()},
-    adicionar(){itens.push(itemVazio());rowsItens();aoMudar();box.querySelector(".item:last-child input").focus()},
+    adicionar(){itens.push(itemVazio());rowsItens();aoMudar();box.querySelector(".item:last-child :is(select,input)").focus()},
+    redesenhar(){rowsItens()},
+    // põe o produto na linha i (ou na primeira linha vazia, ou numa linha nova)
+    colocar(i,p){let x=itens[i];if(!x||x.nome)x=itens.find(y=>!y.nome);if(!x)itens.push(x=itemVazio());
+      Object.assign(x,{produtoId:p.id,nome:p.nome,preco:precoDe(p),custo:r2(custoProduto(p).unit),mat:matDeProduto(p)});delete x.detalhe;rowsItens();aoMudar()},
     validos(){return itens.filter(x=>x.nome.trim())}};
 }
 const edV=editorItens($("#vItens"),()=>calcVenda());
@@ -1121,8 +1148,22 @@ $("#vMes").oninput=renderVendas;$("#vBusca").oninput=renderVendas;
    "Aprovar" abre a aba Vendas já preenchida; ao tocar em Salvar venda, o orçamento fica "aprovado" e ligado à venda (vendaId). */
 const fO=$("#fOrc");
 let valorManual=false, filtroOrc="aberto";
-const edO=editorItens($("#oItens"),()=>calcOrc());
+const edO=editorItens($("#oItens"),()=>calcOrc(),true);
 $("#oAddItem").onclick=()=>edO.adicionar();
+$("#oNovoProd").onclick=()=>irCadastrar("produto",-1);
+$("#oNovoCli").onclick=()=>irCadastrar("cliente");
+fO.cliente.addEventListener("change",e=>{if(e.target.value==="__novo"){e.target.value="";irCadastrar("cliente")}});
+// Cliente do orçamento: escolhido numa lista do cadastro; "＋ Cadastrar cliente novo…" leva à aba Clientes.
+function opcoesCli(){const sel=fO.cliente,v=sel.value;
+  sel.innerHTML='<option value="">— escolha o cliente —</option>'+D.clientes.slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"))
+    .map(c=>`<option value="${c.id}">${esc(c.nome)} · ${fmtCod(c)}</option>`).join("")+'<option value="__novo">＋ Cadastrar cliente novo…</option>';
+  sel.value=D.clientes.some(c=>c.id===v)?v:""}
+/* Ida e volta para cadastrar: o orçamento fica como está; ao salvar o cliente/produto, o painel volta para ele já com o novo escolhido. */
+let retorno=null; // {tipo:"cliente"|"produto", linha}
+function irCadastrar(tipo,linha=-1){retorno={tipo,linha};
+  document.querySelector(`#nav [data-s=${tipo==="cliente"?"clientes":"produtos"}]`).click();
+  if(tipo==="cliente"){limparCli();fC.nome.focus()}else{limparProduto();fP.nome.focus()}}
+window.voltarOrc=()=>document.querySelector("#nav [data-s=orcamentos]").click();
 function calcOrc(){
   const sub=r2(soma(edO.itens,x=>x.qtd*x.preco)), custo=r2(soma(edO.itens,x=>x.qtd*x.custo)), frete=+fO.frete.value||0;
   if(!valorManual)fO.valor.value=r2(sub+frete);
@@ -1134,10 +1175,12 @@ fO.addEventListener("input",e=>{if(e.target.name==="valor")valorManual=true;if(e
 function limparOrc(){ocLimpar();fO.reset();fO.id.value="";fO.data.value=hoje();valorManual=false;edO.set([]);$("#oTitulo").textContent="📝 Novo orçamento";calcOrc()}
 $("#oCancelar").onclick=limparOrc;
 fO.onsubmit=e=>{e.preventDefault();
-  const L=edO.validos();if(!L.length)return avisar("Coloque pelo menos um produto no orçamento.");
+  const cli=D.clientes.find(c=>c.id===fO.cliente.value);
+  if(!cli)return avisar("Escolha o cliente. Se ele ainda não está cadastrado, toque em ＋ Novo.");
+  const L=edO.validos();if(!L.length)return avisar("Escolha pelo menos um produto. Se ele ainda não existe, toque em ＋ Cadastrar produto novo.");
   edO.set(L);const {custo}=calcOrc();
   const ant=D.orcamentos.find(x=>x.id===fO.id.value);
-  const o={id:fO.id.value||novoId("o"),data:fO.data.value,cliente:nomeProprio(fO.cliente.value),clienteId:garantirCliente(fO.cliente.value).id,validade:Math.max(1,Math.round(+fO.validade.value||7)),
+  const o={id:fO.id.value||novoId("o"),data:fO.data.value,cliente:cli.nome,clienteId:cli.id,validade:Math.max(1,Math.round(+fO.validade.value||7)),
     itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{})})),
     frete:r2(fO.frete.value),valor:r2(fO.valor.value),custo,obs:fO.obs.value.trim(),status:ant?.status||"aberto",vendaId:ant?.vendaId||null};
   const i=D.orcamentos.findIndex(x=>x.id===o.id);i>=0?D.orcamentos[i]=o:D.orcamentos.push(o);
@@ -1146,7 +1189,8 @@ fO.onsubmit=e=>{e.preventDefault();
 const venceEm=o=>{const d=new Date(o.data+"T12:00");d.setDate(d.getDate()+(o.validade||7));return d.toLocaleDateString("sv-SE")};
 const ST_ORC={aberto:["Em aberto",""],aprovado:["Aprovado","ok"],recusado:["Recusado","aberto"]};
 function renderOrcamentos(){
-  if(!fO.data.value)limparOrc();
+  opcoesCli();
+  if(!fO.data.value)limparOrc();else edO.redesenhar();
   const qtd=f=>D.orcamentos.filter(o=>f==="todos"||o.status===f).length;
   $("#oFiltro").innerHTML=[["aberto","Em aberto"],["aprovado","Aprovados"],["recusado","Recusados"],["todos","Todos"]]
     .map(([k,t])=>`<button type="button" class="chip${filtroOrc===k?" on":""}" data-f="${k}">${t} (${qtd(k)})</button>`).join("");
@@ -1167,7 +1211,7 @@ function renderOrcamentos(){
 }
 $("#oFiltro").addEventListener("click",e=>{const f=e.target.dataset?.f;if(f){filtroOrc=f;renderOrcamentos()}});
 window.editarOrc=id=>{const o=D.orcamentos.find(x=>x.id===id);
-  fO.id.value=o.id;fO.cliente.value=o.cliente;fO.data.value=o.data;fO.validade.value=o.validade||7;fO.frete.value=o.frete||0;fO.valor.value=o.valor;fO.obs.value=o.obs||"";
+  opcoesCli();fO.id.value=o.id;fO.cliente.value=(D.clientes.find(c=>c.id===o.clienteId)||clientePorNome(o.cliente))?.id||"";fO.data.value=o.data;fO.validade.value=o.validade||7;fO.frete.value=o.frete||0;fO.valor.value=o.valor;fO.obs.value=o.obs||"";
   edO.set(o.itens);valorManual=true;$("#oTitulo").textContent="✏️ Editando orçamento de "+o.cliente;calcOrc();scrollTo({top:0,behavior:"smooth"})};
 window.recusarOrc=id=>{D.orcamentos.find(x=>x.id===id).status="recusado";salvar();renderOrcamentos()};
 window.reabrirOrc=id=>{D.orcamentos.find(x=>x.id===id).status="aberto";filtroOrc="aberto";salvar();renderOrcamentos()};
@@ -1237,15 +1281,12 @@ $("#ocAddFil").onclick=()=>{ocFil.push({filamentoId:D.filamentos[0]?.id||"",g:0}
 $("#ocAdd").onclick=()=>{const {p,c,sug}=ocCalc();
   if(!p.nome)return avisar("Dê um nome para a peça.");
   if(!p.filamentos.length)return avisar("Coloque pelo menos um material com os gramas usados.");
+  if(produtoPorNome(p.nome))return avisar(`Já existe "${p.nome}" em Produtos. Escolha ele na lista do orçamento ou dê outro nome para a peça.`);
+  const novo={...p,id:novoId("p")};D.produtos.push(novo);D.produtos.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
   const detalhe=p.filamentos.map(f=>`${num(f.g)} g ${filamentoDe(f.filamentoId)?.nome||""}`).join(" + ")+` · ${fmtTempo(c.horas)}`;
   const mat=p.filamentos.map(f=>({f:f.filamentoId,g:r2(f.g/c.un)}));
-  const L=edO.validos();L.push({produtoId:null,nome:p.nome,qtd:c.un,preco:sug,custo:r2(c.unit),detalhe,mat});edO.set(L);
-  ocLimpar();calcOrc();status("peça adicionada ao orçamento")};
-$("#ocSalvarProd").onclick=()=>{const {p}=ocCalc();
-  if(!p.nome)return avisar("Dê um nome para a peça.");
-  if(produtoPorNome(p.nome))return avisar(`Já existe "${p.nome}" em Produtos.`);
-  D.produtos.push({...p,id:novoId("p")});D.produtos.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
-  salvar();render();status(`"${p.nome}" salvo em Produtos`)};
+  const L=edO.validos();L.push({produtoId:novo.id,nome:p.nome,qtd:c.un,preco:sug,custo:r2(c.unit),detalhe,mat});edO.set(L);
+  salvar();ocLimpar();calcOrc();status(`"${p.nome}" salvo em Produtos e adicionado ao orçamento`)};
 
 /* ---------- parcelamentos (ex.: impressora comprada em sociedade) ----------
    parcela = total ÷ nº de parcelas; parte de cada pessoa = parcela ÷ nº de pessoas.
@@ -1333,7 +1374,8 @@ fC.onsubmit=async e=>{e.preventDefault();
     // trocou o nome: atualiza nas vendas e orçamentos desse cliente
     if(norm(antigo)!==norm(nome))[...D.vendas,...D.orcamentos].forEach(x=>{if(x.clienteId===c.id||norm(x.cliente)===norm(antigo))x.cliente=nome})}
   else c=novoCliente(nome,fC.telefone.value);
-  salvar();limparCli();render();status(`cliente ${fmtCod(c)} ${c.nome} salvo`)};
+  salvar();limparCli();render();status(`cliente ${fmtCod(c)} ${c.nome} salvo`);
+  if(retorno?.tipo==="cliente"){voltarOrc();fO.cliente.value=c.id;status(`cliente ${c.nome} cadastrado e escolhido no orçamento`)}};
 window.editarCli=id=>{const c=D.clientes.find(x=>x.id===id);fC.id.value=c.id;fC.nome.value=c.nome;fC.telefone.value=fmtTel(c.telefone);
   $("#clTitulo").textContent=`✏️ Editando ${fmtCod(c)} ${c.nome}`;scrollTo({top:0,behavior:"smooth"})};
 function renderCadastro(){
@@ -1550,6 +1592,8 @@ function render(){
     .map(c=>`<option value="${esc(c.nome)}">${fmtCod(c)}${c.telefone?" · "+esc(fmtTel(c.telefone)):""}</option>`).join("");
   $("#dlProdutos").innerHTML=D.produtos.map(p=>`<option value="${esc(p.nome)}">${brl(precoDe(p))}</option>`).join("");
   const s=document.querySelector(".sec.on").id;
+  if(s==="s-orcamentos")retorno=null; // voltou ao orçamento: acaba a ida e volta
+  document.querySelectorAll(".voltaOrc").forEach(b=>b.hidden=!(retorno&&b.closest(".sec").id===(retorno.tipo==="cliente"?"s-clientes":"s-produtos")));
   ({"s-geral":renderGeral,"s-orcamentos":renderOrcamentos,"s-vendas":renderVendas,"s-produtos":renderProdutos,"s-despesas":renderDesp,"s-clientes":renderClientes,"s-estoque":renderEstoque,"s-resumo":renderResumo,"s-config":renderConfig})[s]();
 }
 
@@ -1561,6 +1605,13 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.6.0",data:"2026-11-07",titulo:"Orçamento escolhendo cliente e produto da lista",itens:[
+    {novo:"No orçamento, o cliente agora é escolhido numa lista dos clientes cadastrados. Se ele ainda não existe, o painel leva você para Clientes e, ao salvar, volta para o orçamento com ele já escolhido.",
+     uso:"Orçamentos › Cliente › escolha na lista. Cliente novo: toque em ＋ Novo (ou “＋ Cadastrar cliente novo…” na lista), preencha nome e telefone e toque em Salvar cliente."},
+    {novo:"Os produtos do orçamento também vêm da lista do catálogo, com o preço já preenchido. Se o produto não existe, o painel leva você para Produtos e, ao salvar, volta para o orçamento com ele na lista.",
+     uso:"Escolha o produto e a quantidade. Produto novo: toque em ＋ Cadastrar produto novo, preencha e toque em Salvar produto. O que você já tinha preenchido no orçamento continua lá."},
+    {novo:"A peça sob medida agora fica salva em Produtos (categoria “Sob medida”) ao entrar no orçamento.",
+     uso:"Orçamentos › 🧮 Calcular peça sob medida › Salvar em Produtos e adicionar ao orçamento."}]},
   {v:"1.5.0",data:"2026-11-07",titulo:"Aba Estoque e fim do dízimo",itens:[
     {novo:"Materiais e estoque saíram de Config e ganharam uma aba própria, Estoque: quanto tem de cada filamento, registrar compra ou perda, cadastro dos materiais e as movimentações.",
      uso:"Toque em 🧵 Estoque no menu. Comece com “Estoque que já tenho”; a cada rolo comprado, “Compra de rolo”. As vendas descontam os gramas sozinhas."},
@@ -1624,7 +1675,8 @@ const PASSOS=[
     <li>Coloque o <b>tempo</b> e os <b>gramas</b> que o fatiador mostra.</li>
     <li>Diga quantas <b>peças saem por impressão</b>.</li></ol>
     <p>Ao lado aparecem o <b>custo por peça</b>, o <b>preço sugerido</b> e o lucro. Toque em <b>Salvar produto</b>.</p>`},
-  {ico:"📝",titulo:"3. Faça orçamentos",aba:"orcamentos",texto:`<p>Na aba <b>Orçamentos</b>, monte a proposta com os produtos e a quantidade e toque em <b>Salvar orçamento</b>.</p>
+  {ico:"📝",titulo:"3. Faça orçamentos",aba:"orcamentos",texto:`<p>Na aba <b>Orçamentos</b>, escolha o <b>cliente</b> e os <b>produtos</b> na lista, coloque a quantidade e toque em <b>Salvar orçamento</b>.</p>
+    <p>Cliente ou produto ainda não cadastrado? Toque em <b>＋ Novo</b> / <b>＋ Cadastrar produto novo</b>: o painel abre o cadastro e, ao salvar, volta para o orçamento.</p>
     <p>Peça fora do catálogo? Toque em <b>🧮 Calcular peça sob medida</b>, coloque os materiais em gramas e o tempo: o painel calcula custo e preço.</p>
     <p>Toque em <b>📤 Enviar</b> para mandar ao cliente pelo WhatsApp.</p>
     <p>Quando o cliente aprovar, toque em <b>✅ Aprovar</b>: a venda já abre preenchida.</p>`},
