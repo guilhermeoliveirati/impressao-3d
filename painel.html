@@ -174,6 +174,18 @@ table.resumo tr.final td{font-size:1.286rem;font-weight:700;border-top:2px solid
 .novidade .par b{color:#475569}
 #rodape a{color:inherit}
 nav .ct{display:none}
+/* parcelamentos */
+.parc{border:1px solid var(--brd);border-radius:14px;padding:12px;margin-bottom:12px}
+.pcab{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.pcab label{flex:1;min-width:120px}
+.tick{width:26px;height:26px;min-height:0;accent-color:#16a34a;cursor:pointer}
+.ptab tr.agora td{background:#fef9c3!important}
+.ptab tr.quitado td{color:var(--ok)}
+@media (max-width:900px){.ptab th:nth-child(3),.ptab td:nth-child(3){display:none}.ptab td,.ptab th{padding:6px 4px;white-space:normal}.ptab .tag{display:none}.parc{padding:10px 8px}}
+/* peça sob medida no orçamento */
+.sobmedida{background:#faf8ff;border:1px solid #ddd6fe;border-radius:14px;padding:14px;margin-top:10px}
+.f2{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end}
+.f2>*{min-width:0}.f2 .largo{grid-column:1/-1}
 /* Confirmação e avisos dentro do painel (no app instalado as caixas confirm e alert do navegador podem não aparecer) */
 #conf{position:fixed;inset:0;z-index:60;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:16px}
 #conf[hidden]{display:none}
@@ -252,6 +264,32 @@ nav .ct{display:none}
         <div class="row" style="margin-top:8px;justify-content:space-between">
           <button type="button" class="btn sm sec2" id="oAddItem">＋ Adicionar item</button>
           <span class="muted" id="oSub"></span>
+        </div>
+      </div>
+      <div style="grid-column:1/-1">
+        <button type="button" class="btn sm" id="ocAbrir">🧮 Calcular peça sob medida pelos materiais</button>
+        <div id="ocBox" class="sobmedida" hidden>
+          <h3 style="margin-top:0">🧮 Peça sob medida</h3>
+          <div class="f2">
+            <label class="largo">Nome da peça<input id="ocNome" placeholder="ex.: Suporte de celular personalizado"></label>
+            <label>Impressora<select id="ocImp"></select></label>
+            <label>Quantidade de peças<input id="ocQtd" type="number" min="1" step="1" value="1"></label>
+            <label>Tempo de impressão – horas<input id="ocH" type="number" min="0" step="1" value="0"></label>
+            <label>minutos<input id="ocM" type="number" min="0" step="1" value="0"></label>
+            <label>Trabalho manual (min)<input id="ocMao" type="number" min="0" step="1" value="0"></label>
+            <label>Extras por peça (R$)<input id="ocExt" type="number" min="0" step="0.01" value="0"></label>
+            <label>Margem de lucro (%)<input id="ocMarg" type="number" min="0" step="1"></label>
+          </div>
+          <h3>Materiais usados (total de todas as peças)</h3>
+          <div id="ocFil"></div>
+          <button type="button" class="btn sm sec2" id="ocAddFil">＋ Outro material</button>
+          <p class="muted" style="margin:6px 0 0">Tempo e gramas: o total que o fatiador mostra para todas as peças juntas.</p>
+          <div id="ocRes" style="margin-top:12px"></div>
+          <div class="row" style="margin-top:10px">
+            <button type="button" class="btn" id="ocAdd">＋ Adicionar ao orçamento</button>
+            <button type="button" class="btn sec2" id="ocSalvarProd">Salvar também em Produtos</button>
+            <button type="button" class="btn sec2" id="ocFechar">Fechar</button>
+          </div>
         </div>
       </div>
       <label>Frete / entrega (R$)<input name="frete" type="number" step="0.01" min="0" value="0"></label>
@@ -392,6 +430,15 @@ nav .ct{display:none}
   </div>
   <div class="card">
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <h2 style="margin:0">💳 Parcelamentos</h2>
+      <button class="btn sm sec2" id="pcNovo">＋ Novo parcelamento</button>
+    </div>
+    <div id="pcLista"></div>
+    <p class="muted">Marque ✓ quando cada pessoa pagar a parte do mês; o mês atual fica em amarelo. As parcelas não entram como despesa:
+      o valor da impressora já entra no custo de cada peça (desgaste, em Config).</p>
+  </div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
       <h2 style="margin:0">Despesas</h2>
       <label>Mês<input type="month" id="dMes"></label>
     </div>
@@ -401,6 +448,23 @@ nav .ct{display:none}
 
 <!-- CLIENTES -->
 <section class="sec" id="s-clientes">
+  <div class="card">
+    <h2 id="clTitulo">👤 Cadastrar cliente</h2>
+    <form class="f" id="fCli" autocomplete="off">
+      <input type="hidden" name="id">
+      <label>Nome<input name="nome" required></label>
+      <label>Telefone / WhatsApp<input name="telefone" type="tel" inputmode="tel" placeholder="(11) 91234-5678"></label>
+      <div class="row"><button class="btn" type="submit">Salvar cliente</button><button class="btn sec2" type="button" id="clCancelar">Limpar</button></div>
+    </form>
+    <p class="muted">O código do cliente é criado sozinho. Quem aparece numa venda ou orçamento e ainda não está cadastrado entra aqui automaticamente (sem telefone).</p>
+  </div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <h2 style="margin:0">👥 Clientes cadastrados</h2>
+      <label style="flex:1;max-width:320px">Buscar<input id="clBusca" placeholder="nome, telefone ou código"></label>
+    </div>
+    <div class="scroll"><table id="tCli"></table></div>
+  </div>
   <div class="grid2">
     <div class="card"><h2>Melhores clientes</h2><div class="scroll"><table id="tTop"></table></div></div>
     <div class="card"><h2>Clientes sumidos</h2>
@@ -530,7 +594,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.2.0";
+const VERSAO="1.3.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -694,8 +758,10 @@ function normalizar(){
   D.versao??=1;D.proximoId??=1;
   D.taxas??={...TAXAS_PADRAO};
   D.config={energiaKwh:0.95,maoDeObraHora:25,falhaPct:10,margemPct:100,arredondar:"90",...(D.config||{})};
-  for(const k of ["impressoras","filamentos","produtos","orcamentos","vendas","despesas"])D[k]??=[];
-  D.dizimos??={};
+  for(const k of ["impressoras","filamentos","produtos","clientes","orcamentos","vendas","despesas","parcelamentos"])D[k]??=[];
+  D.dizimos??={};D.proximoCliente??=1;
+  // clientes que só existiam pelo nome em vendas/orçamentos entram no cadastro (sem telefone)
+  [...D.vendas,...D.orcamentos].sort((a,b)=>a.data.localeCompare(b.data)).forEach(x=>{if(x.cliente&&!clientePorNome(x.cliente))novoCliente(x.cliente)});
 }
 
 /* ---------- navegação ---------- */
@@ -981,7 +1047,7 @@ fV.onsubmit=e=>{e.preventDefault();
   const L=edV.validos();
   if(!L.length)return avisar("Coloque pelo menos um produto na venda.");
   edV.set(L);const {taxa,lucro,custo}=calcVenda();
-  const v={id:fV.id.value||novoId("v"),data:fV.data.value,cliente:nomeProprio(fV.cliente.value),
+  const v={id:fV.id.value||novoId("v"),data:fV.data.value,cliente:nomeProprio(fV.cliente.value),clienteId:garantirCliente(fV.cliente.value).id,
     itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo)})),
     frete:r2(fV.frete.value),cobrado:r2(fV.cobrado.value),metodo:fV.metodo.value,custo,taxa,lucro,obs:D.vendas.find(x=>x.id===fV.id.value)?.obs||""};
   const i=D.vendas.findIndex(x=>x.id===v.id); i>=0?D.vendas[i]=v:D.vendas.push(v);
@@ -1012,7 +1078,7 @@ window.editarVenda=id=>{const v=D.vendas.find(x=>x.id===id);
   edV.set(v.itens);orcEmVenda=null;$("#vOrc").hidden=true;
   cobradoManual=true;$("#vTitulo").textContent="Editando venda de "+v.cliente;calcVenda();scrollTo({top:0,behavior:"smooth"})};
 window.apagar=async(col,id)=>{
-  let msg={vendas:"Apagar esta venda?",despesas:"Apagar esta despesa?",orcamentos:"Apagar este orçamento?"}[col]||"Apagar?";
+  let msg={vendas:"Apagar esta venda?",despesas:"Apagar esta despesa?",orcamentos:"Apagar este orçamento?",clientes:"Apagar este cliente do cadastro? As vendas e orçamentos continuam com o nome dele.",parcelamentos:"Apagar este parcelamento e todas as marcações de pago?"}[col]||"Apagar?";
   if(col==="produtos"){const n=D.vendas.filter(v=>(v.itens||[]).some(x=>x.produtoId===id)).length;
     msg=n?`Este produto aparece em ${n} venda(s). As vendas continuam com o nome e o custo gravados. Apagar o produto do catálogo?`:"Apagar este produto?"}
   if(!await confirmar(msg,"Apagar",true))return;
@@ -1036,14 +1102,14 @@ function calcOrc(){
   return{custo};
 }
 fO.addEventListener("input",e=>{if(e.target.name==="valor")valorManual=true;if(e.target.name==="valor"||e.target.name==="frete")calcOrc()});
-function limparOrc(){fO.reset();fO.id.value="";fO.data.value=hoje();valorManual=false;edO.set([]);$("#oTitulo").textContent="📝 Novo orçamento";calcOrc()}
+function limparOrc(){ocLimpar();fO.reset();fO.id.value="";fO.data.value=hoje();valorManual=false;edO.set([]);$("#oTitulo").textContent="📝 Novo orçamento";calcOrc()}
 $("#oCancelar").onclick=limparOrc;
 fO.onsubmit=e=>{e.preventDefault();
   const L=edO.validos();if(!L.length)return avisar("Coloque pelo menos um produto no orçamento.");
   edO.set(L);const {custo}=calcOrc();
   const ant=D.orcamentos.find(x=>x.id===fO.id.value);
-  const o={id:fO.id.value||novoId("o"),data:fO.data.value,cliente:nomeProprio(fO.cliente.value),validade:Math.max(1,Math.round(+fO.validade.value||7)),
-    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo)})),
+  const o={id:fO.id.value||novoId("o"),data:fO.data.value,cliente:nomeProprio(fO.cliente.value),clienteId:garantirCliente(fO.cliente.value).id,validade:Math.max(1,Math.round(+fO.validade.value||7)),
+    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(x.detalhe?{detalhe:x.detalhe}:{})})),
     frete:r2(fO.frete.value),valor:r2(fO.valor.value),custo,obs:fO.obs.value.trim(),status:ant?.status||"aberto",vendaId:ant?.vendaId||null};
   const i=D.orcamentos.findIndex(x=>x.id===o.id);i>=0?D.orcamentos[i]=o:D.orcamentos.push(o);
   filtroOrc=o.status;salvar();limparOrc();renderOrcamentos();status(`orçamento de ${o.cliente} salvo`);
@@ -1090,9 +1156,105 @@ window.verVendaOrc=id=>{const o=D.orcamentos.find(x=>x.id===id),v=D.vendas.find(
 window.enviarOrc=async id=>{const o=D.orcamentos.find(x=>x.id===id);
   const txt=`*Orçamento*\nCliente: ${o.cliente}\nData: ${fmtData(o.data)}\n\n`+o.itens.map(x=>`${num(x.qtd,0)}× ${x.nome}: ${brl(x.preco*x.qtd)}`).join("\n")+
     (o.frete?`\nFrete: ${brl(o.frete)}`:"")+`\n\n*Total: ${brl(o.valor)}*\nVálido até ${fmtData(venceEm(o))}.`+(o.obs?`\n\n${o.obs}`:"");
+  const cli=D.clientes.find(c=>c.id===o.clienteId)||clientePorNome(o.cliente);
+  if(cli?.telefone){window.open(linkZap(cli.telefone)+"?text="+encodeURIComponent(txt),"_blank");return}
   if(navigator.share){try{await navigator.share({text:txt});return}catch(e){if(e.name==="AbortError")return}}
   try{await navigator.clipboard.writeText(txt);avisar("Texto do orçamento copiado. Cole no WhatsApp para mandar ao cliente.")}
   catch{avisar(txt)}};
+
+/* ---------- peça sob medida (dentro do orçamento) ----------
+   Mesma conta da aba Produtos (custoProduto): materiais em gramas, energia, desgaste e manutenção da impressora,
+   perdas, mão de obra e extras. Tempo e gramas são do total; dividindo pela quantidade sai o custo por peça.
+   Preço por peça = custo × (1 + margem), arredondado como em Config. */
+let ocFil=[];
+function ocLer(){return{nome:$("#ocNome").value.trim(),categoria:"Sob medida",impressoraId:$("#ocImp").value,horas:+$("#ocH").value||0,minutos:+$("#ocM").value||0,
+  unidades:Math.max(1,Math.round(+$("#ocQtd").value||1)),maoMin:+$("#ocMao").value||0,extras:r2($("#ocExt").value),
+  falhaPct:null,margemPct:$("#ocMarg").value===""?null:+$("#ocMarg").value,precoVenda:null,
+  filamentos:ocFil.filter(f=>f.filamentoId&&f.g>0).map(f=>({filamentoId:f.filamentoId,g:r2(f.g)})),obs:""}}
+function ocRows(){
+  $("#ocFil").innerHTML=D.filamentos.length?ocFil.map((f,i)=>`<div class="linha">
+    <select data-i="${i}" data-k="filamentoId">${D.filamentos.map(x=>`<option value="${x.id}"${x.id===f.filamentoId?" selected":""}>${esc(x.nome)} · ${brl(x.precoKg)}/kg</option>`).join("")}</select>
+    <input data-i="${i}" data-k="g" type="number" step="0.1" min="0" value="${f.g||0}" style="width:100px" aria-label="gramas"><span class="muted">g</span>
+    ${ocFil.length>1?`<button type="button" class="btn sm del" data-rm="${i}" title="Tirar material">✕</button>`:""}</div>`).join("")
+    :'<p class="muted">Cadastre os filamentos em Config primeiro.</p>';
+}
+function ocCalc(){
+  const p=ocLer(),c=custoProduto(p),un=c.un,sug=precoSugerido(p,c);
+  $("#ocMarg").placeholder="padrão "+D.config.margemPct+"%";
+  const imp=impressoraDe(p.impressoraId);
+  const L=[["🧵 Materiais",c.fil,`${num(c.gramas)} g`],["⚡ Energia",c.energia,`${num(c.kwh,2)} kWh`],
+    ["🖨️ Desgaste e manutenção",c.maquina,`${fmtTempo(c.horas)}${imp?` · manutenção ${brl(imp.manutHora)}/h`:""}`],
+    ["⚠️ Perdas / falhas",c.falha,`${num(c.falhaPct)}%`],["✋ Mão de obra",c.mao,`${num(p.maoMin,0)} min`],["📦 Extras",c.extras*un,""]];
+  const mx=Math.max(...L.map(l=>l[1]),.01);
+  $("#ocRes").innerHTML=`<div class="decomp">${L.map(([l,v,d])=>`<span>${l} <span class="muted">${d}</span></span><div class="bar"><i style="width:${(v/mx*100).toFixed(1)}%"></i></div><span class="v">${brl(v)}</span>`).join("")}</div>
+    <div class="destaque" style="margin-top:8px"><span>Custo total (${un} ${un>1?"peças":"peça"})</span><span class="n">${brl(c.unit*un)}</span></div>
+    <div class="destaque"><span>Custo por peça</span><span class="n">${brl(c.unit)}</span></div>
+    <div class="destaque"><span>Preço de venda por peça <span class="muted">(margem ${num(margemDe(p))}%)</span></span><span class="n" style="color:var(--acc)">${brl(sug)}</span></div>
+    <div class="calc">Total para o cliente: <b>${brl(sug*un)}</b> · lucro <b class="${sug>=c.unit?"lucro":"taxa"}">${brl((sug-c.unit)*un)}</b></div>`;
+  return{p,c,sug};
+}
+function ocPrep(){
+  $("#ocImp").innerHTML=D.impressoras.map(i=>`<option value="${i.id}">${esc(i.nome)}</option>`).join("")||'<option value="">(cadastre em Config)</option>';
+  if(!ocFil.length)ocFil=[{filamentoId:D.filamentos[0]?.id||"",g:0}];ocRows();ocCalc();
+}
+function ocLimpar(){["#ocNome","#ocMarg"].forEach(x=>$(x).value="");["#ocH","#ocM","#ocMao","#ocExt"].forEach(x=>$(x).value=0);$("#ocQtd").value=1;ocFil=[];$("#ocBox").hidden=true}
+$("#ocAbrir").onclick=()=>{const b=$("#ocBox");b.hidden=!b.hidden;if(!b.hidden){ocPrep();$("#ocNome").focus()}};
+$("#ocFechar").onclick=ocLimpar;
+$("#ocBox").addEventListener("keydown",e=>{if(e.key==="Enter")e.preventDefault()}); // Enter aqui não salva o orçamento
+$("#ocBox").addEventListener("input",e=>{const el=e.target;if(el.closest("#ocFil")&&el.dataset.k){ocFil[el.dataset.i][el.dataset.k]=el.dataset.k==="g"?(+el.value||0):el.value}ocCalc()});
+$("#ocBox").addEventListener("change",e=>{const el=e.target;if(el.closest("#ocFil")&&el.dataset.k==="filamentoId")ocFil[el.dataset.i].filamentoId=el.value;ocCalc()});
+$("#ocFil").addEventListener("click",e=>{const i=e.target.dataset?.rm;if(i==null)return;ocFil.splice(+i,1);ocRows();ocCalc()});
+$("#ocAddFil").onclick=()=>{ocFil.push({filamentoId:D.filamentos[0]?.id||"",g:0});ocRows();ocCalc()};
+$("#ocAdd").onclick=()=>{const {p,c,sug}=ocCalc();
+  if(!p.nome)return avisar("Dê um nome para a peça.");
+  if(!p.filamentos.length)return avisar("Coloque pelo menos um material com os gramas usados.");
+  const detalhe=p.filamentos.map(f=>`${num(f.g)} g ${filamentoDe(f.filamentoId)?.nome||""}`).join(" + ")+` · ${fmtTempo(c.horas)}`;
+  const L=edO.validos();L.push({produtoId:null,nome:p.nome,qtd:c.un,preco:sug,custo:r2(c.unit),detalhe});edO.set(L);
+  ocLimpar();calcOrc();status("peça adicionada ao orçamento")};
+$("#ocSalvarProd").onclick=()=>{const {p}=ocCalc();
+  if(!p.nome)return avisar("Dê um nome para a peça.");
+  if(produtoPorNome(p.nome))return avisar(`Já existe "${p.nome}" em Produtos.`);
+  D.produtos.push({...p,id:novoId("p")});D.produtos.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+  salvar();render();status(`"${p.nome}" salvo em Produtos`)};
+
+/* ---------- parcelamentos (ex.: impressora comprada em sociedade) ----------
+   parcela = total ÷ nº de parcelas; parte de cada pessoa = parcela ÷ nº de pessoas.
+   pagos["AAAA-MM"][i] = true quando a pessoa i pagou a parte daquele mês. Não entra como despesa. */
+const mesMais=(m,n)=>{const [y,mm]=m.split("-").map(Number);return new Date(y,mm-1+n,1).toLocaleDateString("sv-SE").slice(0,7)};
+const nomeMes=m=>`${MESES[+m.slice(5)-1]}/${m.slice(0,4)}`;
+function renderParcelas(){
+  const box=$("#pcLista");
+  if(!D.parcelamentos.length){box.innerHTML='<p class="muted">Nenhum parcelamento. Toque em ＋ Novo parcelamento.</p>';return}
+  const atual=hoje().slice(0,7);
+  box.innerHTML=D.parcelamentos.map((pc,ip)=>{
+    const parc=r2(pc.total/pc.parcelas), parte=r2(parc/pc.pessoas.length);
+    const meses=Array.from({length:pc.parcelas},(_,i)=>mesMais(pc.inicio,i));
+    const pago=(m,j)=>!!pc.pagos?.[m]?.[j];
+    const pagas=pc.pessoas.map((_,j)=>meses.filter(m=>pago(m,j)).length), tot=soma(pagas,x=>x), partes=pc.parcelas*pc.pessoas.length;
+    return`<div class="parc">
+      <div class="pcab">
+        <label style="flex:2;min-width:180px">Descrição<input data-pc="${ip}" data-k="descricao" value="${esc(pc.descricao)}"></label>
+        <label>Valor total (R$)<input data-pc="${ip}" data-k="total" type="number" step="0.01" min="0" value="${pc.total}"></label>
+        <label>Parcelas<input data-pc="${ip}" data-k="parcelas" type="number" min="1" step="1" value="${pc.parcelas}"></label>
+        <label>1ª parcela<input data-pc="${ip}" data-k="inicio" type="month" value="${pc.inicio}"></label>
+        <label style="flex:2;min-width:200px">Pessoas (separe por vírgula)<input data-pc="${ip}" data-k="pessoas" value="${esc(pc.pessoas.join(", "))}"></label>
+      </div>
+      <div class="calc" style="margin:10px 0">Parcela <b>${brl(parc)}</b> · cada pessoa paga <b>${brl(parte)}</b> por mês · ${pc.parcelas}x, de ${nomeMes(meses[0])} a ${nomeMes(meses.at(-1))}</div>
+      <div class="scroll"><table class="ptab"><tr><th>Parcela</th><th>Mês</th><th class="n">Valor</th>${pc.pessoas.map(n=>`<th class="n">${esc(n)}</th>`).join("")}</tr>`+
+      meses.map((m,i)=>`<tr class="${m===atual?"agora":""}${pc.pessoas.every((_,j)=>pago(m,j))?" quitado":""}"><td>${i+1}/${pc.parcelas}</td><td>${nomeMes(m)}${m===atual?' <span class="tag">este mês</span>':""}</td><td class="n">${brl(parc)}</td>`+
+        pc.pessoas.map((n,j)=>`<td class="n"><input type="checkbox" class="tick" data-pc="${ip}" data-m="${m}" data-j="${j}" ${pago(m,j)?"checked":""} aria-label="${esc(n)} pagou ${nomeMes(m)}"></td>`).join("")+`</tr>`).join("")+
+      `<tr class="rod"><th>Pago</th><th></th><th></th>${pc.pessoas.map((_,j)=>`<th class="n">${pagas[j]}/${pc.parcelas} · ${brl(pagas[j]*parte)}</th>`).join("")}</tr>
+       <tr class="rod"><th>Falta</th><th></th><th></th>${pc.pessoas.map((_,j)=>`<th class="n">${brl((pc.parcelas-pagas[j])*parte)}</th>`).join("")}</tr></table></div>
+      <div class="row" style="justify-content:space-between;margin-top:8px"><span class="muted">${tot} de ${partes} partes pagas · falta ${brl((partes-tot)*parte)} no total</span>
+        <button class="btn sm del" onclick="apagar('parcelamentos','${pc.id}')">✕ Apagar parcelamento</button></div></div>`}).join("");
+}
+$("#pcLista").addEventListener("change",e=>{const el=e.target,pc=D.parcelamentos[el.dataset.pc];if(!pc)return;
+  if(el.classList.contains("tick")){const a=((pc.pagos??={})[el.dataset.m]??=pc.pessoas.map(()=>false));a[+el.dataset.j]=el.checked;salvar();setTimeout(renderParcelas,200);return}
+  const k=el.dataset.k;if(!k)return;
+  pc[k]=k==="pessoas"?el.value.split(",").map(x=>x.trim()).filter(Boolean):k==="total"?r2(el.value):k==="parcelas"?Math.max(1,Math.round(+el.value||1)):el.value.trim();
+  if(!pc.pessoas.length)pc.pessoas=["Eu"];if(!pc.inicio)pc.inicio=hoje().slice(0,7);
+  salvar();setTimeout(renderParcelas,250)});
+$("#pcNovo").onclick=()=>{D.parcelamentos.push({id:novoId("pc"),descricao:"Novo parcelamento",total:0,parcelas:10,inicio:hoje().slice(0,7),pessoas:["Eu"],pagos:{}});salvar();renderParcelas()};
 
 /* ---------- despesas ---------- */
 const fD=$("#fDesp");
@@ -1111,6 +1273,7 @@ $("#dCopiar").onclick=async()=>{
 };
 window.editarDesp=id=>{const d=D.despesas.find(x=>x.id===id);for(const k in d)if(fD[k])fD[k].value=d[k];scrollTo({top:0,behavior:"smooth"})};
 function renderDesp(){
+  renderParcelas();
   const mes=$("#dMes").value, L=D.despesas.filter(d=>d.data.startsWith(mes));
   $("#tDesp").innerHTML=`<tr><th>Data</th><th>Categoria</th><th>Descrição</th><th class="n">Valor</th><th></th></tr>`+
     L.map(d=>`<tr><td>${fmtData(d.data)}</td><td>${esc(d.categoria)}</td><td>${esc(d.descricao)}</td><td class="n">${brl(d.valor)}</td><td><button class="btn sm sec2" onclick="editarDesp('${d.id}')">Editar</button> <button class="btn sm del" onclick="apagar('despesas','${d.id}')">✕</button></td></tr>`).join("")+
@@ -1118,12 +1281,51 @@ function renderDesp(){
 }
 $("#dMes").oninput=renderDesp;
 
+/* ---------- cadastro de clientes ----------
+   Código automático em sequência (D.proximoCliente), mostrado como #001. Telefone guardado só com os números.
+   Venda ou orçamento com nome novo cadastra o cliente sozinho (garantirCliente) e guarda clienteId. */
+const fmtCod=c=>"#"+String(c.codigo).padStart(3,"0");
+const soDig=t=>String(t||"").replace(/\D/g,"");
+const fmtTel=t=>{const d=soDig(t);return d.length===11?`(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`:d.length===10?`(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`:d};
+const linkZap=t=>{let d=soDig(t);if(d.length<=11)d="55"+d;return"https://wa.me/"+d};
+const clientePorNome=n=>{const k=norm(n);return k?D.clientes.find(c=>norm(c.nome)===k):null};
+function novoCliente(nome,telefone=""){const c={id:novoId("c"),codigo:D.proximoCliente++,nome:nomeProprio(nome),telefone:soDig(telefone)};D.clientes.push(c);return c}
+const garantirCliente=nome=>clientePorNome(nome)||novoCliente(nome);
+const fC=$("#fCli");
+function limparCli(){fC.reset();fC.id.value="";$("#clTitulo").textContent="👤 Cadastrar cliente"}
+$("#clCancelar").onclick=limparCli;
+fC.telefone.addEventListener("blur",()=>{if(fC.telefone.value)fC.telefone.value=fmtTel(fC.telefone.value)});
+fC.onsubmit=async e=>{e.preventDefault();
+  const nome=nomeProprio(fC.nome.value), outro=clientePorNome(nome);
+  if(outro&&outro.id!==fC.id.value&&!await confirmar(`Já existe o cliente ${fmtCod(outro)} ${outro.nome}. Cadastrar outro com o mesmo nome?`))return;
+  let c=D.clientes.find(x=>x.id===fC.id.value);
+  if(c){const antigo=c.nome;c.nome=nome;c.telefone=soDig(fC.telefone.value);
+    // trocou o nome: atualiza nas vendas e orçamentos desse cliente
+    if(norm(antigo)!==norm(nome))[...D.vendas,...D.orcamentos].forEach(x=>{if(x.clienteId===c.id||norm(x.cliente)===norm(antigo))x.cliente=nome})}
+  else c=novoCliente(nome,fC.telefone.value);
+  salvar();limparCli();render();status(`cliente ${fmtCod(c)} ${c.nome} salvo`)};
+window.editarCli=id=>{const c=D.clientes.find(x=>x.id===id);fC.id.value=c.id;fC.nome.value=c.nome;fC.telefone.value=fmtTel(c.telefone);
+  $("#clTitulo").textContent=`✏️ Editando ${fmtCod(c)} ${c.nome}`;scrollTo({top:0,behavior:"smooth"})};
+function renderCadastro(){
+  const q=norm($("#clBusca").value), compras={};
+  D.vendas.forEach(v=>{const c=D.clientes.find(x=>x.id===v.clienteId)||clientePorNome(v.cliente);if(c){const a=compras[c.id]??={n:0,f:0};a.n++;a.f+=v.cobrado}});
+  const L=D.clientes.filter(c=>!q||norm(c.nome+" "+c.telefone+" "+fmtTel(c.telefone)+" "+fmtCod(c)).includes(q)).sort((a,b)=>a.codigo-b.codigo);
+  $("#tCli").innerHTML=`<tr><th>Código</th><th>Nome</th><th>Telefone</th><th class="n">Compras</th><th class="n">Total</th><th></th></tr>`+
+    (L.map(c=>`<tr><td><b>${fmtCod(c)}</b></td><td>${esc(c.nome)}</td>
+      <td>${c.telefone?`<a href="${linkZap(c.telefone)}" target="_blank" rel="noopener" title="Abrir no WhatsApp">${esc(fmtTel(c.telefone))}</a>`:'<span class="muted">–</span>'}</td>
+      <td class="n">${compras[c.id]?.n||0}</td><td class="n">${brl(compras[c.id]?.f||0)}</td>
+      <td><button class="btn sm sec2" onclick="editarCli('${c.id}')">Editar</button> <button class="btn sm del" onclick="apagar('clientes','${c.id}')">✕</button></td></tr>`).join("")
+     ||`<tr><td colspan="6" class="muted">${D.clientes.length?"Nenhum cliente com essa busca.":"Nenhum cliente cadastrado ainda."}</td></tr>`);
+}
+$("#clBusca").oninput=renderCadastro;
+
 /* ---------- clientes ---------- */
 function porCliente(){
   const c={};for(const v of D.vendas){const k=norm(v.cliente);const x=c[k]??={nome:v.cliente,n:0,fat:0,lucro:0,ult:"",prim:v.data};x.n++;x.fat+=v.cobrado;x.lucro+=v.lucro;if(v.data>x.ult){x.ult=v.data;x.nome=v.cliente}}
   return Object.values(c);
 }
 function renderClientes(){
+  renderCadastro();
   const C=porCliente(), hj=new Date();
   const dias=d=>Math.round((hj-new Date(d))/864e5);
   $("#tTop").innerHTML=`<tr><th>Cliente</th><th class="n">Compras</th><th class="n">Total gasto</th><th class="n">Lucro</th><th>Última</th></tr>`+
@@ -1327,8 +1529,8 @@ function iniciar(){
 function render(){
   if(!D)return;
   _M=null;
-  const nomes=[...new Map(D.vendas.map(v=>[norm(v.cliente),v.cliente])).values()].sort();
-  $("#dlClientes").innerHTML=nomes.map(n=>`<option value="${esc(n)}">`).join("");
+  $("#dlClientes").innerHTML=D.clientes.slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"))
+    .map(c=>`<option value="${esc(c.nome)}">${fmtCod(c)}${c.telefone?" · "+esc(fmtTel(c.telefone)):""}</option>`).join("");
   $("#dlProdutos").innerHTML=D.produtos.map(p=>`<option value="${esc(p.nome)}">${brl(precoDe(p))}</option>`).join("");
   const s=document.querySelector(".sec.on").id;
   ({"s-geral":renderGeral,"s-orcamentos":renderOrcamentos,"s-vendas":renderVendas,"s-produtos":renderProdutos,"s-despesas":renderDesp,"s-clientes":renderClientes,"s-dizimo":renderDizimo,"s-resumo":renderResumo,"s-config":renderConfig})[s]();
@@ -1342,6 +1544,15 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.3.0",data:"2026-11-07",titulo:"Cadastro de clientes, parcelas da impressora e peça sob medida",itens:[
+    {novo:"Cadastro de clientes com nome, telefone e código automático (#001, #002…).",
+     uso:"Clientes › Cadastrar cliente › Salvar. Na lista, toque no telefone para abrir o WhatsApp. Quem aparece numa venda ou orçamento já entra no cadastro sozinho."},
+    {novo:"Controle de parcelamentos, como a impressora dividida em 3: mostra a parcela, a parte de cada pessoa e quanto falta.",
+     uso:"Despesas › Parcelamentos. Marque ✓ no mês e na pessoa quando ela pagar. O mês atual fica em amarelo."},
+    {novo:"Orçamento de peça sob medida pelos materiais: gramas de cada filamento, tempo e quantidade de peças. Mostra materiais, energia, desgaste e manutenção da impressora, custo e preço de venda.",
+     uso:"Orçamentos › 🧮 Calcular peça sob medida › preencha › Adicionar ao orçamento. Use “Salvar também em Produtos” para reaproveitar a peça depois."},
+    {novo:"O botão 📤 Enviar do orçamento abre direto a conversa do cliente no WhatsApp, quando ele tem telefone cadastrado.",
+     uso:"Cadastre o telefone em Clientes e toque em 📤 Enviar no orçamento."}]},
   {v:"1.2.0",data:"2026-11-07",titulo:"Orçamentos, exclusão corrigida e Config mais simples",itens:[
     {novo:"Nova aba Orçamentos, antes de Vendas: monte a proposta com os produtos, veja o custo e o lucro previsto e mande para o cliente.",
      uso:"Orçamentos › preencha cliente e produtos › Salvar orçamento. Toque em 📤 Enviar para mandar pelo WhatsApp. Quando o cliente aprovar, toque em ✅ Aprovar: a aba Vendas abre preenchida; confira o pagamento e toque em Salvar venda."},
@@ -1380,10 +1591,11 @@ const PASSOS=[
     <li>Diga quantas <b>peças saem por impressão</b>.</li></ol>
     <p>Ao lado aparecem o <b>custo por peça</b>, o <b>preço sugerido</b> e o lucro. Toque em <b>Salvar produto</b>.</p>`},
   {ico:"📝",titulo:"3. Faça orçamentos",aba:"orcamentos",texto:`<p>Na aba <b>Orçamentos</b>, monte a proposta com os produtos e a quantidade e toque em <b>Salvar orçamento</b>.</p>
+    <p>Peça fora do catálogo? Toque em <b>🧮 Calcular peça sob medida</b>, coloque os materiais em gramas e o tempo: o painel calcula custo e preço.</p>
     <p>Toque em <b>📤 Enviar</b> para mandar ao cliente pelo WhatsApp.</p>
     <p>Quando o cliente aprovar, toque em <b>✅ Aprovar</b>: a venda já abre preenchida.</p>`},
   {ico:"🧾",titulo:"4. Lance cada venda",aba:"vendas",texto:`<p>Na aba <b>Vendas</b>:</p><ol>
-    <li>Digite o <b>cliente</b>.</li>
+    <li>Escolha o <b>cliente</b> (cliente novo é cadastrado sozinho; o telefone fica em Clientes).</li>
     <li>Escolha o <b>produto</b> e a <b>quantidade</b>: preço e custo vêm sozinhos.</li>
     <li>Toque na <b>forma de pagamento</b> e em <b>Salvar venda</b>.</li></ol>
     <p>Venda que veio de orçamento já chega preenchida.</p>`},

@@ -46,13 +46,16 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
   "config": { "energiaKwh": 0.95, "maoDeObraHora": 25, "falhaPct": 10, "margemPct": 100, "arredondar": "90" },  // arredondar: nao | 1 | 90 | 5
   "impressoras": [ { "id", "nome", "potenciaW", "valor", "vidaUtilH", "manutHora" } ],
   "filamentos":  [ { "id", "nome", "material", "precoKg" } ],
+  "proximoCliente": 3,                // próximo código de cliente (#001, #002…)
+  "clientes": [ { "id", "codigo", "nome", "telefone" /* só números */ } ],
+  "parcelamentos": [ { "id", "descricao", "total", "parcelas", "inicio": "AAAA-MM", "pessoas": ["Eu", …], "pagos": { "AAAA-MM": [true, false, …] } } ],
   "orcamentos": [ { "id", "data", "cliente", "validade" /* dias */, "itens": [ …iguais aos da venda… ], "frete", "valor", "custo", "obs",
-                    "status": "aberto" | "aprovado" | "recusado", "vendaId": null } ],
+                    "status": "aberto" | "aprovado" | "recusado", "vendaId": null, "clienteId" } ],   // item pode ter "detalhe" (peça sob medida)
   "produtos": [ { "id", "nome", "categoria", "impressoraId", "horas", "minutos", "unidades", "maoMin", "extras",
                   "falhaPct": null, "margemPct": null, "precoVenda": null,   // null = usa o padrão de Config / o preço sugerido
                   "filamentos": [ { "filamentoId", "g" } ], "obs" } ],
   "vendas": [ { "id", "data", "cliente", "itens": [ { "produtoId"|null, "nome", "qtd", "preco", "custo" } ],
-                "frete", "cobrado", "metodo", "custo", "taxa", "lucro", "obs" } ],
+                "frete", "cobrado", "metodo", "custo", "taxa", "lucro", "obs", "clienteId" } ],
   "despesas": [ { "id", "data", "categoria", "descricao", "valor" } ],
   "dizimos": { "AAAA-MM": { "itens": [ { "nome", "valor" } | { "nome", "auto": true } ] } },
 }
@@ -83,6 +86,17 @@ A tabela "Preço por forma de pagamento" mostra o preço para receber o mesmo qu
 (`orcEmVenda`); ao salvar a venda, o orçamento vira `aprovado` com `vendaId`. Apagar essa venda devolve o orçamento para `aberto`.
 "📤 Enviar" monta um texto para WhatsApp (compartilhar do celular ou copiar).
 
+**Clientes**: código automático em sequência (`proximoCliente`). Venda ou orçamento com nome novo cadastra o cliente sozinho
+(`garantirCliente`, sem telefone) e guarda `clienteId`. Ao abrir, nomes antigos sem cadastro também entram. Trocar o nome no cadastro
+atualiza vendas e orçamentos. Com telefone, "📤 Enviar" do orçamento abre a conversa no WhatsApp (`wa.me/55…`).
+
+**Peça sob medida** (no orçamento): mesma conta de `custoProduto` (gramas e tempo do total ÷ quantidade = por peça) e `precoSugerido`.
+Vira item avulso do orçamento com `detalhe` (gramas e tempo); "Salvar também em Produtos" cria o produto com categoria "Sob medida".
+
+**Parcelamentos** (aba Despesas): parcela = total ÷ parcelas; parte = parcela ÷ pessoas; ✓ por mês e pessoa em `pagos`.
+**Não** entram como despesa: o valor da impressora já entra no custo das peças (desgaste). Cadastrado: Bambu Lab A1, R$ 4.499,10,
+10x a partir de dez/2026, 3 pessoas (R$ 449,91 por mês, R$ 149,97 cada).
+
 **Despesas**: compra de filamento **não** é despesa (já entra no custo de cada venda). Fixas copiáveis: MEI, Aluguel, Internet.
 **Dízimo e Resumo**: mesmas regras da Oficina; o item automático se chama "Impressão 3D" (= lucro − despesas do mês).
 
@@ -95,12 +109,12 @@ A tabela "Preço por forma de pagamento" mostra o preço para receber o mesmo qu
 ## Abas
 
 Geral (KPIs, gráfico mensal, produtos mais vendidos, formas de pagamento, mapa mês × ano, fechamento) ·
-**Orçamentos** (proposta, enviar, aprovar → venda) · Vendas (itens, pagamento em botões, lista do mês, Excel) · **Produtos** (calculadora + catálogo) ·
-Despesas · Clientes · Dízimo · Resumo · Config (custos de produção, impressoras, filamentos, taxas, ajuda, exportar).
+**Orçamentos** (proposta, peça sob medida, enviar, aprovar → venda) · Vendas (itens, pagamento em botões, lista do mês, Excel) · **Produtos** (calculadora + catálogo) ·
+Despesas (e parcelamentos) · Clientes (cadastro com código) · Dízimo · Resumo · Config (custos de produção, impressoras, filamentos, taxas, ajuda, exportar).
 
 **Valores usados em Config (2026-11-07)**: energia R$ 1,00/kWh (EDP São Paulo, que atende Mogi das Cruzes: ~R$ 0,80 sem impostos,
 ~R$ 0,95–1,00 com ICMS, PIS/COFINS e bandeira; o certo é conta de luz ÷ kWh). Bambu Lab A1: 95 W médios em PLA (wiki da Bambu),
-R$ 3.000, vida útil 5.000 h, manutenção R$ 0,20/h (bico, placa PEI, correias). Cópias de segurança do `dados.json` ficam em `backup/` (fora do git).
+R$ 4.499,10 (preço total pago, 1.3.0), vida útil 5.000 h, manutenção R$ 0,20/h (bico, placa PEI, correias). Cópias de segurança do `dados.json` ficam em `backup/` (fora do git).
 
 ## Como testar sem mexer nos dados reais
 
@@ -133,3 +147,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.0.4 | 2026-11-05 | Endereço novo: repositório renomeado para `impressao-3d` (site `/impressao-3d/painel.html`), para o Android instalar o app do zero, sem o registro quebrado do endereço antigo |
 | 1.1.0 | 2026-11-06 | Passo a passo no primeiro acesso e janela de novidades a cada versão (o que mudou + como usar); Config › Ajuda e versão no rodapé abrem as duas. Regra: toda versão ganha entrada em `NOVIDADES` |
 | 1.2.0 | 2026-11-07 | Aba Orçamentos (proposta, enviar pelo WhatsApp, aprovar → venda preenchida); excluir volta a funcionar (confirmação dentro do painel no lugar de `confirm()`); saem a venda por voz (Gemini) e o tamanho da letra; Config com Bambu Lab A1 e energia da EDP |
+| 1.3.0 | 2026-11-07 | Cadastro de clientes com código automático e telefone (WhatsApp); parcelamentos com ✓ por mês e pessoa (A1 em 10x dividida em 3); peça sob medida no orçamento pelos materiais; Enviar abre o WhatsApp do cliente |
