@@ -599,7 +599,8 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const nomeProprio=s=>String(s??"").trim().replace(/\s+/g," ").split(" ").map((p,i)=>
   i>0&&/^(da|de|do|das|dos|e)$/i.test(p)?p.toLowerCase():p.charAt(0).toLocaleUpperCase("pt-BR")+p.slice(1)).join(" ");
-document.addEventListener("focusout",e=>{if(e.target.name==="cliente"&&e.target.value)e.target.value=nomeProprio(e.target.value)});
+// Nome do cliente digitado (Vendas): primeira letra maiúscula ao sair do campo. Só em <input>: no orçamento o cliente é uma lista (<select>) e o valor é o código interno.
+document.addEventListener("focusout",e=>{if(e.target.tagName==="INPUT"&&e.target.name==="cliente"&&e.target.value)e.target.value=nomeProprio(e.target.value)});
 // Campos numéricos: ao tocar num campo com 0, o zero some; se sair sem digitar, o 0 volta.
 document.addEventListener("focusin",e=>{const c=e.target;if(c.type==="number"&&c.value!==""&&+c.value===0){c.value="";c.dataset.eraZero="1"}});
 document.addEventListener("focusout",e=>{const c=e.target;if(c.dataset.eraZero){delete c.dataset.eraZero;if(c.value==="")c.value="0"}});
@@ -618,7 +619,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.7.0";
+const VERSAO="1.7.1";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1619,6 +1620,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.7.1",data:"2026-11-07",titulo:"Correção: cliente do orçamento",itens:[
+    {novo:"Ao escolher o cliente e tocar em Salvar orçamento, o cliente sumia e o painel dizia que ele não tinha sido escolhido. Corrigido.",
+     uso:"Nada a fazer: escolha o cliente na lista e salve normalmente."}]},
   {v:"1.7.0",data:"2026-11-07",titulo:"Tempo de aquecer e calibrar já incluso",itens:[
     {novo:"Cada impressora tem o tempo de aquecer e calibrar antes de imprimir. A Bambu Lab A1 já vem com 7 minutos. Esse tempo entra uma vez em cada impressão, não em cada peça.",
      uso:"Config › Impressoras › Aquecer e calibrar (min). Mude se a sua levar mais ou menos tempo."},

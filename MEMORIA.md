@@ -164,7 +164,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-07, versão 1.7.0)
+## Estado atual (2026-11-07, versão 1.7.1)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -195,3 +195,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.6.0 | 2026-11-07 | Orçamento escolhe cliente e produtos em listas do cadastro; se não existir, leva para Clientes/Produtos e volta ao orçamento com o novo escolhido; peça sob medida vira produto ao entrar no orçamento |
 | 1.6.1 | 2026-11-07 | Tempo de impressão num campo só, escolhendo horas ou minutos (Produtos e peça sob medida); formato do `dados.json` igual |
 | 1.7.0 | 2026-11-07 | Aquecer e calibrar por impressora (`preparoMin`, A1 = 7 min), somado 1x por impressão; tempo e gramas de Produtos e peça sob medida passam a ser de 1 peça (`porPeca`); produtos antigos continuam com a conta antiga até serem editados |
+| 1.7.1 | 2026-11-07 | Correção: o ajuste de maiúsculas do nome do cliente (ao sair do campo) mexia no `<select>` do orçamento e trocava `c17` por `C17`, apagando a escolha; agora só vale para `<input>` |
