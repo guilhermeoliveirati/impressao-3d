@@ -41,10 +41,6 @@ nav button .ico{margin-right:4px}
   .kpi .v{font-size:1.3rem!important}
   #tVendas{display:none}
   #s-vendas #vCards{display:grid}
-  #tDiz input[data-k="nome"]{width:100%;min-width:0}
-  #tDiz input[data-k="valor"]{width:84px!important;padding:8px 6px}
-  #tDiz td:first-child{width:40%}
-  #tDiz td,#tDiz th{padding:6px 4px}
   .item{grid-template-columns:1fr 1fr 1fr auto!important}
   .item .nm{grid-column:1/-1}
   #fProd label[style*="span 2"]{grid-column:1/-1!important}
@@ -213,9 +209,9 @@ nav .ct{display:none}
     <button data-s="orcamentos"><span class="ico">📝</span><span class="txt"><span class="lg">Orçamentos</span><span class="ct">Orçar</span></span></button>
     <button data-s="vendas"><span class="ico">🧾</span><span class="txt">Vendas</span></button>
     <button data-s="produtos"><span class="ico">🧊</span><span class="txt">Produtos</span></button>
+    <button data-s="estoque"><span class="ico">🧵</span><span class="txt">Estoque</span></button>
     <button data-s="despesas"><span class="ico">💸</span><span class="txt">Despesas</span></button>
     <button data-s="clientes"><span class="ico">👥</span><span class="txt">Clientes</span></button>
-    <button data-s="dizimo"><span class="ico">🙏</span><span class="txt">Dízimo</span></button>
     <button data-s="resumo"><span class="ico">📈</span><span class="txt">Resumo</span></button>
     <button data-s="config"><span class="ico">⚙️</span><span class="txt">Config</span></button>
   </nav>
@@ -485,18 +481,36 @@ nav .ct{display:none}
     <div id="cHist" style="margin-top:10px"></div></div>
 </section>
 
-<!-- DÍZIMO -->
-<section class="sec" id="s-dizimo">
-  <div class="card" style="max-width:640px">
-    <div class="row" style="justify-content:space-between;margin-bottom:8px">
-      <h2 style="margin:0">🙏 Dízimo do mês</h2>
-      <label>Mês<input type="month" id="zMes"></label>
+<!-- ESTOQUE (materiais, compras, perdas) -->
+<section class="sec" id="s-estoque">
+  <div class="card"><div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <h2 style="margin:0">🧵 Quanto tenho de cada material</h2>
+      <label style="flex-direction:row;align-items:center;gap:6px">Avisar quando tiver menos de <input id="cfgMinimo" type="number" min="0" step="10" style="width:90px;min-height:36px;text-align:right"> g</label>
     </div>
-    <table id="tDiz"></table>
-    <p class="muted" id="zLucro"></p>
-    <p class="muted">Salva automaticamente ao digitar.</p>
+    <div class="estres" id="estResumo"></div>
+    <p class="muted">Estoque = compras + estoque que já tinha − perdas − o que as vendas usaram. Cada venda desconta sozinha os gramas dos produtos vendidos
+      (pelos materiais cadastrados no produto ou na peça sob medida). Editar ou apagar uma venda devolve os gramas. Orçamento não mexe no estoque.</p>
   </div>
-  <div class="card"><h2>Histórico</h2><div class="scroll"><table id="tDizHist"></table></div></div>
+  <div class="card"><h2>Registrar compra ou baixa</h2>
+    <form class="f" id="fEst" autocomplete="off">
+      <label>Material<select name="filamentoId" id="estFil"></select></label>
+      <label>O que foi<select name="tipo"><option value="compra">Compra de rolo</option><option value="inicial">Estoque que já tenho</option><option value="perda">Perda / teste / falha</option></select></label>
+      <label>Quantidade (g)<input name="g" type="number" min="1" step="1" value="1000" required></label>
+      <label class="soCompra">Valor pago (R$)<input name="valor" type="number" min="0" step="0.01" value="0"></label>
+      <label>Data<input name="data" type="date" required></label>
+      <label class="soCompra" style="flex-direction:row;align-items:center;gap:8px;grid-column:1/-1;font-weight:500"><input type="checkbox" name="atualizaPreco" checked style="min-height:0;width:20px;height:20px"> Atualizar o preço por kg deste material com o valor desta compra</label>
+      <div class="row" style="grid-column:1/-1"><button class="btn" type="submit">Registrar</button></div>
+    </form>
+    <p class="muted">A compra de material não entra em Despesas: o custo dele já sai do lucro de cada venda.</p>
+  </div>
+  <div class="card"><h2>Materiais (filamentos)</h2>
+    <div class="scroll"><table class="cfgtab" id="tFilCfg"></table></div>
+    <button class="btn sm sec2" id="cfgAddFil" style="margin-top:8px">＋ Novo material</button>
+    <p class="muted">Preço do rolo convertido para 1 kg, com frete. Rolo de 500 g por R$ 60 = R$ 120 o kg. Ao mudar um preço, o custo de todos os produtos que usam esse material é recalculado (vendas já salvas não mudam).</p>
+  </div>
+  <div class="card"><h2>Movimentações</h2>
+    <div class="scroll" style="max-height:320px"><table id="tEst"></table></div>
+  </div>
 </section>
 
 <!-- RESUMO -->
@@ -537,30 +551,6 @@ nav .ct{display:none}
     <button class="btn sm sec2" id="cfgAddImp" style="margin-top:8px">＋ Impressora</button>
     <p class="muted">Potência média imprimindo (não a da fonte): ~100 W para Bambu A1/P1, ~120–150 W para Ender e similares com mesa aquecida.
       O desgaste divide o valor da impressora pela vida útil em horas; a manutenção cobre bico, correias, PEI, graxa.</p>
-  </div>
-  <div class="card" id="cardEstoque"><h2>🧵 Materiais e estoque</h2>
-    <div class="estres" id="estResumo"></div>
-    <div class="scroll"><table class="cfgtab" id="tFilCfg"></table></div>
-    <div class="row" style="margin-top:8px">
-      <button class="btn sm sec2" id="cfgAddFil">＋ Novo material</button>
-      <label style="flex-direction:row;align-items:center;gap:6px">Avisar quando tiver menos de <input id="cfgMinimo" type="number" min="0" step="10" style="width:90px;min-height:36px;text-align:right"> g</label>
-    </div>
-    <p class="muted">Preço do rolo convertido para 1 kg, com frete. Rolo de 500 g por R$ 60 = R$ 120 o kg. Ao mudar um preço, o custo de todos os produtos que usam esse material é recalculado (vendas já salvas não mudam).</p>
-    <h3>Registrar compra ou baixa</h3>
-    <form class="f" id="fEst" autocomplete="off">
-      <label>Material<select name="filamentoId" id="estFil"></select></label>
-      <label>O que foi<select name="tipo"><option value="compra">Compra de rolo</option><option value="inicial">Estoque que já tenho</option><option value="perda">Perda / teste / falha</option></select></label>
-      <label>Quantidade (g)<input name="g" type="number" min="1" step="1" value="1000" required></label>
-      <label class="soCompra">Valor pago (R$)<input name="valor" type="number" min="0" step="0.01" value="0"></label>
-      <label>Data<input name="data" type="date" required></label>
-      <label class="soCompra" style="flex-direction:row;align-items:center;gap:8px;grid-column:1/-1;font-weight:500"><input type="checkbox" name="atualizaPreco" checked style="min-height:0;width:20px;height:20px"> Atualizar o preço por kg deste material com o valor desta compra</label>
-      <div class="row" style="grid-column:1/-1"><button class="btn" type="submit">Registrar</button></div>
-    </form>
-    <h3>Movimentações</h3>
-    <div class="scroll" style="max-height:320px"><table id="tEst"></table></div>
-    <p class="muted">Estoque = compras + estoque que já tinha − perdas − o que as vendas usaram. Cada venda desconta os gramas dos produtos vendidos
-      (pelos materiais cadastrados no produto ou na peça sob medida). Editar ou apagar uma venda devolve os gramas. Orçamento não mexe no estoque.
-      A compra de material não entra em Despesas: o custo dele já sai do lucro de cada venda.</p>
   </div>
   <div class="grid2">
     <div class="card"><h2>Taxas da maquininha</h2><table id="tTaxas"></table>
@@ -623,7 +613,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.4.0";
+const VERSAO="1.5.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -744,7 +734,6 @@ $("#btnDriveOutro").onclick=()=>abrirDrive(true).catch(erroGate);
 let fila=Promise.resolve(), pendentes=0, geracao=0;
 function salvar(){
   D.atualizado=new Date().toISOString().slice(0,19);
-  _M=null;
   if(!fonte){status("alterações NÃO salvas: baixe uma cópia em Config",true);return}
   pendentes++;status("salvando…");
   const json=JSON.stringify(D,null,1), compacto=JSON.stringify(D), g=geracao;
@@ -796,7 +785,8 @@ function normalizar(){
   D.taxas??={...TAXAS_PADRAO};
   D.config={energiaKwh:0.95,maoDeObraHora:25,falhaPct:10,margemPct:100,arredondar:"90",estoqueMinimoG:200,...(D.config||{})};
   for(const k of ["impressoras","filamentos","produtos","clientes","orcamentos","vendas","despesas","parcelamentos","estoque"])D[k]??=[];
-  D.dizimos??={};D.proximoCliente??=1;
+  delete D.dizimos; // o dízimo saiu do painel na 1.5.0
+  D.proximoCliente??=1;
   // clientes que só existiam pelo nome em vendas/orçamentos entram no cadastro (sem telefone)
   [...D.vendas,...D.orcamentos].sort((a,b)=>a.data.localeCompare(b.data)).forEach(x=>{if(x.cliente&&!clientePorNome(x.cliente))novoCliente(x.cliente)});
 }
@@ -1381,67 +1371,10 @@ function renderClientes(){
 }
 $("#cDias").oninput=renderClientes;$("#cBusca").oninput=renderClientes;
 
-/* ---------- dízimo (mesma regra da Oficina) ---------- */
-const NDIZ=4, NOME_AUTO="Impressão 3D";
-let _M=null; const MM=()=>_M??=agregar();
-const lucroMenosDesp=m=>{const x=MM()[m];return x?r2(x.lucro-x.desp):0};
-function dizMes(m){
-  const rec=D.dizimos[m], z=rec?rec.itens:[{nome:NOME_AUTO,auto:true}];
-  return Array.from({length:NDIZ},(_,i)=>{const x=z[i]||{};return{nome:x.nome||"",auto:!!x.auto,valor:x.auto?lucroMenosDesp(m):(x.valor||0)}});
-}
-const dizimoDe=m=>r2(dizMes(m).reduce((s,x)=>s+x.valor,0)*0.1);
-const mesesComDados=()=>[...new Set([...Object.keys(MM()),...Object.keys(D.dizimos)])].sort();
-function gravarDiz(mes,it){D.dizimos[mes]={itens:it.filter(x=>x.nome||x.valor||x.auto).map(x=>x.auto?{nome:x.nome,auto:true}:{nome:x.nome,valor:x.valor})};salvar()}
-function renderDizimo(){
-  const mes=$("#zMes").value, it=dizMes(mes), rec=D.dizimos[mes];
-  $("#tDiz").innerHTML=`<tr><th>Descrição</th><th class="n">Valor (R$)</th><th class="n">10%</th></tr>`+
-    it.map((x,i)=>`<tr><td><input data-i="${i}" data-k="nome" value="${esc(x.nome)}" placeholder="Valor ${i+1}"></td>
-      <td class="n">${i===0?`<label style="flex-direction:row;align-items:center;gap:4px;display:inline-flex;margin-right:6px" title="Usa o lucro − despesas do mês"><input type="checkbox" id="zAuto" style="min-height:0" ${x.auto?"checked":""}>auto</label>`:""}<input data-i="${i}" data-k="valor" type="number" step="0.01" min="0" value="${x.valor||""}" ${x.auto?"disabled":""} style="width:130px;text-align:right"></td>
-      <td class="n" id="z10-${i}">${brl(x.valor*0.1)}</td></tr>`).join("")+
-    `<tr><th>Total dos valores</th><th class="n" id="zTot"></th><th></th></tr>
-     <tr><th>Total do dízimo (10%)</th><th></th><th class="n" id="zTot10" style="font-size:1.143rem"></th></tr>`;
-  $("#zLucro").innerHTML=`Lucro das vendas − despesas neste mês: <b>${brl(lucroMenosDesp(mes))}</b>. `+
-    (!rec?"Este mês ainda não foi editado: o dízimo está no automático.":rec.itens.length?"":"O dízimo deste mês foi excluído.")+
-    ` <button class="btn sm sec2" id="zCopiar">Copiar valores do mês anterior</button> <button class="btn sm sec2" id="zReset">Voltar ao automático</button> <button class="btn sm del" id="zExcluir">Excluir dízimo do mês</button>`;
-  $("#zAuto").onchange=e=>{it[0].auto=e.target.checked;if(it[0].auto&&!it[0].nome)it[0].nome=NOME_AUTO;if(!it[0].auto)it[0].valor=lucroMenosDesp(mes);gravarDiz(mes,it);renderDizimo()};
-  $("#zReset").onclick=()=>{delete D.dizimos[mes];salvar();renderDizimo()};
-  $("#zExcluir").onclick=()=>excluirDizimo(mes);
-  $("#zCopiar").onclick=()=>copiarDizimo(mes);
-  totaisDizimo(it);renderDizHist();
-}
-async function copiarDizimo(mes){
-  const [y,m]=mes.split("-").map(Number), ant=new Date(y,m-2,1).toLocaleDateString("sv-SE").slice(0,7);
-  const copiar=dizMes(ant).filter(x=>!x.auto&&(x.nome||x.valor));
-  if(!copiar.length)return avisar(`Não há valores para copiar em ${MESES[+ant.slice(5)-1]}/${ant.slice(0,4)}.`);
-  const atual=dizMes(mes), auto=atual.filter(x=>x.auto), outros=atual.filter(x=>!x.auto&&(x.nome||x.valor));
-  if(outros.length&&!await confirmar("Este mês já tem valores lançados. Substituir pelos do mês anterior?"))return;
-  gravarDiz(mes,[...auto,...copiar].slice(0,NDIZ));renderDizimo();
-}
-window.excluirDizimo=async mes=>{if(!await confirmar(`Excluir o dízimo de ${MESES[+mes.slice(5)-1]}/${mes.slice(0,4)}?`,"Excluir",true))return;D.dizimos[mes]={itens:[]};salvar();render()};
-const excluirDizimo=window.excluirDizimo;
-function totaisDizimo(it){const t=it.reduce((s,x)=>s+(+x.valor||0),0);$("#zTot").textContent=brl(t);$("#zTot10").textContent=brl(t*0.1)}
-$("#tDiz").addEventListener("input",e=>{
-  const el=e.target;if(!el.dataset.k)return;
-  const mes=$("#zMes").value, it=dizMes(mes);
-  it[el.dataset.i][el.dataset.k]=el.dataset.k==="valor"?r2(el.value):el.value.trim();
-  if(el.dataset.k==="valor")$("#z10-"+el.dataset.i).textContent=brl(it[el.dataset.i].valor*0.1);
-  totaisDizimo(it);gravarDiz(mes,it);renderDizHist();
-});
-function renderDizHist(){
-  const ms=mesesComDados().reverse();let ano=null,h=`<tr><th>Mês</th>${Array.from({length:NDIZ},(_,i)=>`<th class="n">Valor ${i+1}</th>`).join("")}<th class="n">Total</th><th class="n">Dízimo (10%)</th></tr>`;
-  const totAno={};ms.forEach(m=>{const t=dizMes(m).reduce((s,x)=>s+x.valor,0);totAno[m.slice(0,4)]=(totAno[m.slice(0,4)]||0)+t});
-  ms.forEach(m=>{const it=dizMes(m),t=it.reduce((s,x)=>s+x.valor,0),a=m.slice(0,4);
-    if(a!==ano){ano=a;h+=`<tr><th>${a}</th>${"<th></th>".repeat(NDIZ)}<th class="n">${brl(totAno[a])}</th><th class="n">${brl(totAno[a]*0.1)}</th></tr>`}
-    h+=`<tr style="cursor:pointer" onclick="$('#zMes').value='${m}';renderDizimo();scrollTo({top:0,behavior:'smooth'})"><td>${MESES[+m.slice(5)-1]}/${a}</td>${it.map(x=>`<td class="n">${x.valor?`<span class="muted">${esc(x.nome)}</span> ${brl(x.valor)}`:"–"}</td>`).join("")}<td class="n">${brl(t)}</td><td class="n"><b>${brl(t*0.1)}</b></td></tr>`});
-  $("#tDizHist").innerHTML=h;
-}
-$("#zMes").oninput=renderDizimo;
-
 /* ---------- resumo ---------- */
 function resumoMes(M,mes){
   const x=M[mes]||{lucro:0,desp:0,n:0};
-  const diz=dizimoDe(mes);
-  return{lucro:x.lucro,desp:x.desp,diz,aposDesp:x.lucro-x.desp,liquido:x.lucro-x.desp-diz,n:x.n};
+  return{lucro:x.lucro,desp:x.desp,liquido:x.lucro-x.desp,n:x.n};
 }
 function renderResumo(){
   const M=agregar(), mes=$("#rMes").value, r=resumoMes(M,mes);
@@ -1449,32 +1382,25 @@ function renderResumo(){
   $("#tResumo").innerHTML=
     lin("","Lucro das vendas",r.lucro)+
     lin("sub","− Despesas",-r.desp)+
-    lin("parcial","Lucro − despesas",r.aposDesp)+
-    lin("sub","− Dízimo",-r.diz)+
-    lin("parcial","Lucro − despesas − dízimo",r.liquido)+
     `<tr class="final"><td>Lucro líquido</td><td class="n" style="color:${r.liquido<0?"var(--bad)":"var(--ok)"}">${brl(r.liquido)}</td></tr>`;
   const avisos=[];
   if(!r.n)avisos.push("Nenhuma venda neste mês.");
   if(!r.desp)avisos.push("Nenhuma despesa lançada neste mês.");
-  if(!r.diz)avisos.push("Nenhum dízimo neste mês.");
   $("#rObs").textContent=avisos.join(" ");
   const sel=$("#rAno"), A=anos();
   if(sel.options.length!==A.length){sel.innerHTML="";A.forEach(a=>sel.add(new Option(a,a)));sel.value=mes.slice(0,4);sel.onchange=renderResumo}
-  const ano=sel.value, t={lucro:0,desp:0,aposDesp:0,diz:0,liquido:0};
-  let h=`<tr><th>Mês</th><th class="n">Lucro vendas</th><th class="n">Despesas</th><th class="n">Lucro − despesas</th><th class="n">Dízimo</th><th class="n">Lucro líquido</th><th></th></tr>`;
-  MESES.forEach((n,i)=>{const m=`${ano}-${String(i+1).padStart(2,"0")}`;if(!M[m]&&!D.dizimos[m])return;
+  const ano=sel.value, t={lucro:0,desp:0,liquido:0};
+  let h=`<tr><th>Mês</th><th class="n">Lucro vendas</th><th class="n">Despesas</th><th class="n">Lucro líquido</th></tr>`;
+  MESES.forEach((n,i)=>{const m=`${ano}-${String(i+1).padStart(2,"0")}`;if(!M[m])return;
     const x=resumoMes(M,m);for(const k in t)t[k]+=x[k];
-    const auto=dizMes(m)[0].auto;
     h+=`<tr><td style="cursor:pointer" onclick="$('#rMes').value='${m}';renderResumo();scrollTo({top:0,behavior:'smooth'})">${n}/${ano}</td><td class="n">${brl(x.lucro)}</td>
-      <td class="n"><a href="#" onclick="abrirMes('despesas','${m}');return false" title="Editar despesas">${x.desp?brl(x.desp):"–"}</a></td><td class="n">${brl(x.aposDesp)}</td>
-      <td class="n">${x.diz?brl(x.diz):"–"}${auto&&x.diz?' <span class="muted">auto</span>':""}</td><td class="n"><b>${brl(x.liquido)}</b></td>
-      <td><button class="btn sm sec2" onclick="abrirMes('dizimo','${m}')">Editar dízimo</button></td></tr>`});
-  h+=`<tr><th>Total ${ano}</th><th class="n">${brl(t.lucro)}</th><th class="n">${brl(t.desp)}</th><th class="n">${brl(t.aposDesp)}</th><th class="n">${brl(t.diz)}</th><th class="n">${brl(t.liquido)}</th><th></th></tr>`;
+      <td class="n"><a href="#" onclick="abrirMes('despesas','${m}');return false" title="Editar despesas">${x.desp?brl(x.desp):"–"}</a></td><td class="n"><b>${brl(x.liquido)}</b></td></tr>`});
+  h+=`<tr><th>Total ${ano}</th><th class="n">${brl(t.lucro)}</th><th class="n">${brl(t.desp)}</th><th class="n">${brl(t.liquido)}</th></tr>`;
   $("#tResumoAno").innerHTML=h;
 }
 $("#rMes").oninput=()=>{$("#rAno").value=$("#rMes").value.slice(0,4);renderResumo()};
-window.abrirEstoque=()=>{document.querySelector("#nav [data-s=config]").click();setTimeout(()=>$("#cardEstoque").scrollIntoView({block:"start"}),150)};
-window.abrirMes=(aba,m)=>{const campo={dizimo:"#zMes",despesas:"#dMes"}[aba];if(campo)$(campo).value=m;
+window.abrirEstoque=()=>document.querySelector("#nav [data-s=estoque]").click();
+window.abrirMes=(aba,m)=>{const campo={despesas:"#dMes"}[aba];if(campo)$(campo).value=m;
   document.querySelector(`#nav [data-s=${aba}]`).click()};
 
 /* ---------- Excel do mês ---------- */
@@ -1499,12 +1425,11 @@ function montarExcel(mes){
   XLSX.utils.book_append_sheet(wb,planilha([["Produto","Qtd","Vendido","Custo","Lucro (antes da taxa)"],...Object.entries(it).map(([n,a])=>[n,a.q,a.f,a.c,a.f-a.c])],[30,7,13,13,18],[2,3,4]),"Produtos");
   const td=soma(De,d=>d.valor);
   XLSX.utils.book_append_sheet(wb,planilha([["Data","Categoria","Descrição","Valor"],...De.map(d=>[fmtData(d.data),d.categoria,d.descricao,d.valor]),[],["TOTAL","","",td]],[11,26,30,13],[3]),"Despesas");
-  const dz=dizMes(mes).filter(x=>x.nome||x.valor), tz=soma(dz,x=>x.valor);
   XLSX.utils.book_append_sheet(wb,planilha([["Descrição","Valor","10%"],...dz.map(x=>[x.nome,x.valor,r2(x.valor*0.1)]),[],["Total dos valores",tz,""],["Total do dízimo (10%)","",r2(tz*0.1)]],[24,14,14],[1,2]),"Dízimo");
   XLSX.utils.book_append_sheet(wb,planilha([[`Resumo ${nomeMes} ${ano}`,""],["Faturamento",s.f],["Custo de produção",s.c],["Taxas de cartão",s.t],["Lucro das vendas",s.l],
-    ["Despesas",td],["Lucro final",s.l-td],["Dízimo (10%)",r2(tz*0.1)],["Qtd. vendas",V.length],["Peças vendidas",s.p],[],["Gerado pelo Painel Impressão 3D em "+new Date().toLocaleString("pt-BR"),""]],
+    ["Despesas",td],["Lucro final",s.l-td],["Qtd. vendas",V.length],["Peças vendidas",s.p],[],["Gerado pelo Painel Impressão 3D em "+new Date().toLocaleString("pt-BR"),""]],
     [30,16],[]),"Resumo");
-  const wR=wb.Sheets.Resumo;for(let i=1;i<=7;i++){const c=wR[XLSX.utils.encode_cell({r:i,c:1})];if(c)c.z='"R$" #,##0.00'}
+  const wR=wb.Sheets.Resumo;for(let i=1;i<=6;i++){const c=wR[XLSX.utils.encode_cell({r:i,c:1})];if(c)c.z='"R$" #,##0.00'}
   return {wb,nome:`${+m} - Impressao 3D - ${nomeMes} ${ano}.xlsx`,n:V.length};
 }
 $("#vExcel").onclick=async()=>{
@@ -1549,11 +1474,12 @@ fE.onsubmit=e=>{e.preventDefault();
   const m={id:novoId("e"),data:fE.data.value,filamentoId:fE.filamentoId.value,tipo:fE.tipo.value,g,valor:fE.tipo.value==="compra"?r2(fE.valor.value):0};
   D.estoque.push(m);
   if(m.tipo==="compra"&&m.valor>0&&fE.atualizaPreco.checked){const f=filamentoDe(m.filamentoId);if(f)f.precoKg=r2(m.valor/g*1000)}
-  salvar();fE.g.value=1000;fE.valor.value=0;renderConfig();
+  salvar();fE.g.value=1000;fE.valor.value=0;render();
   status(`${TIPO_EST[m.tipo].toLowerCase()} de ${fmtG(g)} registrada`)};
-$("#cfgMinimo").onchange=e=>{D.config.estoqueMinimoG=Math.max(0,Math.round(+e.target.value||0));salvar();renderConfig()};
+$("#cfgMinimo").onchange=e=>{D.config.estoqueMinimoG=Math.max(0,Math.round(+e.target.value||0));salvar();render()};
 function renderEstoque(){
   _E=estoques();
+  $("#tFilCfg").innerHTML=tabelaCfg("filamentos",["Em estoque",estCel]);
   const sel=$("#estFil"),ant=sel.value;
   sel.innerHTML=D.filamentos.map(f=>`<option value="${f.id}">${esc(f.nome)}</option>`).join("")||'<option value="">(cadastre um material)</option>';
   if(D.filamentos.some(f=>f.id===ant))sel.value=ant;
@@ -1581,19 +1507,18 @@ function tabelaCfg(col,extra){
       ${extra?`<td class="n">${extra[1](x)}</td>`:""}<td class="n muted">${usos(col,x.id)} produtos</td><td><button class="btn sm del" onclick="apagarCfg('${col}','${x.id}')">✕</button></td></tr>`).join("");
 }
 const usos=(col,id)=>D.produtos.filter(p=>col==="impressoras"?p.impressoraId===id:(p.filamentos||[]).some(f=>f.filamentoId===id)).length;
-$("#s-config").addEventListener("change",e=>{const el=e.target,col=el.dataset.t;if(!col)return;
+const editaCfg=e=>{const el=e.target,col=el.dataset.t;if(!col)return;
   const x=D[col][el.dataset.i];x[el.dataset.k]=el.type==="number"?(+el.value||0):el.value.trim();salvar();
-  setTimeout(renderConfig,250)}); // espera um pouco: se o toque foi num ✕, ele acontece antes de redesenhar
+  setTimeout(render,250)};
+$("#s-config").addEventListener("change",editaCfg);$("#s-estoque").addEventListener("change",editaCfg); // espera um pouco: se o toque foi num ✕, ele acontece antes de redesenhar
 window.apagarCfg=async(col,id)=>{const n=usos(col,id),x=D[col].find(y=>y.id===id);
   if(!await confirmar(n?`"${x?.nome}" está em ${n} produto(s); o custo deles vai ficar sem essa parte. Apagar mesmo assim?`:`Apagar "${x?.nome}"?`,"Apagar",true))return;
-  D[col]=D[col].filter(x=>x.id!==id);salvar();renderConfig()};
+  D[col]=D[col].filter(x=>x.id!==id);salvar();render()};
 $("#cfgAddImp").onclick=()=>{D.impressoras.push({id:novoId("i"),nome:"Impressora "+(D.impressoras.length+1),potenciaW:120,valor:2500,vidaUtilH:4000,manutHora:0.3});salvar();renderConfig()};
-$("#cfgAddFil").onclick=()=>{D.filamentos.push({id:novoId("f"),nome:"Novo material",material:"PLA",precoKg:110});salvar();renderConfig()};
+$("#cfgAddFil").onclick=()=>{D.filamentos.push({id:novoId("f"),nome:"Novo material",material:"PLA",precoKg:110});salvar();render()};
 function renderConfig(){
   document.querySelectorAll("#fCfg [data-c]").forEach(el=>el.value=D.config[el.dataset.c]);
   $("#tImp").innerHTML=tabelaCfg("impressoras",["Custo por hora",i=>brl(custoHoraImp(i))]);
-  renderEstoque();
-  $("#tFilCfg").innerHTML=tabelaCfg("filamentos",["Em estoque",estCel]);
   $("#tTaxas").innerHTML=`<tr><th>Forma</th><th class="n">Taxa (%)</th></tr>`+Object.entries(D.taxas).map(([k,v])=>
     `<tr><td>${esc(k)}</td><td class="n"><input type="number" step="0.01" value="${r2(v*100)}" style="width:90px;text-align:right;min-height:36px" onchange="D.taxas['${k}']=this.value/100;salvar()"></td></tr>`).join("");
   $("#cfgInfo").innerHTML=`${D.produtos.length} produtos, ${D.orcamentos.length} orçamentos, ${D.vendas.length} vendas, ${D.despesas.length} despesas. Última alteração: ${D.atualizado?.replace("T"," ")||"–"}.`;
@@ -1614,19 +1539,18 @@ function iniciar(){
   $("#selMetodo").innerHTML=Object.keys(D.taxas).map(k=>`<option>${esc(k)}</option>`).join("");
   $("#selCat").innerHTML=CATS.map(k=>`<option>${k}</option>`).join("");
   const mesAtual=hoje().slice(0,7);
-  $("#vMes").value=mesAtual;$("#dMes").value=mesAtual;$("#zMes").value=mesAtual;$("#rMes").value=mesAtual;
+  $("#vMes").value=mesAtual;$("#dMes").value=mesAtual;$("#rMes").value=mesAtual;
   fD.data.value=hoje();
   limparVenda();limparProduto();limparOrc();render();
   setTimeout(mostrarAvisos,400);
 }
 function render(){
   if(!D)return;
-  _M=null;
   $("#dlClientes").innerHTML=D.clientes.slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"))
     .map(c=>`<option value="${esc(c.nome)}">${fmtCod(c)}${c.telefone?" · "+esc(fmtTel(c.telefone)):""}</option>`).join("");
   $("#dlProdutos").innerHTML=D.produtos.map(p=>`<option value="${esc(p.nome)}">${brl(precoDe(p))}</option>`).join("");
   const s=document.querySelector(".sec.on").id;
-  ({"s-geral":renderGeral,"s-orcamentos":renderOrcamentos,"s-vendas":renderVendas,"s-produtos":renderProdutos,"s-despesas":renderDesp,"s-clientes":renderClientes,"s-dizimo":renderDizimo,"s-resumo":renderResumo,"s-config":renderConfig})[s]();
+  ({"s-geral":renderGeral,"s-orcamentos":renderOrcamentos,"s-vendas":renderVendas,"s-produtos":renderProdutos,"s-despesas":renderDesp,"s-clientes":renderClientes,"s-estoque":renderEstoque,"s-resumo":renderResumo,"s-config":renderConfig})[s]();
 }
 
 /* ---------- boas-vindas e novidades ----------
@@ -1637,6 +1561,11 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.5.0",data:"2026-11-07",titulo:"Aba Estoque e fim do dízimo",itens:[
+    {novo:"Materiais e estoque saíram de Config e ganharam uma aba própria, Estoque: quanto tem de cada filamento, registrar compra ou perda, cadastro dos materiais e as movimentações.",
+     uso:"Toque em 🧵 Estoque no menu. Comece com “Estoque que já tenho”; a cada rolo comprado, “Compra de rolo”. As vendas descontam os gramas sozinhas."},
+    {novo:"O dízimo saiu do painel: não tem mais a aba, nem a linha no Resumo, nem a folha no Excel.",
+     uso:"O Resumo agora mostra lucro das vendas − despesas = lucro líquido do mês."}]},
   {v:"1.4.0",data:"2026-11-07",titulo:"Estoque de materiais e parcelas na lista",itens:[
     {novo:"Estoque de materiais: registre o que tem em casa e cada compra de rolo. Cada venda desconta sozinha os gramas usados, e o painel avisa quando um material está acabando.",
      uso:"Config › Materiais e estoque › Registrar compra ou baixa. Comece com “Estoque que já tenho”. Perdas e testes: “Perda / teste / falha”. Ao registrar uma compra com valor, o preço do kg já é atualizado."},
@@ -1689,7 +1618,7 @@ const PASSOS=[
     <li><b>Energia</b>: o preço do kWh da sua conta de luz.</li>
     <li><b>Mão de obra</b>: quanto vale uma hora do seu trabalho.</li>
     <li><b>Impressoras</b>: potência, quanto pagou e vida útil.</li>
-    <li><b>Materiais e estoque</b>: cada filamento com o preço do kg e quanto você tem (registre o estoque e as compras).</li></ol>`},
+    <li>Na aba <b>Estoque</b>: cada filamento com o preço do kg e quanto você tem (registre o estoque e as compras).</li></ol>`},
   {ico:"🧊",titulo:"2. Cadastre seus produtos",aba:"produtos",texto:`<p>Na aba <b>Produtos</b>, para cada peça:</p><ol>
     <li>Digite o <b>nome</b> e escolha a impressora.</li>
     <li>Coloque o <b>tempo</b> e os <b>gramas</b> que o fatiador mostra.</li>
@@ -1708,7 +1637,7 @@ const PASSOS=[
     <p>A compra de filamento <b>não</b> entra aqui, porque já é descontada em cada venda.</p>`},
   {ico:"📈",titulo:"6. Acompanhe o resultado",aba:"geral",texto:`<ul>
     <li><b>Geral</b>: faturamento, lucro e produtos mais vendidos.</li>
-    <li><b>Resumo</b>: lucro − despesas − dízimo = lucro líquido do mês.</li>
+    <li><b>Resumo</b>: lucro das vendas − despesas = lucro líquido do mês.</li>
     <li><b>Vendas › Exportar</b>: planilha Excel do mês.</li></ul>`},
   {ico:"✅",titulo:"Pronto!",texto:`<p>Você já pode começar. Os exemplos que vieram em Produtos podem ser editados ou apagados.</p>
     <p>Para ver este passo a passo de novo: <b>Config › Ajuda</b>.</p>`}

@@ -6,7 +6,7 @@
 ## Origem
 
 Cópia adaptada do **Painel da Oficina** (`Meu Drive/Mecanica/Painel`, v1.9.7): mesma arquitetura, mesmo visual,
-mesmas abas de Despesas, Clientes, Dízimo, Resumo e Config. A diferença é o negócio: aqui se vendem **peças impressas em 3D**,
+mesmas abas de Despesas, Clientes, Resumo e Config (o Dízimo da Oficina saiu na 1.5.0). A diferença é o negócio: aqui se vendem **peças impressas em 3D**,
 e existe a aba **Produtos**, que calcula o custo de produção e o preço de venda.
 
 ## Onde fica
@@ -75,7 +75,6 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
                 "frete", "cobrado", "metodo", "custo", "taxa", "lucro", "obs", "clienteId" } ],
                 // cada item pode ter "mat": [ { "f": filamentoId, "g": gramas POR UNIDADE } ] — usado pelo estoque
   "despesas": [ { "id", "data", "categoria", "descricao", "valor" } ],
-  "dizimos": { "AAAA-MM": { "itens": [ { "nome", "valor" } | { "nome", "auto": true } ] } },
 }
 ```
 
@@ -111,7 +110,7 @@ atualiza vendas e orçamentos. Com telefone, "📤 Enviar" do orçamento abre a 
 **Peça sob medida** (no orçamento): mesma conta de `custoProduto` (gramas e tempo do total ÷ quantidade = por peça) e `precoSugerido`.
 Vira item avulso do orçamento com `detalhe` (gramas e tempo); "Salvar também em Produtos" cria o produto com categoria "Sob medida".
 
-**Estoque de materiais** (Config › Materiais e estoque): saldo (g) = compras + estoque inicial − perdas − Σ(item.mat.g × qtd) das **vendas**.
+**Estoque de materiais** (aba Estoque, desde 1.5.0): saldo (g) = compras + estoque inicial − perdas − Σ(item.mat.g × qtd) das **vendas**.
 Calculado na hora (`estoques()`), nada é baixado à mão: editar/apagar venda devolve os gramas. Orçamento não mexe no estoque.
 `mat` vem do produto (gramas ÷ peças por impressão, `matDeProduto`) ou da peça sob medida; item antigo sem `mat` usa o produto atual.
 Compra com valor pode atualizar o preço do kg. Abaixo de `estoqueMinimoG` aparece aviso em Geral. Compra de material não é despesa.
@@ -122,19 +121,19 @@ Quantidade de parcelas escolhida numa lista de 1x a 36x. **Não** entram como de
 10x a partir de dez/2026, 3 sócios (R$ 449,91 por mês, R$ 149,97 cada).
 
 **Despesas**: compra de filamento **não** é despesa (já entra no custo de cada venda). Fixas copiáveis: MEI, Aluguel, Internet.
-**Dízimo e Resumo**: mesmas regras da Oficina; o item automático se chama "Impressão 3D" (= lucro − despesas do mês).
+**Resumo**: lucro líquido = lucro das vendas − despesas do mês. **Sem dízimo** (removido na 1.5.0; `normalizar()` apaga `D.dizimos` de arquivos antigos).
 
 ## Boas-vindas e novidades (desde 1.1.0)
 
-- **Primeiro acesso** em cada aparelho: janela com o passo a passo (`PASSOS`): custos e materiais em Config → Produtos → Orçamentos → Vendas → Despesas → Geral/Resumo.
+- **Primeiro acesso** em cada aparelho: janela com o passo a passo (`PASSOS`): custos em Config e materiais em Estoque → Produtos → Orçamentos → Vendas → Despesas → Geral/Resumo.
 - **Depois de cada atualização**: janela com as entradas de `NOVIDADES` mais novas que a última versão vista no aparelho.
 - Guardado só no aparelho: `p3d.passosVistos` e `p3d.versaoVista`. Rever a qualquer hora: Config › Ajuda, ou tocando na versão no rodapé.
 
 ## Abas
 
 Geral (KPIs, gráfico mensal, produtos mais vendidos, formas de pagamento, mapa mês × ano, fechamento) ·
-**Orçamentos** (proposta, peça sob medida, enviar, aprovar → venda) · Vendas (itens, pagamento em botões, lista do mês, Excel) · **Produtos** (calculadora + catálogo) ·
-Despesas (e parcelamentos) · Clientes (cadastro com código) · Dízimo · Resumo · Config (custos de produção, impressoras, materiais e estoque, taxas, ajuda, exportar).
+**Orçamentos** (proposta, peça sob medida, enviar, aprovar → venda) · Vendas (itens, pagamento em botões, lista do mês, Excel) · **Produtos** (calculadora + catálogo) · **Estoque** (quanto tem, compras/perdas, cadastro dos filamentos, movimentações) ·
+Despesas (e parcelamentos) · Clientes (cadastro com código) · Resumo · Config (custos de produção, impressoras, taxas, ajuda, exportar).
 
 **Valores usados em Config (2026-11-07)**: energia R$ 1,00/kWh (EDP São Paulo, que atende Mogi das Cruzes: ~R$ 0,80 sem impostos,
 ~R$ 0,95–1,00 com ICMS, PIS/COFINS e bandeira; o certo é conta de luz ÷ kWh). Bambu Lab A1: 95 W médios em PLA (wiki da Bambu),
@@ -155,12 +154,13 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-07, versão 1.4.0)
+## Estado atual (2026-11-07, versão 1.5.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
 - Para o dono fazer: conferir preço por kg dos filamentos e o valor da hora de trabalho em Config; registrar o estoque inicial
   dos materiais; trocar os 3 produtos "(exemplo)" pelos de verdade.
+- 1.5.0: materiais e estoque viraram a aba Estoque; dízimo removido (aba, Resumo e Excel).
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -178,3 +178,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.3.0 | 2026-11-07 | Cadastro de clientes com código automático e telefone (WhatsApp); parcelamentos com ✓ por mês e pessoa (A1 em 10x dividida em 3); peça sob medida no orçamento pelos materiais; Enviar abre o WhatsApp do cliente |
 | 1.3.1 | 2026-11-07 | Aviso falso de “alterado em outro lugar”: o painel compara o conteúdo do arquivo, não só a data (o Google Drive do computador muda a data ao sincronizar); nomes das pessoas do parcelamento |
 | 1.4.0 | 2026-11-07 | Estoque de materiais (compras, estoque inicial, perdas; vendas descontam os gramas; aviso de material acabando em Geral e resumo com barras); parcelas escolhidas numa lista de 1x a 36x |
+| 1.5.0 | 2026-11-07 | Materiais e estoque saem de Config para a aba própria Estoque (no lugar do Dízimo no menu); dízimo removido do painel (aba, Resumo, Excel, `dados.json`) |
