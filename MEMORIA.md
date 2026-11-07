@@ -83,6 +83,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
 **Custo de uma impressão** (`custoProduto`):
 - filamento = Σ gramas × preço do kg ÷ 1000
 - energia = potência (W) ÷ 1000 × horas × R$/kWh
+- tempo: na tela é um campo só com unidade (horas ou minutos, `lerTempo`/`mostrarTempo`); no `dados.json` continua `horas` + `minutos`
 - desgaste e manutenção = horas × (valor da impressora ÷ vida útil em horas + manutenção por hora)
 - perdas = (filamento + energia + desgaste) × % de perda (produto ou padrão)
 - mão de obra = minutos de trabalho manual ÷ 60 × R$/hora
@@ -160,7 +161,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-07, versão 1.6.0)
+## Estado atual (2026-11-07, versão 1.6.1)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -168,6 +169,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   dos materiais; trocar os 3 produtos "(exemplo)" pelos de verdade.
 - 1.5.0: materiais e estoque viraram a aba Estoque; dízimo removido (aba, Resumo e Excel).
 - 1.6.0: orçamento só com cliente e produtos do cadastro (listas), com ida e volta para cadastrar.
+- 1.6.1: tempo de impressão num campo só, em horas ou minutos (Produtos e peça sob medida).
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -187,3 +189,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.4.0 | 2026-11-07 | Estoque de materiais (compras, estoque inicial, perdas; vendas descontam os gramas; aviso de material acabando em Geral e resumo com barras); parcelas escolhidas numa lista de 1x a 36x |
 | 1.5.0 | 2026-11-07 | Materiais e estoque saem de Config para a aba própria Estoque (no lugar do Dízimo no menu); dízimo removido do painel (aba, Resumo, Excel, `dados.json`) |
 | 1.6.0 | 2026-11-07 | Orçamento escolhe cliente e produtos em listas do cadastro; se não existir, leva para Clientes/Produtos e volta ao orçamento com o novo escolhido; peça sob medida vira produto ao entrar no orçamento |
+| 1.6.1 | 2026-11-07 | Tempo de impressão num campo só, escolhendo horas ou minutos (Produtos e peça sob medida); formato do `dados.json` igual |

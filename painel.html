@@ -285,8 +285,7 @@ nav .ct{display:none}
             <label class="largo">Nome da peça<input id="ocNome" placeholder="ex.: Suporte de celular personalizado"></label>
             <label>Impressora<select id="ocImp"></select></label>
             <label>Quantidade de peças<input id="ocQtd" type="number" min="1" step="1" value="1"></label>
-            <label>Tempo de impressão – horas<input id="ocH" type="number" min="0" step="1" value="0"></label>
-            <label>minutos<input id="ocM" type="number" min="0" step="1" value="0"></label>
+            <label class="largo">Tempo de impressão<span class="campoBtn"><input id="ocT" type="number" min="0" step="any" value="0" style="flex:1;min-width:0"><select id="ocTU" aria-label="unidade do tempo" style="width:auto"><option value="h">horas</option><option value="min">minutos</option></select></span></label>
             <label>Trabalho manual (min)<input id="ocMao" type="number" min="0" step="1" value="0"></label>
             <label>Extras por peça (R$)<input id="ocExt" type="number" min="0" step="0.01" value="0"></label>
             <label>Margem de lucro (%)<input id="ocMarg" type="number" min="0" step="1"></label>
@@ -385,8 +384,7 @@ nav .ct{display:none}
         <label style="grid-column:span 2">Nome do produto<input name="nome" required placeholder="ex.: Chaveiro personalizado"></label>
         <label>Categoria<input name="categoria" list="dlCats" placeholder="ex.: Chaveiros"></label>
         <label>Impressora<select name="impressoraId" id="pImp"></select></label>
-        <label>Tempo de impressão – horas<input name="horas" type="number" step="1" min="0" value="0"></label>
-        <label>minutos<input name="minutos" type="number" step="1" min="0" value="0"></label>
+        <label style="grid-column:span 2">Tempo de impressão<span class="campoBtn"><input name="tempo" type="number" step="any" min="0" value="0" style="flex:1;min-width:0"><select name="tempoUn" aria-label="unidade do tempo" style="width:auto"><option value="h">horas</option><option value="min">minutos</option></select></span></label>
         <label title="Quantas peças saem de uma impressão (mesa cheia)">Peças por impressão<input name="unidades" type="number" step="1" min="1" value="1"></label>
         <label title="Preparar o arquivo, tirar da mesa, lixar, pintar, montar… (tempo total da impressão)">Trabalho manual (min)<input name="maoMin" type="number" step="1" min="0" value="0"></label>
         <div style="grid-column:1/-1">
@@ -619,7 +617,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.6.0";
+const VERSAO="1.6.1";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -938,9 +936,12 @@ $("#pFil").addEventListener("change",atualizaFil);
 $("#pFil").addEventListener("click",e=>{const i=e.target.dataset?.rm;if(i==null)return;prodFil.splice(+i,1);rowsFil();calcProduto()});
 $("#pAddFil").onclick=()=>{prodFil.push({filamentoId:D.filamentos[0]?.id||"",g:0});rowsFil();calcProduto()};
 const vazioNull=v=>v===""||v==null?null:+v;
+/* Tempo de impressão: um campo só, em horas ou em minutos (o dados.json continua com "horas" e "minutos"). */
+const lerTempo=(v,un)=>un==="min"?{horas:0,minutos:+v||0}:{horas:+v||0,minutos:0};
+const mostrarTempo=p=>{const t=r2((+p.horas||0)*60+(+p.minutos||0));return t>0&&t%60===0?[t/60,"h"]:t>0?[t,"min"]:[0,"h"]};
 function lerProduto(){
   return{id:fP.id.value,nome:fP.nome.value.trim(),categoria:fP.categoria.value.trim(),impressoraId:fP.impressoraId.value,
-    horas:+fP.horas.value||0,minutos:+fP.minutos.value||0,unidades:Math.max(1,Math.round(+fP.unidades.value||1)),maoMin:+fP.maoMin.value||0,
+    ...lerTempo(fP.tempo.value,fP.tempoUn.value),unidades:Math.max(1,Math.round(+fP.unidades.value||1)),maoMin:+fP.maoMin.value||0,
     extras:r2(fP.extras.value),falhaPct:vazioNull(fP.falhaPct.value),margemPct:vazioNull(fP.margemPct.value),
     precoVenda:fP.precoVenda.value===""?null:r2(fP.precoVenda.value),
     filamentos:prodFil.filter(f=>f.filamentoId&&f.g>0).map(f=>({filamentoId:f.filamentoId,g:r2(f.g)})),obs:fP.obs.value.trim()};
@@ -995,6 +996,7 @@ function carregarProduto(p,copia){
   limparProduto();
   for(const k of ["id","nome","categoria","impressoraId","horas","minutos","unidades","maoMin","extras","falhaPct","margemPct","precoVenda","obs"])
     if(fP[k])fP[k].value=p[k]??"";
+  [fP.tempo.value,fP.tempoUn.value]=mostrarTempo(p);
   if(copia){fP.id.value="";fP.nome.value=p.nome+" (cópia)"}
   prodFil=p.filamentos?.length?p.filamentos.map(f=>({...f})):[{filamentoId:D.filamentos[0]?.id||"",g:0}];
   $("#pTitulo").textContent=copia?"🧮 Novo produto (cópia)":"✏️ Editando "+p.nome;
@@ -1240,7 +1242,7 @@ window.enviarOrc=async id=>{const o=D.orcamentos.find(x=>x.id===id);
    perdas, mão de obra e extras. Tempo e gramas são do total; dividindo pela quantidade sai o custo por peça.
    Preço por peça = custo × (1 + margem), arredondado como em Config. */
 let ocFil=[];
-function ocLer(){return{nome:$("#ocNome").value.trim(),categoria:"Sob medida",impressoraId:$("#ocImp").value,horas:+$("#ocH").value||0,minutos:+$("#ocM").value||0,
+function ocLer(){return{nome:$("#ocNome").value.trim(),categoria:"Sob medida",impressoraId:$("#ocImp").value,...lerTempo($("#ocT").value,$("#ocTU").value),
   unidades:Math.max(1,Math.round(+$("#ocQtd").value||1)),maoMin:+$("#ocMao").value||0,extras:r2($("#ocExt").value),
   falhaPct:null,margemPct:$("#ocMarg").value===""?null:+$("#ocMarg").value,precoVenda:null,
   filamentos:ocFil.filter(f=>f.filamentoId&&f.g>0).map(f=>({filamentoId:f.filamentoId,g:r2(f.g)})),obs:""}}
@@ -1270,7 +1272,7 @@ function ocPrep(){
   $("#ocImp").innerHTML=D.impressoras.map(i=>`<option value="${i.id}">${esc(i.nome)}</option>`).join("")||'<option value="">(cadastre em Config)</option>';
   if(!ocFil.length)ocFil=[{filamentoId:D.filamentos[0]?.id||"",g:0}];ocRows();ocCalc();
 }
-function ocLimpar(){["#ocNome","#ocMarg"].forEach(x=>$(x).value="");["#ocH","#ocM","#ocMao","#ocExt"].forEach(x=>$(x).value=0);$("#ocQtd").value=1;ocFil=[];$("#ocBox").hidden=true}
+function ocLimpar(){["#ocNome","#ocMarg"].forEach(x=>$(x).value="");["#ocT","#ocMao","#ocExt"].forEach(x=>$(x).value=0);$("#ocTU").value="h";$("#ocQtd").value=1;ocFil=[];$("#ocBox").hidden=true}
 $("#ocAbrir").onclick=()=>{const b=$("#ocBox");b.hidden=!b.hidden;if(!b.hidden){ocPrep();$("#ocNome").focus()}};
 $("#ocFechar").onclick=ocLimpar;
 $("#ocBox").addEventListener("keydown",e=>{if(e.key==="Enter")e.preventDefault()}); // Enter aqui não salva o orçamento
@@ -1605,6 +1607,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.6.1",data:"2026-11-07",titulo:"Tempo de impressão em horas ou minutos",itens:[
+    {novo:"O tempo de impressão agora é um campo só: você digita o número e escolhe ao lado se é em horas ou em minutos.",
+     uso:"Produtos e Orçamentos › peça sob medida › Tempo de impressão. Ex.: 2,5 horas ou 150 minutos. Produtos já salvos abrem com o tempo certo."}]},
   {v:"1.6.0",data:"2026-11-07",titulo:"Orçamento escolhendo cliente e produto da lista",itens:[
     {novo:"No orçamento, o cliente agora é escolhido numa lista dos clientes cadastrados. Se ele ainda não existe, o painel leva você para Clientes e, ao salvar, volta para o orçamento com ele já escolhido.",
      uso:"Orçamentos › Cliente › escolha na lista. Cliente novo: toque em ＋ Novo (ou “＋ Cadastrar cliente novo…” na lista), preencha nome e telefone e toque em Salvar cliente."},
