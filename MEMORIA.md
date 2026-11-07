@@ -110,15 +110,14 @@ A tabela "Preço por forma de pagamento" mostra o preço para receber o mesmo qu
 **Orçamento escolhe da lista (1.6.0)**: cliente é um `<select>` do cadastro (obrigatório) e cada item é um `<select>` do catálogo
 (`editorItens(..., catalogo=true)`); não se digita item avulso. "＋ Novo" / "＋ Cadastrar produto novo…" chamam `irCadastrar(tipo, linha)`:
 guarda `retorno`, abre Clientes/Produtos com o aviso "Voltar ao orçamento"; ao salvar, volta ao orçamento com o novo já escolhido
-(`edO.colocar`). Voltar à aba Orçamentos por qualquer caminho encerra o `retorno`. A peça sob medida é salva em Produtos ao entrar no orçamento.
+(`edO.colocar`). Voltar à aba Orçamentos por qualquer caminho encerra o `retorno`.
 Itens antigos fora do catálogo aparecem como "(fora do catálogo)". Vendas continuam aceitando digitação livre.
 
 **Clientes**: código automático em sequência (`proximoCliente`). Venda com nome novo cadastra o cliente sozinho
 (`garantirCliente`, sem telefone) e guarda `clienteId`. Ao abrir, nomes antigos sem cadastro também entram. Trocar o nome no cadastro
 atualiza vendas e orçamentos. Com telefone, "📤 Enviar" do orçamento abre a conversa no WhatsApp (`wa.me/55…`).
 
-**Peça sob medida** (no orçamento): mesma conta de `custoProduto` (gramas e tempo do total ÷ quantidade = por peça) e `precoSugerido`.
-Vira item avulso do orçamento com `detalhe` (gramas e tempo); "Salvar também em Produtos" cria o produto com categoria "Sob medida".
+**Peça sob medida**: removida do orçamento na 1.7.2. Peça nova se cadastra em Produtos; itens antigos com `detalhe` continuam aparecendo.
 
 **Estoque de materiais** (aba Estoque, desde 1.5.0): saldo (g) = compras + estoque inicial − perdas − Σ(item.mat.g × qtd) das **vendas**.
 Calculado na hora (`estoques()`), nada é baixado à mão: editar/apagar venda devolve os gramas. Orçamento não mexe no estoque.
@@ -142,7 +141,7 @@ Quantidade de parcelas escolhida numa lista de 1x a 36x. **Não** entram como de
 ## Abas
 
 Geral (KPIs, gráfico mensal, produtos mais vendidos, formas de pagamento, mapa mês × ano, fechamento) ·
-**Orçamentos** (proposta, peça sob medida, enviar, aprovar → venda) · Vendas (itens, pagamento em botões, lista do mês, Excel) · **Produtos** (calculadora + catálogo) · **Estoque** (quanto tem, compras/perdas, cadastro dos filamentos, movimentações) ·
+**Orçamentos** (proposta, enviar, aprovar → venda) · Vendas (itens, pagamento em botões, lista do mês, Excel) · **Produtos** (calculadora + catálogo) · **Estoque** (quanto tem, compras/perdas, cadastro dos filamentos, movimentações) ·
 Despesas (e parcelamentos) · Clientes (cadastro com código) · Resumo · Config (custos de produção, impressoras, taxas, ajuda, exportar).
 
 **Valores usados em Config (2026-11-07)**: energia R$ 1,00/kWh (EDP São Paulo, que atende Mogi das Cruzes: ~R$ 0,80 sem impostos,
@@ -164,7 +163,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-07, versão 1.7.1)
+## Estado atual (2026-11-07, versão 1.7.2)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -174,6 +173,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.6.0: orçamento só com cliente e produtos do cadastro (listas), com ida e volta para cadastrar.
 - 1.6.1: tempo de impressão num campo só, em horas ou minutos (Produtos e peça sob medida).
 - 1.7.0: aquecer e calibrar por impressora (A1: 7 min); tempo e gramas de produto/peça sob medida são de 1 peça.
+- 1.7.2: saiu a peça sob medida do orçamento; produto novo só pelo cadastro de Produtos.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -196,3 +196,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.6.1 | 2026-11-07 | Tempo de impressão num campo só, escolhendo horas ou minutos (Produtos e peça sob medida); formato do `dados.json` igual |
 | 1.7.0 | 2026-11-07 | Aquecer e calibrar por impressora (`preparoMin`, A1 = 7 min), somado 1x por impressão; tempo e gramas de Produtos e peça sob medida passam a ser de 1 peça (`porPeca`); produtos antigos continuam com a conta antiga até serem editados |
 | 1.7.1 | 2026-11-07 | Correção: o ajuste de maiúsculas do nome do cliente (ao sair do campo) mexia no `<select>` do orçamento e trocava `c17` por `C17`, apagando a escolha; agora só vale para `<input>` |
+| 1.7.2 | 2026-11-07 | Saiu a calculadora de peça sob medida do orçamento (botão, painel e código); itens antigos com `detalhe` continuam aparecendo |

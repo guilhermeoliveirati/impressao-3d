@@ -183,10 +183,6 @@ nav .ct{display:none}
 .ptab tr.agora td{background:#fef9c3!important}
 .ptab tr.quitado td{color:var(--ok)}
 @media (max-width:900px){.ptab th:nth-child(3),.ptab td:nth-child(3){display:none}.ptab td,.ptab th{padding:6px 4px;white-space:normal}.ptab .tag{display:none}.parc{padding:10px 8px}}
-/* peça sob medida no orçamento */
-.sobmedida{background:#faf8ff;border:1px solid #ddd6fe;border-radius:14px;padding:14px;margin-top:10px}
-.f2{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end}
-.f2>*{min-width:0}.f2 .largo{grid-column:1/-1}
 /* resumo do estoque */
 .estres{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px}
 .estres .m{background:#f8fafc;border:1px solid var(--brd);border-radius:12px;padding:8px 10px}
@@ -275,30 +271,6 @@ nav .ct{display:none}
         <div class="row" style="margin-top:8px;justify-content:space-between">
           <span class="row" style="gap:6px"><button type="button" class="btn sm sec2" id="oAddItem">＋ Adicionar produto</button><button type="button" class="btn sm sec2" id="oNovoProd">＋ Cadastrar produto novo</button></span>
           <span class="muted" id="oSub"></span>
-        </div>
-      </div>
-      <div style="grid-column:1/-1">
-        <button type="button" class="btn sm" id="ocAbrir">🧮 Calcular peça sob medida pelos materiais</button>
-        <div id="ocBox" class="sobmedida" hidden>
-          <h3 style="margin-top:0">🧮 Peça sob medida</h3>
-          <div class="f2">
-            <label class="largo">Nome da peça<input id="ocNome" placeholder="ex.: Suporte de celular personalizado"></label>
-            <label>Impressora<select id="ocImp"></select></label>
-            <label>Quantidade de peças<input id="ocQtd" type="number" min="1" step="1" value="1"></label>
-            <label class="largo">Tempo de impressão de 1 peça<span class="campoBtn"><input id="ocT" type="number" min="0" step="any" value="0" style="flex:1;min-width:0"><select id="ocTU" aria-label="unidade do tempo" style="width:auto"><option value="h">horas</option><option value="min">minutos</option></select></span></label>
-            <label>Trabalho manual (min)<input id="ocMao" type="number" min="0" step="1" value="0"></label>
-            <label>Extras por peça (R$)<input id="ocExt" type="number" min="0" step="0.01" value="0"></label>
-            <label>Margem de lucro (%)<input id="ocMarg" type="number" min="0" step="1"></label>
-          </div>
-          <h3>Materiais de 1 peça</h3>
-          <div id="ocFil"></div>
-          <button type="button" class="btn sm sec2" id="ocAddFil">＋ Outro material</button>
-          <p class="muted" style="margin:6px 0 0">Tempo e gramas de 1 peça, sem aquecer e calibrar (o painel soma o tempo da impressora uma vez). A peça fica salva em Produtos (categoria “Sob medida”) para poder ser escolhida de novo.</p>
-          <div id="ocRes" style="margin-top:12px"></div>
-          <div class="row" style="margin-top:10px">
-            <button type="button" class="btn" id="ocAdd">＋ Salvar em Produtos e adicionar ao orçamento</button>
-            <button type="button" class="btn sec2" id="ocFechar">Fechar</button>
-          </div>
         </div>
       </div>
       <label>Frete / entrega (R$)<input name="frete" type="number" step="0.01" min="0" value="0"></label>
@@ -619,7 +591,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.7.1";
+const VERSAO="1.7.2";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1187,7 +1159,7 @@ function calcOrc(){
   return{custo};
 }
 fO.addEventListener("input",e=>{if(e.target.name==="valor")valorManual=true;if(e.target.name==="valor"||e.target.name==="frete")calcOrc()});
-function limparOrc(){ocLimpar();fO.reset();fO.id.value="";fO.data.value=hoje();valorManual=false;edO.set([]);$("#oTitulo").textContent="📝 Novo orçamento";calcOrc()}
+function limparOrc(){fO.reset();fO.id.value="";fO.data.value=hoje();valorManual=false;edO.set([]);$("#oTitulo").textContent="📝 Novo orçamento";calcOrc()}
 $("#oCancelar").onclick=limparOrc;
 fO.onsubmit=e=>{e.preventDefault();
   const cli=D.clientes.find(c=>c.id===fO.cliente.value);
@@ -1249,59 +1221,6 @@ window.enviarOrc=async id=>{const o=D.orcamentos.find(x=>x.id===id);
   if(navigator.share){try{await navigator.share({text:txt});return}catch(e){if(e.name==="AbortError")return}}
   try{await navigator.clipboard.writeText(txt);avisar("Texto do orçamento copiado. Cole no WhatsApp para mandar ao cliente.")}
   catch{avisar(txt)}};
-
-/* ---------- peça sob medida (dentro do orçamento) ----------
-   Mesma conta da aba Produtos (custoProduto): materiais em gramas, energia, desgaste e manutenção da impressora,
-   perdas, mão de obra e extras. Tempo e gramas são do total; dividindo pela quantidade sai o custo por peça.
-   Preço por peça = custo × (1 + margem), arredondado como em Config. */
-let ocFil=[];
-function ocLer(){return{nome:$("#ocNome").value.trim(),categoria:"Sob medida",impressoraId:$("#ocImp").value,...lerTempo($("#ocT").value,$("#ocTU").value),porPeca:true,
-  unidades:Math.max(1,Math.round(+$("#ocQtd").value||1)),maoMin:+$("#ocMao").value||0,extras:r2($("#ocExt").value),
-  falhaPct:null,margemPct:$("#ocMarg").value===""?null:+$("#ocMarg").value,precoVenda:null,
-  filamentos:ocFil.filter(f=>f.filamentoId&&f.g>0).map(f=>({filamentoId:f.filamentoId,g:r2(f.g)})),obs:""}}
-function ocRows(){
-  $("#ocFil").innerHTML=D.filamentos.length?ocFil.map((f,i)=>`<div class="linha">
-    <select data-i="${i}" data-k="filamentoId">${D.filamentos.map(x=>`<option value="${x.id}"${x.id===f.filamentoId?" selected":""}>${esc(x.nome)} · ${brl(x.precoKg)}/kg${estTxt(x.id)}</option>`).join("")}</select>
-    <input data-i="${i}" data-k="g" type="number" step="0.1" min="0" value="${f.g||0}" style="width:100px" aria-label="gramas"><span class="muted">g</span>
-    ${ocFil.length>1?`<button type="button" class="btn sm del" data-rm="${i}" title="Tirar material">✕</button>`:""}</div>`).join("")
-    :'<p class="muted">Cadastre os filamentos em Config primeiro.</p>';
-}
-function ocCalc(){
-  const p=ocLer(),c=custoProduto(p),un=c.un,sug=precoSugerido(p,c);
-  $("#ocMarg").placeholder="padrão "+D.config.margemPct+"%";
-  const imp=impressoraDe(p.impressoraId);
-  const L=[["🧵 Materiais",c.fil,`${num(c.gramas)} g`],["⚡ Energia",c.energia,`${num(c.kwh,2)} kWh`],
-    ["🖨️ Desgaste e manutenção",c.maquina,`${fmtTempo(c.horas)}${imp?` · manutenção ${brl(imp.manutHora)}/h`:""}`],
-    ["⚠️ Perdas / falhas",c.falha,`${num(c.falhaPct)}%`],["✋ Mão de obra",c.mao,`${num(p.maoMin,0)} min`],["📦 Extras",c.extras*un,""]];
-  const mx=Math.max(...L.map(l=>l[1]),.01);
-  $("#ocRes").innerHTML=contaTempo(c)+`<div class="decomp">${L.map(([l,v,d])=>`<span>${l} <span class="muted">${d}</span></span><div class="bar"><i style="width:${(v/mx*100).toFixed(1)}%"></i></div><span class="v">${brl(v)}</span>`).join("")}</div>
-    <div class="destaque" style="margin-top:8px"><span>Custo total (${un} ${un>1?"peças":"peça"})</span><span class="n">${brl(c.unit*un)}</span></div>
-    <div class="destaque"><span>Custo por peça</span><span class="n">${brl(c.unit)}</span></div>
-    <div class="destaque"><span>Preço de venda por peça <span class="muted">(margem ${num(margemDe(p))}%)</span></span><span class="n" style="color:var(--acc)">${brl(sug)}</span></div>
-    <div class="calc">Total para o cliente: <b>${brl(sug*un)}</b> · lucro <b class="${sug>=c.unit?"lucro":"taxa"}">${brl((sug-c.unit)*un)}</b></div>`;
-  return{p,c,sug};
-}
-function ocPrep(){
-  $("#ocImp").innerHTML=D.impressoras.map(i=>`<option value="${i.id}">${esc(i.nome)}</option>`).join("")||'<option value="">(cadastre em Config)</option>';
-  if(!ocFil.length)ocFil=[{filamentoId:D.filamentos[0]?.id||"",g:0}];ocRows();ocCalc();
-}
-function ocLimpar(){["#ocNome","#ocMarg"].forEach(x=>$(x).value="");["#ocT","#ocMao","#ocExt"].forEach(x=>$(x).value=0);$("#ocTU").value="h";$("#ocQtd").value=1;ocFil=[];$("#ocBox").hidden=true}
-$("#ocAbrir").onclick=()=>{const b=$("#ocBox");b.hidden=!b.hidden;if(!b.hidden){ocPrep();$("#ocNome").focus()}};
-$("#ocFechar").onclick=ocLimpar;
-$("#ocBox").addEventListener("keydown",e=>{if(e.key==="Enter")e.preventDefault()}); // Enter aqui não salva o orçamento
-$("#ocBox").addEventListener("input",e=>{const el=e.target;if(el.closest("#ocFil")&&el.dataset.k){ocFil[el.dataset.i][el.dataset.k]=el.dataset.k==="g"?(+el.value||0):el.value}ocCalc()});
-$("#ocBox").addEventListener("change",e=>{const el=e.target;if(el.closest("#ocFil")&&el.dataset.k==="filamentoId")ocFil[el.dataset.i].filamentoId=el.value;ocCalc()});
-$("#ocFil").addEventListener("click",e=>{const i=e.target.dataset?.rm;if(i==null)return;ocFil.splice(+i,1);ocRows();ocCalc()});
-$("#ocAddFil").onclick=()=>{ocFil.push({filamentoId:D.filamentos[0]?.id||"",g:0});ocRows();ocCalc()};
-$("#ocAdd").onclick=()=>{const {p,c,sug}=ocCalc();
-  if(!p.nome)return avisar("Dê um nome para a peça.");
-  if(!p.filamentos.length)return avisar("Coloque pelo menos um material com os gramas usados.");
-  if(produtoPorNome(p.nome))return avisar(`Já existe "${p.nome}" em Produtos. Escolha ele na lista do orçamento ou dê outro nome para a peça.`);
-  const novo={...p,id:novoId("p")};D.produtos.push(novo);D.produtos.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
-  const detalhe=p.filamentos.map(f=>`${num(f.g)} g ${filamentoDe(f.filamentoId)?.nome||""}`).join(" + ")+` por peça · ${fmtTempo(c.horas)} de impressão`;
-  const mat=p.filamentos.map(f=>({f:f.filamentoId,g:r2(f.g)}));
-  const L=edO.validos();L.push({produtoId:novo.id,nome:p.nome,qtd:c.un,preco:sug,custo:r2(c.unit),detalhe,mat});edO.set(L);
-  salvar();ocLimpar();calcOrc();status(`"${p.nome}" salvo em Produtos e adicionado ao orçamento`)};
 
 /* ---------- parcelamentos (ex.: impressora comprada em sociedade) ----------
    parcela = total ÷ nº de parcelas; parte de cada pessoa = parcela ÷ nº de pessoas.
@@ -1620,6 +1539,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.7.2",data:"2026-11-07",titulo:"Orçamento mais simples",itens:[
+    {novo:"Saiu o botão “Calcular peça sob medida pelos materiais” do orçamento.",
+     uso:"Peça nova? Cadastre em Produtos (ou toque em ＋ Cadastrar produto novo no orçamento) e escolha ela na lista. Peças sob medida já salvas continuam em Produtos."}]},
   {v:"1.7.1",data:"2026-11-07",titulo:"Correção: cliente do orçamento",itens:[
     {novo:"Ao escolher o cliente e tocar em Salvar orçamento, o cliente sumia e o painel dizia que ele não tinha sido escolhido. Corrigido.",
      uso:"Nada a fazer: escolha o cliente na lista e salve normalmente."}]},
@@ -1703,7 +1625,6 @@ const PASSOS=[
     <p>Ao lado aparecem o <b>custo por peça</b>, o <b>preço sugerido</b> e o lucro. Toque em <b>Salvar produto</b>.</p>`},
   {ico:"📝",titulo:"3. Faça orçamentos",aba:"orcamentos",texto:`<p>Na aba <b>Orçamentos</b>, escolha o <b>cliente</b> e os <b>produtos</b> na lista, coloque a quantidade e toque em <b>Salvar orçamento</b>.</p>
     <p>Cliente ou produto ainda não cadastrado? Toque em <b>＋ Novo</b> / <b>＋ Cadastrar produto novo</b>: o painel abre o cadastro e, ao salvar, volta para o orçamento.</p>
-    <p>Peça fora do catálogo? Toque em <b>🧮 Calcular peça sob medida</b>, coloque os materiais em gramas e o tempo: o painel calcula custo e preço.</p>
     <p>Toque em <b>📤 Enviar</b> para mandar ao cliente pelo WhatsApp.</p>
     <p>Quando o cliente aprovar, toque em <b>✅ Aprovar</b>: a venda já abre preenchida.</p>`},
   {ico:"🧾",titulo:"4. Lance cada venda",aba:"vendas",texto:`<p>Na aba <b>Vendas</b>:</p><ol>
