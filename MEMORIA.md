@@ -77,7 +77,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
                 "frete", "cobrado", "metodo", "custo", "taxa", "lucro", "obs", "clienteId" } ],
                 // cada item pode ter "mat": [ { "f": filamentoId, "g": gramas POR UNIDADE } ] — usado pelo estoque
                 // e "partes": custo de 1 unidade por tipo { fil, energia, maquina, falha, mao, extras | outros } — usado nas despesas de produção
-  "despesas": [ { "id", "data", "categoria", "descricao", "valor", "vendaId" /* só nos gastos de produção, lançados pela venda */ } ],
+  "despesas": [ { "id", "data", "categoria", "descricao", "valor", "pago" /* false = a pagar; sem o campo = paga */, "vendaId" /* só nos gastos de produção, lançados pela venda */ } ],
 }
 ```
 
@@ -135,11 +135,16 @@ Compra com valor pode atualizar o preço do kg. Abaixo de `estoqueMinimoG` apare
 Perdas reais (falhas, testes) só entram se registradas como "perda" — o % de perdas de Config é só para o preço.
 
 **Parcelamentos** (aba Despesas): parcela = total ÷ parcelas; parte = parcela ÷ pessoas; ✓ por mês e pessoa em `pagos`.
-Quantidade de parcelas escolhida numa lista de 1x a 36x. **Não** entram como despesa: o valor da impressora já entra no custo das peças (desgaste). Cadastrado: Bambu Lab A1, R$ 4.499,10,
+Quantidade de parcelas escolhida numa lista de 1x a 36x. **Não** entram na lista de Despesas; desde 1.9.0 entram no Resumo
+("Parcelas do mês", parcela inteira de todas as pessoas, depois do lucro líquido = "Sobra no mês"), nas Contas do mês e no gráfico de Geral.
+Atenção: o desgaste da impressora também está no custo das peças, então enquanto ela é paga a sobra fica mais conservadora. Cadastrado: Bambu Lab A1, R$ 4.499,10,
 10x a partir de dez/2026, 3 sócios (R$ 449,91 por mês, R$ 149,97 cada).
 
 **Despesas**: compra do rolo de filamento **não** é despesa (vai em Estoque; o filamento usado entra pelos gastos de produção da venda). Fixas copiáveis: MEI, Aluguel, Internet.
-**Resumo**: lucro líquido = faturamento − taxas − custos de produção − outras despesas (= lucro das vendas − despesas sem `vendaId`). **Sem dízimo** (removido na 1.5.0; `normalizar()` apaga `D.dizimos` de arquivos antigos).
+**Resumo**: lucro líquido = faturamento − taxas − custos de produção − outras despesas (= lucro das vendas − despesas sem `vendaId`);
+sobra no mês = lucro líquido − parcelas do mês. **Contas do mês** (1.9.0): despesas sem `vendaId` (✓ = `pago`) e a parte de cada pessoa nas parcelas
+(✓ = o mesmo `pc.pagos` da aba Despesas); mostra "Tudo pago" ou quanto falta. Despesas fixas copiadas do mês anterior entram com `pago:false`.
+**Geral › No positivo ou no negativo?** (1.9.0): barra por mês da sobra (verde/vermelha) e linha do saldo acumulado desde o primeiro mês com movimento. **Sem dízimo** (removido na 1.5.0; `normalizar()` apaga `D.dizimos` de arquivos antigos).
 
 ## Boas-vindas e novidades (desde 1.1.0)
 
@@ -172,7 +177,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-07, versão 1.8.0)
+## Estado atual (2026-11-07, versão 1.9.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -184,6 +189,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.7.0: aquecer e calibrar por impressora (A1: 7 min); tempo e gramas de produto/peça sob medida são de 1 peça.
 - 1.7.2: saiu a peça sob medida do orçamento; produto novo só pelo cadastro de Produtos.
 - 1.8.0: aba Produção (fila dos orçamentos aprovados) e gastos de produção lançados em Despesas pela venda.
+- 1.9.0: gráfico positivo × negativo em Geral; parcelas, sobra e contas do mês (✓ pago) no Resumo; despesas com "Já está pago".
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -208,3 +214,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.7.1 | 2026-11-07 | Correção: o ajuste de maiúsculas do nome do cliente (ao sair do campo) mexia no `<select>` do orçamento e trocava `c17` por `C17`, apagando a escolha; agora só vale para `<input>` |
 | 1.7.2 | 2026-11-07 | Saiu a calculadora de peça sob medida do orçamento (botão, painel e código); itens antigos com `detalhe` continuam aparecendo |
 | 1.8.0 | 2026-11-07 | Aba Produção: orçamento aprovado entra na fila (fila → imprimindo → pronto), concluir abre a venda; ao salvar a venda, os gastos de produção (filamento, energia, desgaste…) entram em Despesas com `vendaId`, sem desconto duplo; Resumo mostra faturamento − taxas − custos de produção − outras despesas |
+| 1.9.0 | 2026-11-07 | Geral: gráfico de meses positivos/negativos e saldo acumulado; Resumo: parcelas do mês, sobra, contas do mês com ✓ de pago (despesas ganham `pago`); valores com “−” sem sinal duplicado; tabelas do Resumo e de Geral não alargam mais a tela do celular |

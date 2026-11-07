@@ -69,7 +69,7 @@ main{max-width:1200px;margin:0 auto;padding:20px 16px}
 .kpi .v{font-size:1.65rem;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
 .kpi .d{font-size:0.857rem;margin-top:2px}
 .up{color:var(--ok)}.down{color:var(--bad)}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}.grid2>*{min-width:0}
 @media (max-width:800px){.grid2{grid-template-columns:1fr}}
 .chart{position:relative;height:300px}
 table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
@@ -93,6 +93,12 @@ input:focus,select:focus{outline:2px solid var(--acc2);border-color:var(--acc)}
 table.resumo td{font-size:1.071rem;padding:9px 8px}
 table.resumo tr.sub td{color:var(--bad)}
 table.resumo tr.parcial td{background:#f8fafc;font-weight:600}
+table.resumo td{white-space:normal}table.resumo td.n{white-space:nowrap}
+table.resumo tr.sec td{padding-top:16px;font-size:.8rem;color:var(--mut);text-transform:uppercase;font-weight:700;letter-spacing:.03em;border-bottom:1px solid var(--brd)}
+table.contas td{vertical-align:middle}table.contas tr.pago td{color:var(--mut)}table.contas tr.pago td.v{text-decoration:line-through}
+.saldoKpis{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.saldoKpis span{background:#f8fafc;border:1px solid var(--brd);border-radius:10px;padding:6px 10px;font-size:.9rem}
+.saldoKpis b.pos{color:var(--ok)}.saldoKpis b.neg{color:var(--bad)}
 table.resumo tr.final td{font-size:1.286rem;font-weight:700;border-top:2px solid var(--txt);border-bottom:0}
 .info{flex:none;width:22px;height:22px;min-height:0;border-radius:50%;border:1.5px solid var(--acc);background:#fff;color:var(--acc);font:italic 700 .929rem/1 Georgia,serif;cursor:pointer;padding:0}
 .info[aria-expanded="true"]{background:var(--acc);color:#fff}
@@ -248,6 +254,10 @@ nav .ct{display:none}
   </div>
   <div class="infobox" id="gAlerta" hidden style="margin-bottom:12px;background:#fef2f2;border-color:#fecaca"></div>
   <div class="kpis" id="gKpis"></div>
+  <div class="card"><h2>⚖️ No positivo ou no negativo?</h2>
+    <p class="muted" style="margin-top:0">Sobra de cada mês = lucro das vendas − outras despesas − parcelas. Barra verde: mês positivo; vermelha: negativo. A linha mostra o saldo acumulado desde o começo.</p>
+    <div class="saldoKpis" id="gSaldo"></div>
+    <div class="chart"><canvas id="cSaldo"></canvas></div></div>
   <div class="card"><h2>📊 Faturamento e lucro por mês</h2><div class="chart"><canvas id="cMes"></canvas></div></div>
   <div class="grid2">
     <div class="card"><h2>🏆 Produtos mais vendidos (ano)</h2><div class="scroll" style="max-height:300px"><table id="tTopProd"></table></div></div>
@@ -413,6 +423,7 @@ nav .ct{display:none}
       <label>Categoria<select name="categoria" id="selCat"></select></label>
       <label>Descrição<input name="descricao"></label>
       <label>Valor (R$)<input name="valor" type="number" step="0.01" min="0" required></label>
+      <label style="flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="pago" checked style="min-height:0;width:20px;height:20px"> Já está pago</label>
       <div class="row"><button class="btn" type="submit">Salvar</button><button class="btn sec2" type="button" id="dCancelar">Limpar</button></div>
     </form>
     <div class="row" style="margin-top:10px">
@@ -427,8 +438,8 @@ nav .ct{display:none}
       <button class="btn sm sec2" id="pcNovo">＋ Novo parcelamento</button>
     </div>
     <div id="pcLista"></div>
-    <p class="muted">Marque ✓ quando cada pessoa pagar a parte do mês; o mês atual fica em amarelo. As parcelas não entram como despesa:
-      o valor da impressora já entra no custo de cada peça (desgaste, em Config).</p>
+    <p class="muted">Marque ✓ quando cada pessoa pagar a parte do mês; o mês atual fica em amarelo. As parcelas não entram na lista de despesas:
+      aparecem no Resumo (Parcelas do mês, Sobra e Contas do mês) e no gráfico de positivo × negativo em Geral.</p>
   </div>
   <div class="card">
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
@@ -511,6 +522,14 @@ nav .ct{display:none}
     </div>
     <table id="tResumo" class="resumo"></table>
     <p class="muted" id="rObs"></p>
+  </div>
+  <div class="card" style="max-width:560px">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <h2 style="margin:0">🧾 Contas do mês</h2>
+      <span id="rContasSt"></span>
+    </div>
+    <p class="muted" style="margin-top:0">Todas as despesas e parcelas do mês. Marque ✓ quando pagar: assim você vê se o mês está todo pago.</p>
+    <div class="scroll"><table id="tContas" class="contas"></table></div>
   </div>
   <div class="card">
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
@@ -604,7 +623,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.8.0";
+const VERSAO="1.9.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -842,9 +861,10 @@ const contaTempo=c=>c.tPeca==null?"":`<div class="calc" style="margin-bottom:8px
 const qtdItens=v=>soma(v.itens||[],x=>x.qtd);
 function agregar(){
   const m={};
-  const get=k=>m[k]??={fat:0,lucro:0,taxa:0,custo:0,pecas:0,n:0,desp:0};
+  const get=k=>m[k]??={fat:0,lucro:0,taxa:0,custo:0,pecas:0,n:0,desp:0,parc:0};
   for(const v of D.vendas){const a=get(v.data.slice(0,7));a.fat+=v.cobrado;a.lucro+=v.lucro;a.taxa+=v.taxa;a.custo+=v.custo||0;a.pecas+=qtdItens(v);a.n++}
   for(const d of D.despesas){if(!d.vendaId)get(d.data.slice(0,7)).desp+=d.valor} // gastos de produção (vendaId) já estão no custo de cada venda
+  for(const pc of D.parcelamentos)for(let i=0;i<pc.parcelas;i++)get(mesMais(pc.inicio,i)).parc+=r2(pc.total/pc.parcelas); // parcela inteira (todas as pessoas)
   return m;
 }
 const anos=()=>[...new Set([...D.vendas.map(v=>+v.data.slice(0,4)),+hoje().slice(0,4)])].sort();
@@ -856,7 +876,7 @@ function renderGeral(){
   const ano=+sel.value, ant=ano-1;
   const mesesAno=Object.keys(M).filter(k=>k.startsWith(ano)).map(k=>+k.slice(5));
   const ult=Math.max(...mesesAno,0)||12;
-  const somaAno=(a,ateMes)=>{const t={fat:0,lucro:0,taxa:0,n:0,desp:0,custo:0,pecas:0};for(let i=1;i<=ateMes;i++){const x=M[`${a}-${String(i).padStart(2,"0")}`];if(x)for(const k in t)t[k]+=x[k]}return t};
+  const somaAno=(a,ateMes)=>{const t={fat:0,lucro:0,taxa:0,n:0,desp:0,custo:0,pecas:0,parc:0};for(let i=1;i<=ateMes;i++){const x=M[`${a}-${String(i).padStart(2,"0")}`];if(x)for(const k in t)t[k]+=x[k]}return t};
   const t=somaAno(ano,12), p=somaAno(ant,ult);
   $("#gObs").textContent=p.n?`Comparação com ${ant} no mesmo período (jan–${MESES[ult-1].toLowerCase()})`:"";
   const k=(l,v,vp,f=brl0,inv)=>{let d="";if(p.n&&vp){const r=v/vp-1;const bom=inv?r<0:r>0;d=`<div class="d ${bom?"up":"down"}">${r>0?"▲":"▼"} ${pct(Math.abs(r))} vs ${ant}</div>`}
@@ -870,6 +890,21 @@ function renderGeral(){
     k("Custo de produção",t.custo,p.custo,brl0,true)+k("Margem",t.fat?t.lucro/t.fat:0,p.fat?p.lucro/p.fat:0,pct);
 
   const serie=(a,c)=>MESES.map((_,i)=>M[`${a}-${String(i+1).padStart(2,"0")}`]?.[c]??null);
+  // positivo × negativo: sobra do mês (lucro − outras despesas − parcelas) e saldo acumulado desde o primeiro mês com movimento
+  const sobra=x=>x?x.lucro-x.desp-x.parc:null, ks0=Object.keys(M).sort();
+  let acum=0;const acumAte={};ks0.forEach(k=>{acum+=sobra(M[k]);acumAte[k]=acum});
+  const mesesAnoK=MESES.map((_,i)=>`${ano}-${String(i+1).padStart(2,"0")}`);
+  const sb=mesesAnoK.map(k=>M[k]?r2(sobra(M[k])):null);
+  const ultK=ks0.filter(k=>k<=`${ano}-12`).at(-1);
+  const pos=sb.filter(v=>v!=null&&v>=0), neg=sb.filter(v=>v!=null&&v<0);
+  const hojeK=hoje().slice(0,7), saldoHoje=acumAte[ks0.filter(k=>k<=hojeK).at(-1)]??0;
+  $("#gSaldo").innerHTML=`<span>Meses positivos em ${ano}: <b class="pos">${pos.length}</b> (${brl0(soma(pos,v=>v))})</span>
+    <span>Meses negativos: <b class="neg">${neg.length}</b> (${brl0(soma(neg,v=>v))})</span>
+    <span>Saldo acumulado até hoje: <b class="${saldoHoje<0?"neg":"pos"}">${brl0(saldoHoje)}</b></span>`;
+  chart("cSaldo","bar",{labels:MESES,datasets:[
+    {label:"Sobra do mês",data:sb,backgroundColor:sb.map(v=>v<0?"#ef4444":"#16a34a"),order:2},
+    {label:"Saldo acumulado",data:mesesAnoK.map(k=>k in acumAte?r2(acumAte[k]):null),type:"line",borderColor:"#1d2330",backgroundColor:"#1d2330",pointRadius:3,order:1,spanGaps:true}]},
+    {plugins:{legend:{display:true}}});
   chart("cMes","bar",{labels:MESES,datasets:[
     {label:`Faturamento ${ano}`,data:serie(ano,"fat"),backgroundColor:"#7c3aed",order:2},
     {label:`Lucro ${ano}`,data:serie(ano,"lucro"),backgroundColor:"#c4b5fd",order:2},
@@ -1352,7 +1387,7 @@ $("#pcNovo").onclick=()=>{D.parcelamentos.push({id:novoId("pc"),descricao:"Novo 
 /* ---------- despesas ---------- */
 const fD=$("#fDesp");
 fD.onsubmit=e=>{e.preventDefault();
-  const d={id:fD.id.value||novoId("d"),data:fD.data.value,categoria:fD.categoria.value,descricao:fD.descricao.value.trim(),valor:r2(fD.valor.value)};
+  const d={id:fD.id.value||novoId("d"),data:fD.data.value,categoria:fD.categoria.value,descricao:fD.descricao.value.trim(),valor:r2(fD.valor.value),pago:fD.pago.checked};
   const i=D.despesas.findIndex(x=>x.id===d.id);i>=0?D.despesas[i]=d:D.despesas.push(d);
   $("#dMes").value=d.data.slice(0,7);salvar();fD.reset();fD.id.value="";fD.data.value=hoje();renderDesp();
 };
@@ -1362,14 +1397,14 @@ $("#dCopiar").onclick=async()=>{
   const fixas=D.despesas.filter(d=>d.data.startsWith(ant)&&FIXAS.includes(d.categoria));
   if(!fixas.length)return avisar("Nenhuma despesa fixa ("+FIXAS.join(", ")+") em "+ant);
   if(D.despesas.some(d=>d.data.startsWith(mes)&&FIXAS.includes(d.categoria))&&!await confirmar("Este mês já tem despesas fixas. Copiar mesmo assim?"))return;
-  fixas.forEach(d=>D.despesas.push({...d,id:novoId("d"),data:mes+"-01"}));salvar();renderDesp();
+  fixas.forEach(d=>D.despesas.push({...d,id:novoId("d"),data:mes+"-01",pago:false})); // conta nova do mês: ainda não pagasalvar();renderDesp();
 };
-window.editarDesp=id=>{const d=D.despesas.find(x=>x.id===id);for(const k in d)if(fD[k])fD[k].value=d[k];scrollTo({top:0,behavior:"smooth"})};
+window.editarDesp=id=>{const d=D.despesas.find(x=>x.id===id);for(const k in d)if(fD[k]&&k!=="pago")fD[k].value=d[k];fD.pago.checked=d.pago!==false;scrollTo({top:0,behavior:"smooth"})};
 function renderDesp(){
   renderParcelas();
   const mes=$("#dMes").value, L=D.despesas.filter(d=>d.data.startsWith(mes));
   $("#tDesp").innerHTML=`<tr><th>Data</th><th>Categoria</th><th>Descrição</th><th class="n">Valor</th><th></th></tr>`+
-    L.map(d=>`<tr><td>${fmtData(d.data)}</td><td>${esc(d.categoria)}${d.vendaId?' <span class="tag">da venda</span>':""}</td><td style="white-space:normal">${esc(d.descricao)}</td><td class="n">${brl(d.valor)}</td><td>${d.vendaId
+    L.map(d=>`<tr><td>${fmtData(d.data)}</td><td>${esc(d.categoria)}${d.vendaId?' <span class="tag">da venda</span>':""}</td><td style="white-space:normal">${esc(d.descricao)}</td><td class="n">${brl(d.valor)}${d.vendaId?"":d.pago===false?' <span class="tag aberto">a pagar</span>':' <span class="tag ok">pago</span>'}</td><td>${d.vendaId
       ?`<button class="btn sm sec2" onclick="verVendaDesp('${d.vendaId}')" title="Esses valores vêm da venda: edite ou apague a venda">Ver venda</button>`
       :`<button class="btn sm sec2" onclick="editarDesp('${d.id}')">Editar</button> <button class="btn sm del" onclick="apagar('despesas','${d.id}')">✕</button>`}</td></tr>`).join("")+
     `<tr><th colspan="3">Total do mês</th><th class="n">${brl(soma(L,d=>d.valor))}</th><th></th></tr>`;
@@ -1441,33 +1476,62 @@ $("#cDias").oninput=renderClientes;$("#cBusca").oninput=renderClientes;
 
 /* ---------- resumo ---------- */
 function resumoMes(M,mes){
-  const x=M[mes]||{fat:0,taxa:0,custo:0,lucro:0,desp:0,n:0};
-  return{fat:x.fat,taxa:x.taxa,custo:x.custo,lucro:x.lucro,desp:x.desp,liquido:x.lucro-x.desp,n:x.n};
+  const x=M[mes]||{fat:0,taxa:0,custo:0,lucro:0,desp:0,parc:0,n:0};
+  return{fat:x.fat,taxa:x.taxa,custo:x.custo,lucro:x.lucro,desp:x.desp,liquido:x.lucro-x.desp,parc:x.parc,sobra:x.lucro-x.desp-x.parc,n:x.n};
 }
 function renderResumo(){
   const M=agregar(), mes=$("#rMes").value, r=resumoMes(M,mes);
+  // linhas com "−" mostram o valor sem sinal (o sinal já está no texto)
   const lin=(cls,l,v)=>`<tr class="${cls}"><td>${l}</td><td class="n">${brl(v)}</td></tr>`;
+  const cor=v=>`style="color:${v<0?"var(--bad)":"var(--ok)"}"`;
   $("#tResumo").innerHTML=
     lin("","Faturamento",r.fat)+
-    lin("sub","− Taxas de cartão",-r.taxa)+
-    lin("sub","− Custos de produção (filamento, energia, desgaste…)",-r.custo)+
-    lin("sub","− Outras despesas",-r.desp)+
-    `<tr class="final"><td>Lucro líquido</td><td class="n" style="color:${r.liquido<0?"var(--bad)":"var(--ok)"}">${brl(r.liquido)}</td></tr>`;
+    lin("sub","− Taxas de cartão",r.taxa)+
+    lin("sub","− Custos de produção (filamento, energia, desgaste…)",r.custo)+
+    lin("sub","− Outras despesas",r.desp)+
+    `<tr class="parcial"><td>= Lucro líquido</td><td class="n" ${cor(r.liquido)}>${brl(r.liquido)}</td></tr>`+
+    lin("sub","− Parcelas do mês (parcelamentos)",r.parc)+
+    `<tr class="final"><td>Sobra no mês</td><td class="n" ${cor(r.sobra)}>${brl(r.sobra)}</td></tr>`;
   const avisos=[];
   if(!r.n)avisos.push("Nenhuma venda neste mês.");
-  if(!r.desp)avisos.push("Nenhuma despesa lançada neste mês.");
+  if(!r.desp)avisos.push("Nenhuma outra despesa lançada neste mês.");
+  if(r.parc)avisos.push("Parcelas: valor inteiro da parcela do mês, somando todas as pessoas.");
   $("#rObs").textContent=avisos.join(" ");
+  renderContas(mes);
   const sel=$("#rAno"), A=anos();
   if(sel.options.length!==A.length){sel.innerHTML="";A.forEach(a=>sel.add(new Option(a,a)));sel.value=mes.slice(0,4);sel.onchange=renderResumo}
-  const ano=sel.value, t={fat:0,taxa:0,custo:0,lucro:0,desp:0,liquido:0,n:0};
-  let h=`<tr><th>Mês</th><th class="n">Lucro vendas</th><th class="n">Outras despesas</th><th class="n">Lucro líquido</th></tr>`;
+  const ano=sel.value, t={fat:0,taxa:0,custo:0,lucro:0,desp:0,liquido:0,parc:0,sobra:0,n:0};
+  let h=`<tr><th>Mês</th><th class="n">Lucro vendas</th><th class="n">Outras despesas</th><th class="n">Lucro líquido</th><th class="n">Parcelas</th><th class="n">Sobra</th></tr>`;
   MESES.forEach((n,i)=>{const m=`${ano}-${String(i+1).padStart(2,"0")}`;if(!M[m])return;
     const x=resumoMes(M,m);for(const k in t)t[k]+=x[k];
     h+=`<tr><td style="cursor:pointer" onclick="$('#rMes').value='${m}';renderResumo();scrollTo({top:0,behavior:'smooth'})">${n}/${ano}</td><td class="n">${brl(x.lucro)}</td>
-      <td class="n"><a href="#" onclick="abrirMes('despesas','${m}');return false" title="Editar despesas">${x.desp?brl(x.desp):"–"}</a></td><td class="n"><b>${brl(x.liquido)}</b></td></tr>`});
-  h+=`<tr><th>Total ${ano}</th><th class="n">${brl(t.lucro)}</th><th class="n">${brl(t.desp)}</th><th class="n">${brl(t.liquido)}</th></tr>`;
+      <td class="n"><a href="#" onclick="abrirMes('despesas','${m}');return false" title="Editar despesas">${x.desp?brl(x.desp):"–"}</a></td><td class="n">${brl(x.liquido)}</td><td class="n">${x.parc?brl(x.parc):"–"}</td><td class="n"><b class="${x.sobra<0?"taxa":"lucro"}">${brl(x.sobra)}</b></td></tr>`});
+  h+=`<tr><th>Total ${ano}</th><th class="n">${brl(t.lucro)}</th><th class="n">${brl(t.desp)}</th><th class="n">${brl(t.liquido)}</th><th class="n">${brl(t.parc)}</th><th class="n">${brl(t.sobra)}</th></tr>`;
   $("#tResumoAno").innerHTML=h;
 }
+/* Contas do mês: despesas (exceto os gastos de produção, que não são contas a pagar) e a parte de cada pessoa nas parcelas.
+   Despesa: "pago" (sem o campo = paga, como era antes da 1.9.0). Parcela: o mesmo ✓ de Despesas › Parcelamentos (pc.pagos). */
+function renderContas(mes){
+  const L=[];
+  D.despesas.filter(d=>!d.vendaId&&d.data.startsWith(mes)).sort((a,b)=>a.data.localeCompare(b.data))
+    .forEach(d=>L.push({nome:`${esc(d.categoria)}${d.descricao?` <span class="muted">· ${esc(d.descricao)}</span>`:""}`,quando:fmtData(d.data),v:d.valor,pago:d.pago!==false,attr:`data-d="${d.id}"`}));
+  D.parcelamentos.forEach((pc,ip)=>{for(let i=0;i<pc.parcelas;i++){if(mesMais(pc.inicio,i)!==mes)continue;
+    const parte=r2(pc.total/pc.parcelas/pc.pessoas.length);
+    pc.pessoas.forEach((n,j)=>L.push({nome:`💳 ${esc(pc.descricao)} ${i+1}/${pc.parcelas} <span class="muted">· ${esc(n)}</span>`,quando:"parcela",v:parte,pago:!!pc.pagos?.[mes]?.[j],attr:`data-pc="${ip}" data-m="${mes}" data-j="${j}"`}))}});
+  const prod=soma(D.despesas.filter(d=>d.vendaId&&d.data.startsWith(mes)),d=>d.valor);
+  const pago=soma(L.filter(x=>x.pago),x=>x.v), falta=soma(L.filter(x=>!x.pago),x=>x.v);
+  $("#rContasSt").innerHTML=!L.length?"":falta>0.004?`<span class="tag aberto">Falta pagar ${brl(falta)}</span>`:'<span class="tag ok">✅ Tudo pago</span>';
+  $("#tContas").innerHTML=L.length?`<tr><th>Conta</th><th></th><th class="n">Valor</th><th class="n">Pago</th></tr>`+
+    L.map(x=>`<tr class="${x.pago?"pago":""}"><td style="white-space:normal">${x.nome}</td><td class="muted">${x.quando}</td><td class="n v">${brl(x.v)}</td>
+      <td class="n"><input type="checkbox" class="tick" ${x.attr} ${x.pago?"checked":""} aria-label="pago"></td></tr>`).join("")+
+    `<tr><th>Pago</th><th></th><th class="n">${brl(pago)}</th><th></th></tr><tr><th>Falta pagar</th><th></th><th class="n">${brl(falta)}</th><th></th></tr>`+
+    (prod?`<tr><td colspan="4" class="muted" style="white-space:normal">Gastos de produção das vendas (${brl(prod)}) não aparecem aqui: são o material e a energia já usados, não contas a pagar.</td></tr>`:"")
+    :`<tr><td class="muted">Nenhuma despesa nem parcela neste mês.</td></tr>`;
+}
+$("#tContas").addEventListener("change",e=>{const el=e.target;if(!el.classList.contains("tick"))return;
+  if(el.dataset.d){D.despesas.find(x=>x.id===el.dataset.d).pago=el.checked}
+  else{const pc=D.parcelamentos[el.dataset.pc];const a=((pc.pagos??={})[el.dataset.m]??=pc.pessoas.map(()=>false));a[+el.dataset.j]=el.checked}
+  salvar();setTimeout(renderResumo,150)});
 $("#rMes").oninput=()=>{$("#rAno").value=$("#rMes").value.slice(0,4);renderResumo()};
 window.abrirEstoque=()=>document.querySelector("#nav [data-s=estoque]").click();
 window.abrirMes=(aba,m)=>{const campo={despesas:"#dMes"}[aba];if(campo)$(campo).value=m;
@@ -1633,6 +1697,13 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.9.0",data:"2026-11-07",titulo:"Positivo × negativo, parcelas e contas do mês",itens:[
+    {novo:"Em Geral, gráfico “No positivo ou no negativo?”: cada mês em verde (sobrou) ou vermelho (faltou), com o saldo acumulado.",
+     uso:"Geral › primeiro gráfico. Sobra do mês = lucro das vendas − outras despesas − parcelas."},
+    {novo:"O Resumo agora inclui as parcelas do mês e mostra a Sobra no mês. Os valores com “−” aparecem sem o sinal duplicado.",
+     uso:"Resumo › escolha o mês. A linha “Parcelas do mês” soma a parcela inteira (todas as pessoas)."},
+    {novo:"Novo quadro “Contas do mês” no Resumo, com todas as despesas e parcelas do mês e o ✓ de pago. Mostra “Tudo pago” ou quanto falta.",
+     uso:"Resumo › Contas do mês › marque ✓ ao pagar. Em Despesas, cada despesa tem “Já está pago”; as fixas copiadas do mês anterior entram como a pagar."}]},
   {v:"1.8.0",data:"2026-11-07",titulo:"Fila de produção e gastos em Despesas",itens:[
     {novo:"Nova aba Produção: o orçamento aprovado entra numa fila, com o tempo de impressão e os gramas de cada pedido, e avisa se falta material.",
      uso:"Orçamentos › ✅ Aprovar. Depois, na aba Produção: ▶ Começar quando for imprimir e ✅ Concluir quando ficar pronto. A venda abre preenchida: confira o pagamento e toque em Salvar venda."},
@@ -1736,7 +1807,8 @@ const PASSOS=[
     <p>Os gastos de produção de cada venda aparecem aqui sozinhos, marcados “da venda”. A compra do rolo de filamento <b>não</b> entra aqui (ela vai em Estoque).</p>`},
   {ico:"📈",titulo:"6. Acompanhe o resultado",aba:"geral",texto:`<ul>
     <li><b>Geral</b>: faturamento, lucro e produtos mais vendidos.</li>
-    <li><b>Resumo</b>: faturamento − taxas − custos de produção − outras despesas = lucro líquido do mês.</li>
+    <li><b>Geral</b>: gráfico de meses no positivo e no negativo.</li>
+    <li><b>Resumo</b>: lucro líquido, parcelas e a sobra do mês, e as <b>contas do mês</b> com ✓ de pago.</li>
     <li><b>Vendas › Exportar</b>: planilha Excel do mês.</li></ul>`},
   {ico:"✅",titulo:"Pronto!",texto:`<p>Você já pode começar. Os exemplos que vieram em Produtos podem ser editados ou apagados.</p>
     <p>Para ver este passo a passo de novo: <b>Config › Ajuda</b>.</p>`}
