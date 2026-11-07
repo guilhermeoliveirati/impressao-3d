@@ -28,6 +28,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
 3. **Nunca gravar chaves no código.** As únicas credenciais no código são as públicas do Google (`GOOGLE` em `painel.html`).
 4. Interface em **português do Brasil**, letras em `rem`, **sem CSS `zoom`**, valores com `brl()`.
 5. A venda **nunca é salva sozinha**: o orçamento aprovado só preenche o formulário; quem salva é o usuário.
+   Conflito de gravação: comparar o **conteúdo** (`conteudoConhecido`), não só a data — o Google Drive do computador muda a data ao sincronizar.
    Não usar `confirm()`/`alert()` do navegador (no app instalado podem não aparecer e os botões "não funcionam"):
    usar `confirmar()` e `avisar()` do próprio painel.
 6. Antes de mexer no `dados.json` por fora do painel, fazer cópia de segurança.
@@ -95,7 +96,7 @@ Vira item avulso do orçamento com `detalhe` (gramas e tempo); "Salvar também e
 
 **Parcelamentos** (aba Despesas): parcela = total ÷ parcelas; parte = parcela ÷ pessoas; ✓ por mês e pessoa em `pagos`.
 **Não** entram como despesa: o valor da impressora já entra no custo das peças (desgaste). Cadastrado: Bambu Lab A1, R$ 4.499,10,
-10x a partir de dez/2026, 3 pessoas (R$ 449,91 por mês, R$ 149,97 cada).
+10x a partir de dez/2026, 3 pessoas: Eu, Luan e Caique (R$ 449,91 por mês, R$ 149,97 cada).
 
 **Despesas**: compra de filamento **não** é despesa (já entra no custo de cada venda). Fixas copiáveis: MEI, Aluguel, Internet.
 **Dízimo e Resumo**: mesmas regras da Oficina; o item automático se chama "Impressão 3D" (= lucro − despesas do mês).
@@ -148,3 +149,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.1.0 | 2026-11-06 | Passo a passo no primeiro acesso e janela de novidades a cada versão (o que mudou + como usar); Config › Ajuda e versão no rodapé abrem as duas. Regra: toda versão ganha entrada em `NOVIDADES` |
 | 1.2.0 | 2026-11-07 | Aba Orçamentos (proposta, enviar pelo WhatsApp, aprovar → venda preenchida); excluir volta a funcionar (confirmação dentro do painel no lugar de `confirm()`); saem a venda por voz (Gemini) e o tamanho da letra; Config com Bambu Lab A1 e energia da EDP |
 | 1.3.0 | 2026-11-07 | Cadastro de clientes com código automático e telefone (WhatsApp); parcelamentos com ✓ por mês e pessoa (A1 em 10x dividida em 3); peça sob medida no orçamento pelos materiais; Enviar abre o WhatsApp do cliente |
+| 1.3.1 | 2026-11-07 | Aviso falso de “alterado em outro lugar”: o painel compara o conteúdo do arquivo, não só a data (o Google Drive do computador muda a data ao sincronizar); parcelamento com Luan e Caique |

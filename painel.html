@@ -594,7 +594,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.3.0";
+const VERSAO="1.3.1";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -666,9 +666,9 @@ async function escolherNoDrive(){
 }
 
 /* --- abrir --- */
-let versaoConhecida=null;
+let versaoConhecida=null, conteudoConhecido=null; // conteúdo do arquivo como foi lido/gravado por último (para comparar)
 async function abrirFonte(f){
-  const r=await f.ler();fonte=f;D=r.dados;versaoConhecida=r.versao;LS.set("jaAbriu",true);iniciar();
+  const r=await f.ler();fonte=f;conteudoConhecido=JSON.stringify(r.dados);D=r.dados;versaoConhecida=r.versao;LS.set("jaAbriu",true);iniciar();
 }
 async function abrirLocal(h){
   if(await h.queryPermission({mode:"readwrite"})!=="granted" && await h.requestPermission({mode:"readwrite"})!=="granted") throw new Error("Permissão negada");
@@ -718,17 +718,23 @@ function salvar(){
   _M=null;
   if(!fonte){status("alterações NÃO salvas: baixe uma cópia em Config",true);return}
   pendentes++;status("salvando…");
-  const json=JSON.stringify(D,null,1), g=geracao;
+  const json=JSON.stringify(D,null,1), compacto=JSON.stringify(D), g=geracao;
   fila=fila.then(async()=>{
     try{
       if(g!==geracao)return;
       if(await fonte.versao()!==versaoConhecida){
-        geracao++;const r=await fonte.ler();D=r.dados;normalizar();versaoConhecida=r.versao;render();
-        status("o arquivo tinha sido alterado em outro lugar: recarregado",true);
-        avisar("O dados.json foi alterado em outro lugar (outro aparelho ou outra aba).\nO painel carregou a versão mais nova. Refaça a última alteração.");
-        return;
+        const r=await fonte.ler();
+        // O Google Drive do computador muda a data do arquivo ao sincronizar, sem mudar o conteúdo.
+        // Só é conflito de verdade quando o conteúdo é diferente do que este painel leu ou gravou por último.
+        if(JSON.stringify(r.dados)===conteudoConhecido)versaoConhecida=r.versao;
+        else{
+          geracao++;conteudoConhecido=JSON.stringify(r.dados);D=r.dados;normalizar();versaoConhecida=r.versao;render();
+          status("o arquivo tinha sido alterado em outro lugar: recarregado",true);
+          avisar("Os dados foram alterados em outro aparelho enquanto você mexia aqui.\nO painel carregou a versão mais nova. Refaça a última alteração.");
+          return;
+        }
       }
-      versaoConhecida=await fonte.gravar(json);
+      versaoConhecida=await fonte.gravar(json);conteudoConhecido=compacto;
       $("#reconectar").style.display="none";
       if(pendentes===1)status("salvo às "+new Date().toLocaleTimeString("pt-BR").slice(0,5))}
     catch(e){
@@ -741,7 +747,9 @@ $("#reconectar").onclick=async()=>{try{await loginGoogle();salvar()}catch(e){sta
 addEventListener("beforeunload",e=>{if(pendentes>0){e.preventDefault();e.returnValue=""}});
 async function conferirArquivo(){
   if(!fonte||pendentes>0||(fonte.tipo==="drive"&&!tokenValido()))return;
-  try{if(await fonte.versao()!==versaoConhecida){const r=await fonte.ler();D=r.dados;normalizar();versaoConhecida=r.versao;render();status("atualizado com a versão mais nova do arquivo")}}
+  try{if(await fonte.versao()!==versaoConhecida){const r=await fonte.ler(),txt=JSON.stringify(r.dados);versaoConhecida=r.versao;
+    if(txt===conteudoConhecido)return; // só a data mudou (sincronização do Google Drive)
+    conteudoConhecido=txt;D=r.dados;normalizar();render();status("atualizado com a versão mais nova do arquivo")}}
   catch{}
 }
 addEventListener("focus",conferirArquivo);
@@ -1544,6 +1552,11 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.3.1",data:"2026-11-07",titulo:"Fim do aviso “alterado em outro lugar”",itens:[
+    {novo:"O aviso de que os dados foram alterados em outro lugar aparecia toda hora no computador, mesmo sem ninguém mexer em outro aparelho. Era o Google Drive mudando a data do arquivo ao sincronizar.",
+     uso:"Nada a fazer: agora o painel confere o conteúdo e só avisa quando outro aparelho realmente mudou os dados."},
+    {novo:"No parcelamento da impressora, Amigo 1 e Amigo 2 viraram Luan e Caique.",
+     uso:"Despesas › Parcelamentos. Para mudar os nomes de novo, edite o campo Pessoas."}]},
   {v:"1.3.0",data:"2026-11-07",titulo:"Cadastro de clientes, parcelas da impressora e peça sob medida",itens:[
     {novo:"Cadastro de clientes com nome, telefone e código automático (#001, #002…).",
      uso:"Clientes › Cadastrar cliente › Salvar. Na lista, toque no telefone para abrir o WhatsApp. Quem aparece numa venda ou orçamento já entra no cadastro sozinho."},
