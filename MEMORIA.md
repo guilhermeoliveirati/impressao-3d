@@ -67,7 +67,8 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
   "parcelamentos": [ { "id", "descricao", "total", "parcelas", "inicio": "AAAA-MM", "pessoas": ["Eu", …], "pagos": { "AAAA-MM": [true, false, …] } } ],
   "estoque": [ { "id", "data", "filamentoId", "tipo": "compra" | "inicial" | "perda", "g", "valor" } ],
   "orcamentos": [ { "id", "data", "cliente", "validade" /* dias */, "itens": [ …iguais aos da venda… ], "frete", "valor", "custo", "obs",
-                    "status": "aberto" | "aprovado" | "recusado", "vendaId": null, "clienteId" } ],   // item pode ter "detalhe" (peça sob medida)
+                    "status": "aberto" | "producao" | "aprovado" /* vendido */ | "recusado", "vendaId": null, "clienteId",
+                    "etapa": "fila" | "imprimindo" | "pronto" /* só em producao */, "aprovadoEm": "AAAA-MM-DD" } ],   // item pode ter "detalhe" (peça sob medida)
   "produtos": [ { "id", "nome", "categoria", "impressoraId", "horas", "minutos", "unidades", "maoMin", "extras",
                   "falhaPct": null, "margemPct": null, "precoVenda": null,   // null = usa o padrão de Config / o preço sugerido
                   "porPeca": true,   // desde 1.7.0: horas/minutos e filamentos.g são de 1 peça (sem: da impressão inteira)
@@ -75,7 +76,8 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
   "vendas": [ { "id", "data", "cliente", "itens": [ { "produtoId"|null, "nome", "qtd", "preco", "custo" } ],
                 "frete", "cobrado", "metodo", "custo", "taxa", "lucro", "obs", "clienteId" } ],
                 // cada item pode ter "mat": [ { "f": filamentoId, "g": gramas POR UNIDADE } ] — usado pelo estoque
-  "despesas": [ { "id", "data", "categoria", "descricao", "valor" } ],
+                // e "partes": custo de 1 unidade por tipo { fil, energia, maquina, falha, mao, extras | outros } — usado nas despesas de produção
+  "despesas": [ { "id", "data", "categoria", "descricao", "valor", "vendaId" /* só nos gastos de produção, lançados pela venda */ } ],
 }
 ```
 
@@ -103,8 +105,15 @@ A tabela "Preço por forma de pagamento" mostra o preço para receber o mesmo qu
 - **Lucro da venda = cobrado − custo de produção dos itens − taxa.**
 - Mão de obra entra como custo; quem quiser que conte como lucro coloca R$ 0/h em Config.
 
-**Orçamento**: mesmos itens da venda, mas não entra em faturamento nem lucro. "✅ Aprovar" abre Vendas preenchida
-(`orcEmVenda`); ao salvar a venda, o orçamento vira `aprovado` com `vendaId`. Apagar essa venda devolve o orçamento para `aberto`.
+**Orçamento**: mesmos itens da venda, mas não entra em faturamento nem lucro. "✅ Aprovar" põe na **fila de produção** (aba Produção, 1.8.0):
+`status:"producao"`, `etapa` fila → imprimindo → pronto, ordem por `aprovadoEm`. "✅ Concluir" abre Vendas preenchida (`orcEmVenda`, etapa vira `pronto`);
+ao salvar a venda, o orçamento vira `aprovado` (mostrado como "Vendido") com `vendaId`. Apagar essa venda devolve o pedido para a produção (`pronto`).
+A fila mostra tempo de impressão (impressões = qtd ÷ peças por impressão, para cima) e gramas, e avisa se falta material no estoque.
+
+**Gastos de produção em Despesas (1.8.0)**: ao salvar a venda, `despesasDaVenda` lança o custo dela em Despesas, por tipo
+(categorias "Produção · Filamento/Energia/Desgaste e manutenção/Perdas e falhas/Mão de obra/Extras/Outros custos"), com `vendaId`.
+Editar a venda refaz; apagar a venda apaga. Esses lançamentos **não** são descontados de novo: `agregar` ignora despesas com `vendaId`.
+Resumo: faturamento − taxas − custos de produção (Σ custo das vendas) − outras despesas = lucro líquido. `normalizar` lança os gastos de vendas antigas uma vez.
 "📤 Enviar" monta um texto para WhatsApp (compartilhar do celular ou copiar).
 
 **Orçamento escolhe da lista (1.6.0)**: cliente é um `<select>` do cadastro (obrigatório) e cada item é um `<select>` do catálogo
@@ -129,8 +138,8 @@ Perdas reais (falhas, testes) só entram se registradas como "perda" — o % de 
 Quantidade de parcelas escolhida numa lista de 1x a 36x. **Não** entram como despesa: o valor da impressora já entra no custo das peças (desgaste). Cadastrado: Bambu Lab A1, R$ 4.499,10,
 10x a partir de dez/2026, 3 sócios (R$ 449,91 por mês, R$ 149,97 cada).
 
-**Despesas**: compra de filamento **não** é despesa (já entra no custo de cada venda). Fixas copiáveis: MEI, Aluguel, Internet.
-**Resumo**: lucro líquido = lucro das vendas − despesas do mês. **Sem dízimo** (removido na 1.5.0; `normalizar()` apaga `D.dizimos` de arquivos antigos).
+**Despesas**: compra do rolo de filamento **não** é despesa (vai em Estoque; o filamento usado entra pelos gastos de produção da venda). Fixas copiáveis: MEI, Aluguel, Internet.
+**Resumo**: lucro líquido = faturamento − taxas − custos de produção − outras despesas (= lucro das vendas − despesas sem `vendaId`). **Sem dízimo** (removido na 1.5.0; `normalizar()` apaga `D.dizimos` de arquivos antigos).
 
 ## Boas-vindas e novidades (desde 1.1.0)
 
@@ -141,7 +150,7 @@ Quantidade de parcelas escolhida numa lista de 1x a 36x. **Não** entram como de
 ## Abas
 
 Geral (KPIs, gráfico mensal, produtos mais vendidos, formas de pagamento, mapa mês × ano, fechamento) ·
-**Orçamentos** (proposta, enviar, aprovar → venda) · Vendas (itens, pagamento em botões, lista do mês, Excel) · **Produtos** (calculadora + catálogo) · **Estoque** (quanto tem, compras/perdas, cadastro dos filamentos, movimentações) ·
+**Orçamentos** (proposta, enviar, aprovar → produção) · **Produção** (fila, começar, concluir → venda) · Vendas (itens, pagamento em botões, lista do mês, Excel) · **Produtos** (calculadora + catálogo) · **Estoque** (quanto tem, compras/perdas, cadastro dos filamentos, movimentações) ·
 Despesas (e parcelamentos) · Clientes (cadastro com código) · Resumo · Config (custos de produção, impressoras, taxas, ajuda, exportar).
 
 **Valores usados em Config (2026-11-07)**: energia R$ 1,00/kWh (EDP São Paulo, que atende Mogi das Cruzes: ~R$ 0,80 sem impostos,
@@ -163,7 +172,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-07, versão 1.7.2)
+## Estado atual (2026-11-07, versão 1.8.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -174,6 +183,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.6.1: tempo de impressão num campo só, em horas ou minutos (Produtos e peça sob medida).
 - 1.7.0: aquecer e calibrar por impressora (A1: 7 min); tempo e gramas de produto/peça sob medida são de 1 peça.
 - 1.7.2: saiu a peça sob medida do orçamento; produto novo só pelo cadastro de Produtos.
+- 1.8.0: aba Produção (fila dos orçamentos aprovados) e gastos de produção lançados em Despesas pela venda.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -197,3 +207,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.7.0 | 2026-11-07 | Aquecer e calibrar por impressora (`preparoMin`, A1 = 7 min), somado 1x por impressão; tempo e gramas de Produtos e peça sob medida passam a ser de 1 peça (`porPeca`); produtos antigos continuam com a conta antiga até serem editados |
 | 1.7.1 | 2026-11-07 | Correção: o ajuste de maiúsculas do nome do cliente (ao sair do campo) mexia no `<select>` do orçamento e trocava `c17` por `C17`, apagando a escolha; agora só vale para `<input>` |
 | 1.7.2 | 2026-11-07 | Saiu a calculadora de peça sob medida do orçamento (botão, painel e código); itens antigos com `detalhe` continuam aparecendo |
+| 1.8.0 | 2026-11-07 | Aba Produção: orçamento aprovado entra na fila (fila → imprimindo → pronto), concluir abre a venda; ao salvar a venda, os gastos de produção (filamento, energia, desgaste…) entram em Despesas com `vendaId`, sem desconto duplo; Resumo mostra faturamento − taxas − custos de produção − outras despesas |
