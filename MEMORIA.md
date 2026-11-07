@@ -138,11 +138,14 @@ Compra com valor pode atualizar o preço do kg. Abaixo de `estoqueMinimoG` apare
 Perdas reais (falhas, testes) só entram se registradas como "perda" — o % de perdas de Config é só para o preço.
 
 **Parcelamentos** (aba Despesas): parcela = total ÷ parcelas; parte = parcela ÷ pessoas; ✓ por mês e pessoa em `pagos`.
-Quantidade de parcelas escolhida numa lista de 1x a 36x. **Não** entram na lista de Despesas; desde 1.9.0 entram no Resumo
+Quantidade de parcelas: **no máximo 10x** em todos os campos (1.11.0; `normalizar` corta parcelamentos maiores). **Não** entram na lista de Despesas; desde 1.9.0 entram no Resumo
 ("Parcelas do mês", parcela inteira de todas as pessoas, depois do lucro líquido = "Sobra no mês"), nas Contas do mês e no gráfico de Geral.
 Atenção: o desgaste da impressora também está no custo das peças, então enquanto ela é paga a sobra fica mais conservadora. Cadastrado: Bambu Lab A1, R$ 4.499,10,
 10x a partir de dez/2026, 3 sócios (R$ 449,91 por mês, R$ 149,97 cada).
 
+**Lançar despesa** (1.11.0, formulário único): pergunta o que é (conta/compra ou 🧵 filamento) e como pagou (à vista ou parcelado, 2x–10x, 1ª parcela e pessoas).
+Conta à vista → `despesas`; conta parcelada → `parcelamentos`; filamento à vista → `estoque` (compra); filamento parcelado → `parcelamentos` com `material`/`materialG`.
+Filamento sempre pode atualizar o `precoKg` (valor ÷ gramas × 1000). Saiu o botão "＋ Novo parcelamento": o cartão do parcelamento continua editável.
 **Despesas**: compra do rolo de filamento **não** é despesa (vai em Estoque; o filamento usado entra pelos gastos de produção da venda). Fixas copiáveis: MEI, Aluguel, Internet.
 **Resumo**: lucro líquido = faturamento − taxas − custos de produção − outras despesas (= lucro das vendas − despesas sem `vendaId`);
 sobra no mês = lucro líquido − parcelas **a pagar** (1.10.0: partes marcadas ✓ não descontam; parcelamento de filamento nunca desconta). **Contas do mês** (1.9.0): despesas sem `vendaId` (✓ = `pago`) e a parte de cada pessoa nas parcelas
@@ -188,7 +191,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-07, versão 1.10.0)
+## Estado atual (2026-11-07, versão 1.11.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -203,6 +206,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.9.0: gráfico positivo × negativo em Geral; parcelas, sobra e contas do mês (✓ pago) no Resumo; despesas com "Já está pago".
 - 1.10.0: parcela paga não desconta da sobra; produção editável; avisar cliente; prazo de entrega; sinal e vendas a receber; despesas que se repetem; filamento parcelado no estoque; meta do mês; menu ☰ Mais no celular.
 - Para o dono: marcar o parcelamento "Filamento Branco" como compra de filamento (Despesas › Parcelamentos) e dizer os gramas.
+- 1.11.0: Lançar despesa num lugar só (conta/filamento, à vista/parcelado); filamento atualiza estoque e preço do kg; parcelas até 10x.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -229,3 +233,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.8.0 | 2026-11-07 | Aba Produção: orçamento aprovado entra na fila (fila → imprimindo → pronto), concluir abre a venda; ao salvar a venda, os gastos de produção (filamento, energia, desgaste…) entram em Despesas com `vendaId`, sem desconto duplo; Resumo mostra faturamento − taxas − custos de produção − outras despesas |
 | 1.9.0 | 2026-11-07 | Geral: gráfico de meses positivos/negativos e saldo acumulado; Resumo: parcelas do mês, sobra, contas do mês com ✓ de pago (despesas ganham `pago`); valores com “−” sem sinal duplicado; tabelas do Resumo e de Geral não alargam mais a tela do celular |
 | 1.10.0 | 2026-11-07 | Sobra desconta só parcelas a pagar; Produção editável (etapa, prazo, sinal, ordem, editar pedido, avisar cliente no WhatsApp); prazo de entrega no orçamento; vendas a receber; despesas que se repetem todo mês (sai o copiar fixas); filamento parcelado entra no estoque e fora da sobra; meta do mês em Geral (`metaSobra` em Config); menu ☰ Mais no celular; salvar orçamento mantém campos da produção |
+| 1.11.0 | 2026-11-07 | Lançar despesa unificado: conta/compra ou filamento, à vista ou parcelado (vai para despesas, parcelamentos ou estoque); filamento atualiza o estoque e o preço do kg; sai o botão Novo parcelamento; compras de filamento do mês aparecem abaixo das despesas; parcelas limitadas a 10x em todos os campos |

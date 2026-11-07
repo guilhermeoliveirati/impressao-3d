@@ -83,6 +83,7 @@ th{color:var(--mut);font-weight:600;position:sticky;top:0;background:var(--card)
 table tr:nth-child(even) td{background:#f8fafc}
 td.n,th.n{text-align:right}
 .scroll{overflow:auto;max-height:520px}
+form.f [hidden]{display:none!important}
 form.f{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end}
 label{display:flex;flex-direction:column;gap:3px;font-size:.82rem;font-weight:600;color:#475569}
 input,select,textarea{font:inherit;min-height:44px;border-radius:10px;padding:8px 12px;font-size:1rem;border:1px solid #d7dee8;background:#fff;color:var(--txt);min-width:0}
@@ -441,25 +442,37 @@ nav .ct{display:none}
   <div class="card">
     <h2>💸 Lançar despesa</h2>
     <form class="f" id="fDesp" autocomplete="off">
-      <input type="hidden" name="id">
+      <input type="hidden" name="id"><input type="hidden" name="tipo" value="conta"><input type="hidden" name="forma" value="avista">
+      <div class="chips" id="dTipo" style="grid-column:1/-1"><span class="rot">O que você comprou ou pagou?</span>
+        <button type="button" class="chip" data-tipo="conta">📄 Conta ou compra (MEI, aluguel, embalagem, impressora…)</button>
+        <button type="button" class="chip" data-tipo="filamento">🧵 Filamento</button></div>
       <label>Data<input name="data" type="date" required></label>
-      <label>Categoria<select name="categoria" id="selCat"></select></label>
-      <label>Descrição<input name="descricao"></label>
-      <label>Valor (R$)<input name="valor" type="number" step="0.01" min="0" required></label>
-      <label style="flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="pago" checked style="min-height:0;width:20px;height:20px"> Já está pago</label>
-      <label style="flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="repete" style="min-height:0;width:20px;height:20px"> 🔁 Repetir todo mês</label>
-      <div class="row"><button class="btn" type="submit">Salvar</button><button class="btn sec2" type="button" id="dCancelar">Limpar</button></div>
+      <label data-se="cat">Categoria<select name="categoria" id="selCat"></select></label>
+      <label data-se="fil">Filamento<select name="filamentoId" id="dFil"></select></label>
+      <label data-se="desc">Descrição<input name="descricao" placeholder="ex.: DAS de novembro"></label>
+      <label>Valor total (R$)<input name="valor" type="number" step="0.01" min="0" required></label>
+      <label data-se="fil">Quantidade (g)<input name="g" type="number" step="1" min="0" value="1000"></label>
+      <div class="chips" id="dForma" style="grid-column:1/-1"><span class="rot">Como pagou?</span>
+        <button type="button" class="chip" data-forma="avista">À vista</button>
+        <button type="button" class="chip" data-forma="parcelado">Parcelado</button></div>
+      <label data-se="parc">Parcelas<select name="parcelas"><option value="2">2x</option><option value="3">3x</option><option value="4">4x</option><option value="5">5x</option><option value="6">6x</option><option value="7">7x</option><option value="8">8x</option><option value="9">9x</option><option value="10">10x</option></select></label>
+      <label data-se="parc">1ª parcela em<input name="inicio" type="month"></label>
+      <label data-se="parc" style="grid-column:span 2">Dividir entre (separe por vírgula)<input name="pessoas" placeholder="ex.: Gui, Luan, Caique"></label>
+      <label data-se="pago" style="flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="pago" checked style="min-height:0;width:20px;height:20px"> Já está pago</label>
+      <label data-se="repete" style="flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="repete" style="min-height:0;width:20px;height:20px"> 🔁 Repetir todo mês</label>
+      <label data-se="fil" style="grid-column:1/-1;flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="atualizaPreco" checked style="min-height:0;width:20px;height:20px"> Atualizar o preço por kg deste filamento com o valor desta compra</label>
+      <div class="calc" id="dCalc" style="grid-column:1/-1" hidden></div>
+      <div class="row" style="grid-column:1/-1"><button class="btn" type="submit" id="dSalvar">Salvar</button><button class="btn sec2" type="button" id="dCancelar">Limpar</button></div>
     </form>
-    <p class="muted">Conta que vem todo mês (MEI, aluguel, internet…)? Marque <b>🔁 Repetir todo mês</b>: ela aparece sozinha nos meses seguintes, como “a pagar”.
-      Para parar, edite a do último mês e desmarque.</p>
-    <p class="muted">Compra de filamento <b>não</b> entra aqui: o custo do filamento já sai do lucro de cada venda (aba Produtos).</p>
+    <p class="muted"><b>Conta do mês</b> (MEI, aluguel, internet…)? Marque <b>🔁 Repetir todo mês</b>: ela aparece sozinha nos meses seguintes, como “a pagar”. Para parar, edite a do último mês e desmarque.<br>
+      <b>Parcelado</b> vai para Parcelamentos, onde você marca ✓ cada parte paga. <b>Filamento</b> entra no Estoque (e atualiza o preço do kg); ele não conta como despesa, porque o custo do filamento já sai do lucro de cada venda.</p>
   </div>
   <div class="card">
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
       <h2 style="margin:0">💳 Parcelamentos</h2>
-      <button class="btn sm sec2" id="pcNovo">＋ Novo parcelamento</button>
     </div>
     <div id="pcLista"></div>
+    <p class="muted" style="margin:4px 0 0">Para lançar uma compra parcelada nova, use <b>Lançar despesa › Parcelado</b>, acima.</p>
     <p class="muted">Marque ✓ quando cada pessoa pagar a parte do mês; o mês atual fica em amarelo. As parcelas não entram na lista de despesas:
       aparecem no Resumo (Parcelas do mês, Sobra e Contas do mês) e no gráfico de positivo × negativo em Geral.</p>
   </div>
@@ -615,7 +628,7 @@ nav .ct{display:none}
 
 <script>
 const MESES=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-const CATS=["MEI","Aluguel","Internet","Manutenção / peças da impressora","Embalagens","Ferramentas / acessórios","Anúncios / marketplace","Frete pago","Outros"];
+const CATS=["MEI","Aluguel","Internet","Impressora / equipamento","Manutenção / peças da impressora","Embalagens","Ferramentas / acessórios","Anúncios / marketplace","Frete pago","Outros"];
 const FIXAS=["MEI","Aluguel","Internet"];
 const brl=v=>(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 const brl0=v=>(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
@@ -646,7 +659,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.10.0";
+const VERSAO="1.11.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -823,7 +836,8 @@ function normalizar(){
   D.impressoras.forEach(i=>i.preparoMin??=7);
   // desde 1.8.0 cada venda lança seus gastos de produção em Despesas (vendaId); vendas antigas ganham os lançamentos uma vez
   D.vendas.forEach(v=>{if(!D.despesas.some(d=>d.vendaId===v.id))despesasDaVenda(v)});
-  gerarRecorrentes(); // contas que se repetem todo mês // aquecer e calibrar antes de cada impressão (Bambu A1: ~7 min)
+  gerarRecorrentes(); // contas que se repetem todo mês
+  D.parcelamentos.forEach(pc=>{if(pc.parcelas>10)pc.parcelas=10}); // parcelamento vai até 10x (1.11.0) // aquecer e calibrar antes de cada impressão (Bambu A1: ~7 min)
   // clientes que só existiam pelo nome em vendas/orçamentos entram no cadastro (sem telefone)
   [...D.vendas,...D.orcamentos].sort((a,b)=>a.data.localeCompare(b.data)).forEach(x=>{if(x.cliente&&!clientePorNome(x.cliente))novoCliente(x.cliente)});
 }
@@ -1455,7 +1469,7 @@ function renderParcelas(){
       <div class="pcab">
         <label style="flex:2;min-width:180px">Descrição<input data-pc="${ip}" data-k="descricao" value="${esc(pc.descricao)}"></label>
         <label>Valor total (R$)<input data-pc="${ip}" data-k="total" type="number" step="0.01" min="0" value="${pc.total}"></label>
-        <label>Parcelas<select data-pc="${ip}" data-k="parcelas">${Array.from({length:Math.max(36,pc.parcelas)},(_,i)=>`<option value="${i+1}"${pc.parcelas===i+1?" selected":""}>${i+1}x</option>`).join("")}</select></label>
+        <label>Parcelas<select data-pc="${ip}" data-k="parcelas">${Array.from({length:10},(_,i)=>`<option value="${i+1}"${pc.parcelas===i+1?" selected":""}>${i+1}x</option>`).join("")}</select></label>
         <label>1ª parcela<input data-pc="${ip}" data-k="inicio" type="month" value="${pc.inicio}"></label>
         <label style="flex:2;min-width:200px">Pessoas (separe por vírgula)<input data-pc="${ip}" data-k="pessoas" value="${esc(pc.pessoas.join(", "))}"></label>
         <label style="flex:2;min-width:200px">É compra de filamento?<select data-pc="${ip}" data-k="material"><option value="">Não (impressora, ferramenta, outro)</option>${D.filamentos.map(f=>`<option value="${f.id}"${pc.material===f.id?" selected":""}>Sim: ${esc(f.nome)}</option>`).join("")}</select></label>
@@ -1473,22 +1487,72 @@ function renderParcelas(){
 $("#pcLista").addEventListener("change",e=>{const el=e.target,pc=D.parcelamentos[el.dataset.pc];if(!pc)return;
   if(el.classList.contains("tick")){const a=((pc.pagos??={})[el.dataset.m]??=pc.pessoas.map(()=>false));a[+el.dataset.j]=el.checked;salvar();setTimeout(renderParcelas,200);return}
   const k=el.dataset.k;if(!k)return;
-  pc[k]=k==="pessoas"?el.value.split(",").map(x=>x.trim()).filter(Boolean):k==="material"?(el.value||null):k==="materialG"?(+el.value||0):k==="total"?r2(el.value):k==="parcelas"?Math.max(1,Math.round(+el.value||1)):el.value.trim();
+  pc[k]=k==="pessoas"?el.value.split(",").map(x=>x.trim()).filter(Boolean):k==="material"?(el.value||null):k==="materialG"?(+el.value||0):k==="total"?r2(el.value):k==="parcelas"?Math.min(10,Math.max(1,Math.round(+el.value||1))):el.value.trim();
   if(!pc.pessoas.length)pc.pessoas=["Eu"];if(!pc.inicio)pc.inicio=hoje().slice(0,7);
   salvar();setTimeout(renderParcelas,250)});
-$("#pcNovo").onclick=()=>{D.parcelamentos.push({id:novoId("pc"),descricao:"Novo parcelamento",total:0,parcelas:10,inicio:hoje().slice(0,7),pessoas:["Eu"],pagos:{}});salvar();renderParcelas()};
+
 
 /* ---------- despesas ---------- */
 const fD=$("#fDesp");
+/* Lançar despesa (formulário único, 1.11.0):
+   tipo "conta"     + à vista   → D.despesas (pago, 🔁 repetir todo mês)
+   tipo "conta"     + parcelado → D.parcelamentos (parcelas, pessoas)
+   tipo "filamento" + à vista   → D.estoque (compra) e atualiza o preço do kg
+   tipo "filamento" + parcelado → D.parcelamentos com material/materialG (entra no estoque) e atualiza o preço do kg
+   Filamento não é despesa: o custo dele já sai do lucro de cada venda. */
+function ajustaDesp(){
+  const t=fD.tipo.value, parc=fD.forma.value==="parcelado", ed=!!fD.id.value;
+  const vis={cat:t==="conta",desc:t==="conta",fil:t==="filamento",parc,pago:!parc&&t==="conta",repete:!parc&&t==="conta"};
+  fD.querySelectorAll("[data-se]").forEach(el=>el.hidden=!vis[el.dataset.se]);
+  $("#dTipo").hidden=$("#dForma").hidden=ed; // editando uma despesa já lançada: só os campos dela
+  fD.querySelectorAll("[data-tipo]").forEach(b=>b.classList.toggle("on",b.dataset.tipo===t));
+  fD.querySelectorAll("[data-forma]").forEach(b=>b.classList.toggle("on",b.dataset.forma===fD.forma.value));
+  if(!fD.inicio.value)fD.inicio.value=(fD.data.value||hoje()).slice(0,7);
+  const v=+fD.valor.value||0, n=+fD.parcelas.value||2, ps=fD.pessoas.value.split(",").map(x=>x.trim()).filter(Boolean), g=+fD.g.value||0, f=filamentoDe(fD.filamentoId.value);
+  const L=[];
+  if(parc&&v)L.push(`Parcela <b>${brl(v/n)}</b>${ps.length>1?` · cada pessoa paga <b>${brl(v/n/ps.length)}</b>`:""} · ${n}x, de ${nomeMes(fD.inicio.value)} a ${nomeMes(mesMais(fD.inicio.value,n-1))}`);
+  if(t==="filamento"&&f&&g){L.push(`🧵 +${fmtG(g)} de ${esc(f.nome)} no Estoque`+(v&&fD.atualizaPreco.checked?` · preço do kg: <b>${brl(v/g*1000)}</b> (hoje ${brl(f.precoKg)})`:""))}
+  $("#dCalc").innerHTML=L.join("<br>");$("#dCalc").hidden=!L.length;
+  $("#dSalvar").textContent=ed?"Salvar alterações":"Salvar";
+}
+function limparDesp(){fD.reset();fD.id.value="";fD.tipo.value="conta";fD.forma.value="avista"; // campos escondidos não voltam com reset()
+  fD.data.value=hoje();fD.inicio.value="";fD.pessoas.value=D.parcelamentos.at(-1)?.pessoas.join(", ")||"";ajustaDesp()}
+fD.addEventListener("click",e=>{const b=e.target.closest("[data-tipo],[data-forma]");if(!b)return;
+  if(b.dataset.tipo)fD.tipo.value=b.dataset.tipo;else fD.forma.value=b.dataset.forma;ajustaDesp()});
+fD.addEventListener("input",ajustaDesp);fD.addEventListener("change",ajustaDesp);
 fD.onsubmit=e=>{e.preventDefault();
-  const d={id:fD.id.value||novoId("d"),data:fD.data.value,categoria:fD.categoria.value,descricao:fD.descricao.value.trim(),valor:r2(fD.valor.value),pago:fD.pago.checked,repete:fD.repete.checked,serie:D.despesas.find(x=>x.id===fD.id.value)?.serie};
-  const i=D.despesas.findIndex(x=>x.id===d.id);i>=0?D.despesas[i]=d:D.despesas.push(d);
-  gerarRecorrentes();$("#dMes").value=d.data.slice(0,7);salvar();fD.reset();fD.id.value="";fD.data.value=hoje();renderDesp();
+  const t=fD.tipo.value, parc=fD.forma.value==="parcelado", valor=r2(fD.valor.value), data=fD.data.value;
+  if(!(valor>0))return avisar("Coloque o valor.");
+  const n=Math.min(10,+fD.parcelas.value||2), inicio=fD.inicio.value||data.slice(0,7);
+  const pessoas=fD.pessoas.value.split(",").map(x=>x.trim()).filter(Boolean);if(!pessoas.length)pessoas.push("Eu");
+  let msg;
+  if(t==="filamento"){
+    const f=filamentoDe(fD.filamentoId.value), g=r2(fD.g.value);
+    if(!f)return avisar("Cadastre o filamento primeiro (aba Estoque › Materiais).");
+    if(!(g>0))return avisar("Coloque a quantidade em gramas.");
+    if(fD.atualizaPreco.checked)f.precoKg=r2(valor/g*1000);
+    if(parc)D.parcelamentos.push({id:novoId("pc"),descricao:`Filamento ${f.nome}`,total:valor,parcelas:n,inicio,pessoas,pagos:{},material:f.id,materialG:g});
+    else D.estoque.push({id:novoId("e"),data,filamentoId:f.id,tipo:"compra",g,valor});
+    msg=`+${fmtG(g)} de ${f.nome} no Estoque${fD.atualizaPreco.checked?` · preço do kg ${brl(f.precoKg)}`:""}${parc?` · ${n}x em Parcelamentos`:""}`;
+  }else if(parc){
+    const desc=fD.descricao.value.trim()||fD.categoria.value;
+    D.parcelamentos.push({id:novoId("pc"),descricao:desc,categoria:fD.categoria.value,total:valor,parcelas:n,inicio,pessoas,pagos:{}});
+    msg=`${desc}: ${n}x de ${brl(valor/n)} em Parcelamentos`;
+  }else{
+    const d={id:fD.id.value||novoId("d"),data,categoria:fD.categoria.value,descricao:fD.descricao.value.trim(),valor,pago:fD.pago.checked,repete:fD.repete.checked,serie:D.despesas.find(x=>x.id===fD.id.value)?.serie};
+    const i=D.despesas.findIndex(x=>x.id===d.id);i>=0?D.despesas[i]=d:D.despesas.push(d);
+    gerarRecorrentes();$("#dMes").value=data.slice(0,7);msg="despesa salva";
+  }
+  salvar();limparDesp();renderDesp();status(msg);
 };
-$("#dCancelar").onclick=()=>{fD.reset();fD.id.value="";fD.data.value=hoje()};
-window.editarDesp=id=>{const d=D.despesas.find(x=>x.id===id);for(const k in d)if(fD[k]&&k!=="pago"&&k!=="repete")fD[k].value=d[k];fD.pago.checked=d.pago!==false;fD.repete.checked=!!d.repete;scrollTo({top:0,behavior:"smooth"})};
+$("#dCancelar").onclick=limparDesp;
+window.editarDesp=id=>{const d=D.despesas.find(x=>x.id===id);limparDesp();fD.tipo.value="conta";fD.forma.value="avista";
+  for(const k of ["id","data","categoria","descricao","valor"])fD[k].value=d[k]??"";fD.pago.checked=d.pago!==false;fD.repete.checked=!!d.repete;ajustaDesp();scrollTo({top:0,behavior:"smooth"})};
 function renderDesp(){
   renderParcelas();
+  {const sel=$("#dFil"),ant=sel.value;sel.innerHTML=D.filamentos.map(f=>`<option value="${f.id}">${esc(f.nome)} · ${brl(f.precoKg)}/kg</option>`).join("")||'<option value="">(cadastre em Estoque › Materiais)</option>';
+   if(D.filamentos.some(f=>f.id===ant))sel.value=ant;
+   if(!fD.id.value&&!fD.pessoas.value)fD.pessoas.value=D.parcelamentos.at(-1)?.pessoas.join(", ")||"";ajustaDesp()}
   const mes=$("#dMes").value, L=D.despesas.filter(d=>d.data.startsWith(mes));
   $("#tDesp").innerHTML=`<tr><th>Data</th><th>Categoria</th><th>Descrição</th><th class="n">Valor</th><th></th></tr>`+
     L.map(d=>`<tr><td>${fmtData(d.data)}</td><td>${esc(d.categoria)}${d.vendaId?' <span class="tag">da venda</span>':""}${d.repete?' <span title="Repete todo mês">🔁</span>':""}</td><td style="white-space:normal">${esc(d.descricao)}</td><td class="n">${brl(d.valor)}${d.vendaId?"":d.pago===false?' <span class="tag aberto">a pagar</span>':' <span class="tag ok">pago</span>'}</td><td>${d.vendaId
@@ -1496,7 +1560,9 @@ function renderDesp(){
       :`<button class="btn sm sec2" onclick="editarDesp('${d.id}')">Editar</button> <button class="btn sm del" onclick="apagar('despesas','${d.id}')">✕</button>`}</td></tr>`).join("")+
     `<tr><th colspan="3">Total do mês</th><th class="n">${brl(soma(L,d=>d.valor))}</th><th></th></tr>`;
   const prod=soma(L.filter(d=>d.vendaId),d=>d.valor);
-  $("#dObs").innerHTML=prod?`Gastos de produção das vendas: <b>${brl(prod)}</b> (já descontados no lucro de cada venda) · Outras despesas: <b>${brl(soma(L.filter(d=>!d.vendaId),d=>d.valor))}</b>`:"";
+  const fil=movsEstoque().filter(m=>m.tipo!=="perda"&&m.tipo!=="inicial"&&m.valor&&m.data.startsWith(mes));
+  $("#dObs").innerHTML=[prod?`Gastos de produção das vendas: <b>${brl(prod)}</b> (já descontados no lucro de cada venda) · Outras despesas: <b>${brl(soma(L.filter(d=>!d.vendaId),d=>d.valor))}</b>`:"",
+    fil.length?`🧵 Compras de filamento no mês: <b>${brl(soma(fil,m=>m.valor))}</b> (${fil.map(m=>`${fmtG(m.g)} ${esc(filamentoDe(m.filamentoId)?.nome||"")}`).join(", ")}). Ficam no Estoque e não contam como despesa. <a href="#" onclick="abrirEstoque();return false">Ver Estoque</a>`:""].filter(Boolean).join("<br>");
 }
 $("#dMes").oninput=renderDesp;
 
@@ -1798,6 +1864,13 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.11.0",data:"2026-11-07",titulo:"Lançar despesa num lugar só",itens:[
+    {novo:"Despesas e parcelamentos foram juntados em “Lançar despesa”. Primeiro você escolhe o que é (conta/compra ou filamento) e depois como pagou (à vista ou parcelado).",
+     uso:"Despesas › Lançar despesa. Parcelado pede o número de parcelas, o mês da 1ª e entre quem dividir; a compra vai para Parcelamentos, onde você marca ✓ cada parte paga."},
+    {novo:"Filamento lançado aqui entra direto no Estoque do filamento escolhido e atualiza o preço do kg (valor ÷ gramas).",
+     uso:"Lançar despesa › 🧵 Filamento › escolha o filamento, o valor e os gramas. Também funciona parcelado."},
+    {novo:"Parcelamento agora vai até 10x, em todos os lugares (despesa parcelada, parcelamentos e venda no crédito).",
+     uso:"Escolha de 2x a 10x em Lançar despesa › Parcelado, ou de 1x a 10x no cartão do parcelamento."}]},
   {v:"1.10.0",data:"2026-11-07",titulo:"Produção editável, contas que se repetem, meta do mês e mais",itens:[
     {novo:"Parcela marcada como paga (✓) não desconta mais da Sobra no mês: só as partes ainda não pagas descontam.",
      uso:"Resumo › Contas do mês › marque ✓. A linha “Parcelas a pagar” e a Sobra mudam na hora."},
@@ -1925,7 +1998,8 @@ const PASSOS=[
     <li>Toque na <b>forma de pagamento</b> e em <b>Salvar venda</b>.</li></ol>
     <p>Venda que veio da produção já chega preenchida. Ao salvar, os gastos (filamento, energia, desgaste…) entram sozinhos em <b>Despesas</b>.</p>`},
   {ico:"💸",titulo:"5. Lance as despesas",aba:"despesas",texto:`<p>Na aba <b>Despesas</b>, coloque os gastos do mês: MEI, embalagens, manutenção da impressora…</p>
-    <p>Conta que vem todo mês? Marque <b>🔁 Repetir todo mês</b>.</p>
+    <p>É tudo num lugar só, em <b>Lançar despesa</b>: escolha se é conta/compra ou filamento, e se pagou à vista ou parcelado.
+      Conta que vem todo mês? Marque <b>🔁 Repetir todo mês</b>. Filamento entra no Estoque e atualiza o preço do kg.</p>
     <p>Os gastos de produção de cada venda aparecem aqui sozinhos, marcados “da venda”. A compra do rolo de filamento <b>não</b> entra aqui (ela vai em Estoque).</p>`},
   {ico:"📈",titulo:"6. Acompanhe o resultado",aba:"geral",texto:`<ul>
     <li><b>Geral</b>: faturamento, lucro e produtos mais vendidos.</li>
