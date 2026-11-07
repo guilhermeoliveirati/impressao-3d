@@ -27,11 +27,12 @@ nav button{background:transparent;border:0;color:#cbd5e1;padding:8px 12px;border
 nav button.on{background:#334155;color:#fff}
 nav button .ico{margin-right:4px}
 @media (max-width:900px){
-  header{position:fixed;top:auto;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(8,1fr);
+  header{position:fixed;top:auto;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(9,1fr);
     padding:6px 4px 8px;gap:1px;box-shadow:0 -4px 14px rgba(15,23,42,.18)}
   nav{display:contents}
-  nav button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;border-radius:12px;font-size:.66rem}
-  nav button .ico{font-size:1.35rem;line-height:1;margin:0}
+  nav button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;border-radius:12px;font-size:.6rem;letter-spacing:-.01em}
+  nav .lg{display:none}nav .ct{display:inline!important}
+  nav button .ico{font-size:1.25rem;line-height:1;margin:0}
   #status{position:fixed;top:8px;right:10px;background:rgba(29,35,48,.85);color:#e2e8f0;padding:3px 10px;border-radius:999px;font-size:.72rem;z-index:6}
   #reconectar{position:fixed;top:40px;right:10px}
   main{padding:16px 12px 96px!important}
@@ -102,8 +103,6 @@ table.resumo tr.final td{font-size:1.286rem;font-weight:700;border-top:2px solid
 /* venda por voz */
 .vtopo{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
 .vtopo h2{margin:0}
-#vVoz{border-radius:999px;padding:6px 14px;background:#f5f3ff;color:var(--acc);border:1px solid #ddd6fe;font-weight:600}
-#vVoz.gravando{background:var(--bad);color:#fff;border-color:var(--bad);animation:pulsar 1s infinite}
 @keyframes pulsar{50%{opacity:.6}}
 .voz{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:linear-gradient(135deg,#f5f3ff,#ecfdf5);border:1px solid #ddd6fe;border-radius:14px;padding:12px;margin-bottom:12px}
 .voz input{flex:1;min-width:200px}
@@ -174,6 +173,15 @@ table.resumo tr.final td{font-size:1.286rem;font-weight:700;border-top:2px solid
 .novidade .par{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;margin:6px 0;font-size:.95rem}
 .novidade .par b{color:#475569}
 #rodape a{color:inherit}
+nav .ct{display:none}
+/* Confirmação e avisos dentro do painel (no app instalado as caixas confirm e alert do navegador podem não aparecer) */
+#conf{position:fixed;inset:0;z-index:60;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+#conf[hidden]{display:none}
+#conf .caixa{background:#fff;border-radius:18px;max-width:420px;width:100%;padding:20px;box-shadow:0 20px 50px rgba(15,23,42,.35)}
+#conf p{margin:0 0 16px;font-size:1.02rem;line-height:1.5;white-space:pre-wrap;color:#334155}
+#conf .botoes{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+#conf .btn.perigo{background:var(--bad)}
+.tag.ok{background:#dcfce7;color:var(--ok)}.tag.aberto{background:#fee2e2;color:var(--bad)}
 @media (max-width:900px){#modal{align-items:flex-end;padding:0}#modal .caixa{border-radius:20px 20px 0 0;max-height:88vh;padding-bottom:28px}}
 </style>
 </head>
@@ -181,6 +189,7 @@ table.resumo tr.final td{font-size:1.286rem;font-weight:700;border-top:2px solid
 <header>
   <nav id="nav">
     <button data-s="geral" class="on"><span class="ico">📊</span><span class="txt">Geral</span></button>
+    <button data-s="orcamentos"><span class="ico">📝</span><span class="txt"><span class="lg">Orçamentos</span><span class="ct">Orçar</span></span></button>
     <button data-s="vendas"><span class="ico">🧾</span><span class="txt">Vendas</span></button>
     <button data-s="produtos"><span class="ico">🧊</span><span class="txt">Produtos</span></button>
     <button data-s="despesas"><span class="ico">💸</span><span class="txt">Despesas</span></button>
@@ -229,15 +238,45 @@ table.resumo tr.final td{font-size:1.286rem;font-weight:700;border-top:2px solid
   <div class="card"><h2>Fechamento mensal</h2><div class="scroll"><table id="tFech"></table></div></div>
 </section>
 
+<!-- ORÇAMENTOS -->
+<section class="sec" id="s-orcamentos">
+  <div class="card">
+    <h2 id="oTitulo">📝 Novo orçamento</h2>
+    <form class="f" id="fOrc" autocomplete="off">
+      <input type="hidden" name="id">
+      <label>Cliente<input name="cliente" list="dlClientes" required></label>
+      <label>Data<input name="data" type="date" required></label>
+      <label>Validade (dias)<input name="validade" type="number" min="1" step="1" value="7"></label>
+      <div style="grid-column:1/-1">
+        <div id="oItens"></div>
+        <div class="row" style="margin-top:8px;justify-content:space-between">
+          <button type="button" class="btn sm sec2" id="oAddItem">＋ Adicionar item</button>
+          <span class="muted" id="oSub"></span>
+        </div>
+      </div>
+      <label>Frete / entrega (R$)<input name="frete" type="number" step="0.01" min="0" value="0"></label>
+      <label>Valor do orçamento (R$)<input name="valor" type="number" step="0.01" min="0" value="0"></label>
+      <label style="grid-column:1/-1">Detalhes para o cliente<input name="obs" placeholder="ex.: cor preta, prazo de 3 dias, nome gravado"></label>
+      <div class="row" style="grid-column:1/-1;margin-top:6px">
+        <button class="btn" type="submit">Salvar orçamento</button>
+        <button class="btn sec2" type="button" id="oCancelar">Limpar</button>
+      </div>
+    </form>
+  </div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <h2 style="margin:0">📋 Orçamentos</h2>
+      <div class="chips" id="oFiltro"></div>
+    </div>
+    <div class="pgrid" id="oLista"></div>
+  </div>
+</section>
+
 <!-- VENDAS -->
 <section class="sec" id="s-vendas">
   <div class="card">
-    <div class="vtopo"><h2 id="vTitulo">Nova venda</h2><button type="button" class="btn sm" id="vVoz">🎤 Falar venda</button></div>
-    <div class="voz" id="vVozBox" hidden>
-      <input id="vVozTexto" placeholder="ou digite: Ana, 3 chaveiros e 1 case NFC, cobrei 80 no pix">
-      <button type="button" class="btn sec2" id="vVozIr">Preencher</button>
-      <div class="muted" id="vVozMsg" style="flex-basis:100%">Fale a venda e a Gemini preenche os campos. Você confere e salva.</div>
-    </div>
+    <div class="vtopo"><h2 id="vTitulo">Nova venda</h2></div>
+    <div class="infobox" id="vOrc" hidden style="margin-bottom:12px"></div>
     <form class="f" id="fVenda" autocomplete="off">
       <input type="hidden" name="id">
       <label>Cliente<input name="cliente" list="dlClientes" required></label>
@@ -434,19 +473,12 @@ table.resumo tr.final td{font-size:1.286rem;font-weight:700;border-top:2px solid
     <div class="card"><h2>Taxas da maquininha</h2><table id="tTaxas"></table>
       <p class="muted">Ao mudar uma taxa, só as vendas novas usam o valor novo.</p></div>
     <div>
-      <div class="card"><h2>Gemini (venda por voz)</h2>
-        <label>Chave da API da Gemini<input id="cfgGemini" type="password" autocomplete="off" placeholder="cole aqui a chave da Gemini"></label>
-        <div class="row" style="margin-top:8px"><button class="btn sec2" id="cfgGemTestar">Testar chave</button><span class="muted" id="cfgGemMsg"></span></div>
-        <p class="muted">A chave fica guardada no dados.json, no seu Google Drive. Não vai para o GitHub.</p></div>
       <div class="card"><h2>❓ Ajuda</h2>
         <div class="row">
           <button class="btn" id="ajPassos">👋 Ver passo a passo</button>
           <button class="btn sec2" id="ajNovidades">✨ Ver todas as novidades</button>
         </div>
         <p class="muted">O passo a passo explica como usar o painel do começo. As novidades mostram o que mudou em cada versão e como usar.</p></div>
-      <div class="card"><h2>Tamanho da letra</h2>
-        <div class="row" id="cfgFonte"></div>
-        <p class="muted">Vale só para este aparelho.</p></div>
       <div class="card"><h2>Arquivo e exportação</h2>
         <p class="muted" id="cfgInfo"></p>
         <div class="row">
@@ -463,6 +495,7 @@ table.resumo tr.final td{font-size:1.286rem;font-weight:700;border-top:2px solid
 </main>
 
 <footer id="rodape">Criado por Guilherme Oliveira | <a href="#" id="linkNovidades" title="Ver as novidades">Versão <span id="versao"></span></a></footer>
+<div id="conf" hidden><div class="caixa" role="alertdialog" aria-modal="true"><p id="confTxt"></p><div class="botoes"><button class="btn sec2" id="confNao">Cancelar</button><button class="btn" id="confOk">Sim</button></div></div></div>
 <div id="modal" hidden><div class="caixa" role="dialog" aria-modal="true"><button class="fechar" id="mFechar" aria-label="Fechar">✕</button><div id="mConteudo"></div></div></div>
 
 <script>
@@ -486,9 +519,18 @@ const hoje=()=>new Date().toLocaleDateString("sv-SE");
 const fmtData=d=>d?d.split("-").reverse().join("/"):"";
 const norm=s=>String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim();
 const soma=(L,f)=>L.reduce((s,x)=>s+(+f(x)||0),0);
+// Confirmação e aviso desenhados no próprio painel. As caixas confirm e alert do navegador podem ser bloqueadas
+// (app instalado, navegador embutido) e aí responde "não" sozinho: os botões de excluir pareciam não funcionar.
+function confirmar(msg,ok="Sim",perigo=false){return new Promise(r=>{
+  $("#confTxt").textContent=msg;const b=$("#confOk");b.textContent=ok;b.classList.toggle("perigo",perigo);
+  $("#confNao").hidden=false;$("#conf").hidden=false;b.focus();
+  const fim=v=>{$("#conf").hidden=true;r(v)};b.onclick=()=>fim(true);$("#confNao").onclick=()=>fim(false)})}
+function avisar(msg){return new Promise(r=>{
+  $("#confTxt").textContent=msg;const b=$("#confOk");b.textContent="OK";b.classList.remove("perigo");
+  $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.1.0";
+const VERSAO="1.2.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -619,7 +661,7 @@ function salvar(){
       if(await fonte.versao()!==versaoConhecida){
         geracao++;const r=await fonte.ler();D=r.dados;normalizar();versaoConhecida=r.versao;render();
         status("o arquivo tinha sido alterado em outro lugar: recarregado",true);
-        alert("O dados.json foi alterado em outro lugar (outro aparelho ou outra aba).\nO painel carregou a versão mais nova. Refaça a última alteração.");
+        avisar("O dados.json foi alterado em outro lugar (outro aparelho ou outra aba).\nO painel carregou a versão mais nova. Refaça a última alteração.");
         return;
       }
       versaoConhecida=await fonte.gravar(json);
@@ -627,7 +669,7 @@ function salvar(){
       if(pendentes===1)status("salvo às "+new Date().toLocaleTimeString("pt-BR").slice(0,5))}
     catch(e){
       if(e instanceof ErroLogin){status("NÃO salvo: entre de novo no Google",true);$("#reconectar").style.display=""}
-      else{status("ERRO ao salvar: "+e.message,true);alert("Não foi possível salvar no dados.json: "+e.message)}}
+      else{status("ERRO ao salvar: "+e.message,true);avisar("Não foi possível salvar no dados.json: "+e.message)}}
     finally{pendentes--}
   });
 }
@@ -652,7 +694,7 @@ function normalizar(){
   D.versao??=1;D.proximoId??=1;
   D.taxas??={...TAXAS_PADRAO};
   D.config={energiaKwh:0.95,maoDeObraHora:25,falhaPct:10,margemPct:100,arredondar:"90",...(D.config||{})};
-  for(const k of ["impressoras","filamentos","produtos","vendas","despesas"])D[k]??=[];
+  for(const k of ["impressoras","filamentos","produtos","orcamentos","vendas","despesas"])D[k]??=[];
   D.dizimos??={};
 }
 
@@ -840,9 +882,9 @@ function limparProduto(){
   $("#pTitulo").textContent="🧮 Novo produto";rowsFil();calcProduto();
 }
 $("#pCancelar").onclick=limparProduto;
-fP.onsubmit=e=>{e.preventDefault();
+fP.onsubmit=async e=>{e.preventDefault();
   const p=lerProduto();p.id=p.id||novoId("p");
-  if(D.produtos.some(x=>x.id!==p.id&&norm(x.nome)===norm(p.nome))&&!confirm(`Já existe um produto chamado "${p.nome}". Salvar outro com o mesmo nome?`))return;
+  if(D.produtos.some(x=>x.id!==p.id&&norm(x.nome)===norm(p.nome))&&!await confirmar(`Já existe um produto chamado "${p.nome}". Salvar outro com o mesmo nome?`))return;
   const i=D.produtos.findIndex(x=>x.id===p.id);i>=0?D.produtos[i]=p:D.produtos.push(p);
   D.produtos.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
   salvar();limparProduto();renderProdutos();status(`produto "${p.nome}" salvo`);
@@ -876,17 +918,17 @@ $("#pBusca").oninput=renderProdutos;
 
 /* ---------- vendas ---------- */
 const fV=$("#fVenda");
-let itens=[];
 const itemVazio=()=>({produtoId:null,nome:"",qtd:1,preco:0,custo:0});
-function rowsItens(){
-  $("#vItens").innerHTML=itens.map((x,i)=>`<div class="item" data-i="${i}">
+// Lista de itens (produto, qtd, preço e custo por unidade), usada em Vendas e em Orçamentos.
+function editorItens(box,aoMudar){
+  let itens=[itemVazio()];
+  const rowsItens=()=>{box.innerHTML=itens.map((x,i)=>`<div class="item" data-i="${i}">
     <label class="nm">Produto<input data-k="nome" list="dlProdutos" value="${esc(x.nome)}" placeholder="escolha do catálogo ou digite um item avulso"></label>
     <label>Qtd<input data-k="qtd" type="number" min="1" step="1" value="${x.qtd}"></label>
     <label>Preço un. (R$)<input data-k="preco" type="number" min="0" step="0.01" value="${x.preco}"></label>
     <label title="Custo de produção por unidade (vem da aba Produtos)">Custo un. (R$)<input data-k="custo" type="number" min="0" step="0.01" value="${x.custo}"></label>
-    <button type="button" class="btn sm del" data-rm="${i}" title="Tirar item" ${itens.length<2?"disabled style='opacity:.4'":""}>✕</button></div>`).join("");
-}
-$("#vItens").addEventListener("input",e=>{
+    <button type="button" class="btn sm del" data-rm="${i}" title="Tirar item" ${itens.length<2?"disabled style='opacity:.4'":""}>✕</button></div>`).join("")};
+  box.addEventListener("input",e=>{
   const el=e.target,k=el.dataset.k;if(!k)return;
   const row=el.closest(".item"),x=itens[row.dataset.i];
   if(k==="nome"){x.nome=el.value;const p=produtoPorNome(el.value);
@@ -894,10 +936,16 @@ $("#vItens").addEventListener("input",e=>{
       row.querySelector('[data-k="preco"]').value=x.preco;row.querySelector('[data-k="custo"]').value=x.custo}
     else if(!p)x.produtoId=null}
   else x[k]=+el.value||0;
-  calcVenda();
-});
-$("#vItens").addEventListener("click",e=>{const i=e.target.dataset?.rm;if(i==null||itens.length<2)return;itens.splice(+i,1);rowsItens();calcVenda()});
-$("#vAddItem").onclick=()=>{itens.push(itemVazio());rowsItens();calcVenda();$("#vItens .item:last-child input").focus()};
+  aoMudar();
+  });
+  box.addEventListener("click",e=>{const i=e.target.dataset?.rm;if(i==null||itens.length<2)return;itens.splice(+i,1);rowsItens();aoMudar()});
+  return{get itens(){return itens},
+    set(v){itens=(v||[]).map(x=>({...x}));if(!itens.length)itens=[itemVazio()];rowsItens()},
+    adicionar(){itens.push(itemVazio());rowsItens();aoMudar();box.querySelector(".item:last-child input").focus()},
+    validos(){return itens.filter(x=>x.nome.trim())}};
+}
+const edV=editorItens($("#vItens"),()=>calcVenda());
+$("#vAddItem").onclick=()=>edV.adicionar();
 function chipsPagamento(){
   const box=$("#vChips"),m=fV.metodo.value,cred=m.startsWith("Crédito");
   box.innerHTML='<span class="rot">Pagamento</span>'+["Pix","Dinheiro","Débito","Crédito"].map(n=>
@@ -907,10 +955,10 @@ function chipsPagamento(){
 $("#vChips").addEventListener("click",e=>{const n=e.target.dataset?.m;if(!n)return;
   fV.metodo.value=n==="Crédito"?(fV.metodo.value.startsWith("Crédito")?fV.metodo.value:"Crédito 1x"):n;calcVenda()});
 $("#vChips").addEventListener("change",e=>{if(e.target.id==="vParc"){fV.metodo.value=e.target.value;calcVenda()}});
-let cobradoManual=false;
+let cobradoManual=false, orcEmVenda=null;
 function calcVenda(){
   chipsPagamento();
-  const sub=r2(soma(itens,x=>x.qtd*x.preco)), custo=r2(soma(itens,x=>x.qtd*x.custo)), frete=+fV.frete.value||0;
+  const sub=r2(soma(edV.itens,x=>x.qtd*x.preco)), custo=r2(soma(edV.itens,x=>x.qtd*x.custo)), frete=+fV.frete.value||0;
   if(!cobradoManual)fV.cobrado.value=r2(sub+frete);
   const cob=+fV.cobrado.value||0, tx=D.taxas[fV.metodo.value]??0;
   const taxa=r2(cob*tx), lucro=r2(cob-custo-taxa);
@@ -926,20 +974,22 @@ fV.addEventListener("input",e=>{
 });
 fV.cobrado.addEventListener("input",()=>calcVenda());
 $("#vInfoLinha").onclick=()=>{const box=$("#vInfo");box.hidden=!box.hidden;$("#vInfoBtn").setAttribute("aria-expanded",!box.hidden)};
-function limparVenda(){fV.reset();fV.id.value="";fV.data.value=hoje();fV.metodo.value="Pix";cobradoManual=false;itens=[itemVazio()];rowsItens();$("#vTitulo").textContent="Nova venda";calcVenda()}
-function esconderVoz(){if(!ouvindo)$("#vVozBox").hidden=true}
-$("#vCancelar").onclick=()=>{limparVenda();esconderVoz()};
+function limparVenda(){fV.reset();fV.id.value="";fV.data.value=hoje();fV.metodo.value="Pix";cobradoManual=false;edV.set([]);
+  orcEmVenda=null;$("#vOrc").hidden=true;$("#vTitulo").textContent="Nova venda";calcVenda()}
+$("#vCancelar").onclick=()=>limparVenda();
 fV.onsubmit=e=>{e.preventDefault();
-  const L=itens.filter(x=>x.nome.trim());
-  if(!L.length)return alert("Coloque pelo menos um produto na venda.");
-  itens=L;const {taxa,lucro,custo}=calcVenda();
+  const L=edV.validos();
+  if(!L.length)return avisar("Coloque pelo menos um produto na venda.");
+  edV.set(L);const {taxa,lucro,custo}=calcVenda();
   const v={id:fV.id.value||novoId("v"),data:fV.data.value,cliente:nomeProprio(fV.cliente.value),
     itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo)})),
     frete:r2(fV.frete.value),cobrado:r2(fV.cobrado.value),metodo:fV.metodo.value,custo,taxa,lucro,obs:D.vendas.find(x=>x.id===fV.id.value)?.obs||""};
   const i=D.vendas.findIndex(x=>x.id===v.id); i>=0?D.vendas[i]=v:D.vendas.push(v);
   D.vendas.sort((a,b)=>a.data.localeCompare(b.data));
   $("#vMes").value=v.data.slice(0,7);
-  salvar();limparVenda();esconderVoz();renderVendas();
+  // venda feita a partir de um orçamento: o orçamento fica aprovado e ligado à venda
+  if(orcEmVenda){const o=D.orcamentos.find(x=>x.id===orcEmVenda);if(o){o.status="aprovado";o.vendaId=v.id}}
+  salvar();limparVenda();renderVendas();
 };
 const descItens=v=>(v.itens||[]).map(x=>`${num(x.qtd,0)}× ${x.nome}`).join(", ");
 function renderVendas(){
@@ -959,14 +1009,90 @@ function renderVendas(){
 }
 window.editarVenda=id=>{const v=D.vendas.find(x=>x.id===id);
   fV.id.value=v.id;fV.cliente.value=v.cliente;fV.data.value=v.data;fV.cobrado.value=v.cobrado;fV.frete.value=v.frete||0;fV.metodo.value=v.metodo||"Pix";
-  itens=(v.itens||[]).map(x=>({...x}));if(!itens.length)itens=[itemVazio()];
-  cobradoManual=true;rowsItens();$("#vTitulo").textContent="Editando venda de "+v.cliente;calcVenda();scrollTo({top:0,behavior:"smooth"})};
-window.apagar=(col,id)=>{
+  edV.set(v.itens);orcEmVenda=null;$("#vOrc").hidden=true;
+  cobradoManual=true;$("#vTitulo").textContent="Editando venda de "+v.cliente;calcVenda();scrollTo({top:0,behavior:"smooth"})};
+window.apagar=async(col,id)=>{
+  let msg={vendas:"Apagar esta venda?",despesas:"Apagar esta despesa?",orcamentos:"Apagar este orçamento?"}[col]||"Apagar?";
   if(col==="produtos"){const n=D.vendas.filter(v=>(v.itens||[]).some(x=>x.produtoId===id)).length;
-    if(!confirm(n?`Este produto aparece em ${n} venda(s). As vendas continuam com o nome e o custo gravados. Apagar o produto do catálogo?`:"Apagar este produto?"))return}
-  else if(!confirm("Apagar este lançamento?"))return;
+    msg=n?`Este produto aparece em ${n} venda(s). As vendas continuam com o nome e o custo gravados. Apagar o produto do catálogo?`:"Apagar este produto?"}
+  if(!await confirmar(msg,"Apagar",true))return;
+  // venda que veio de um orçamento: o orçamento volta a ficar em aberto
+  if(col==="vendas")D.orcamentos.forEach(o=>{if(o.vendaId===id){o.status="aberto";o.vendaId=null}});
   D[col]=D[col].filter(x=>x.id!==id);salvar();render()};
 $("#vMes").oninput=renderVendas;$("#vBusca").oninput=renderVendas;
+
+/* ---------- orçamentos ----------
+   Proposta para o cliente com os mesmos itens da venda. Não entra no faturamento nem no lucro.
+   "Aprovar" abre a aba Vendas já preenchida; ao tocar em Salvar venda, o orçamento fica "aprovado" e ligado à venda (vendaId). */
+const fO=$("#fOrc");
+let valorManual=false, filtroOrc="aberto";
+const edO=editorItens($("#oItens"),()=>calcOrc());
+$("#oAddItem").onclick=()=>edO.adicionar();
+function calcOrc(){
+  const sub=r2(soma(edO.itens,x=>x.qtd*x.preco)), custo=r2(soma(edO.itens,x=>x.qtd*x.custo)), frete=+fO.frete.value||0;
+  if(!valorManual)fO.valor.value=r2(sub+frete);
+  const lucro=r2((+fO.valor.value||0)-custo);
+  $("#oSub").innerHTML=`Itens <b>${brl(sub)}</b> · Custo <b>${brl(custo)}</b> · Lucro previsto <b class="${lucro>=0?"lucro":"taxa"}">${brl(lucro)}</b>`;
+  return{custo};
+}
+fO.addEventListener("input",e=>{if(e.target.name==="valor")valorManual=true;if(e.target.name==="valor"||e.target.name==="frete")calcOrc()});
+function limparOrc(){fO.reset();fO.id.value="";fO.data.value=hoje();valorManual=false;edO.set([]);$("#oTitulo").textContent="📝 Novo orçamento";calcOrc()}
+$("#oCancelar").onclick=limparOrc;
+fO.onsubmit=e=>{e.preventDefault();
+  const L=edO.validos();if(!L.length)return avisar("Coloque pelo menos um produto no orçamento.");
+  edO.set(L);const {custo}=calcOrc();
+  const ant=D.orcamentos.find(x=>x.id===fO.id.value);
+  const o={id:fO.id.value||novoId("o"),data:fO.data.value,cliente:nomeProprio(fO.cliente.value),validade:Math.max(1,Math.round(+fO.validade.value||7)),
+    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo)})),
+    frete:r2(fO.frete.value),valor:r2(fO.valor.value),custo,obs:fO.obs.value.trim(),status:ant?.status||"aberto",vendaId:ant?.vendaId||null};
+  const i=D.orcamentos.findIndex(x=>x.id===o.id);i>=0?D.orcamentos[i]=o:D.orcamentos.push(o);
+  filtroOrc=o.status;salvar();limparOrc();renderOrcamentos();status(`orçamento de ${o.cliente} salvo`);
+};
+const venceEm=o=>{const d=new Date(o.data+"T12:00");d.setDate(d.getDate()+(o.validade||7));return d.toLocaleDateString("sv-SE")};
+const ST_ORC={aberto:["Em aberto",""],aprovado:["Aprovado","ok"],recusado:["Recusado","aberto"]};
+function renderOrcamentos(){
+  if(!fO.data.value)limparOrc();
+  const qtd=f=>D.orcamentos.filter(o=>f==="todos"||o.status===f).length;
+  $("#oFiltro").innerHTML=[["aberto","Em aberto"],["aprovado","Aprovados"],["recusado","Recusados"],["todos","Todos"]]
+    .map(([k,t])=>`<button type="button" class="chip${filtroOrc===k?" on":""}" data-f="${k}">${t} (${qtd(k)})</button>`).join("");
+  const L=D.orcamentos.filter(o=>filtroOrc==="todos"||o.status===filtroOrc).slice().sort((a,b)=>b.data.localeCompare(a.data));
+  $("#oLista").innerHTML=L.length?L.map(o=>{const venceu=o.status==="aberto"&&venceEm(o)<hoje(),l=o.valor-(o.custo||0),temVenda=D.vendas.some(v=>v.id===o.vendaId);
+    return`<div class="pcard">
+    <div class="l1"><b>${esc(o.cliente)}</b><span class="tag ${ST_ORC[o.status][1]}">${ST_ORC[o.status][0]}</span></div>
+    <div class="l3">${fmtData(o.data)} · ${venceu?`<span class="taxa">venceu em ${fmtData(venceEm(o))}</span>`:`válido até ${fmtData(venceEm(o))}`}</div>
+    <div class="l3">${esc(descItens(o))}${o.frete?` · frete ${brl(o.frete)}`:""}</div>
+    <div class="nums"><div><small>Valor</small><b>${brl(o.valor)}</b></div><div><small>Custo</small><b>${brl(o.custo)}</b></div><div><small>Lucro</small><b class="${l>=0?"lucro":"taxa"}">${brl(l)}</b></div></div>
+    ${o.obs?`<div class="l3">${esc(o.obs)}</div>`:""}
+    <div class="acts">${o.status==="aprovado"?(temVenda?`<button class="btn sm sec2" onclick="verVendaOrc('${o.id}')">Ver venda</button>`:""):`<button class="btn sm" onclick="aprovarOrc('${o.id}')">✅ Aprovar</button>`}
+      ${o.status==="aberto"?`<button class="btn sm sec2" onclick="recusarOrc('${o.id}')">Recusado</button>`:""}${o.status==="recusado"?`<button class="btn sm sec2" onclick="reabrirOrc('${o.id}')">Reabrir</button>`:""}
+      <button class="btn sm sec2" onclick="enviarOrc('${o.id}')">📤 Enviar</button>
+      <button class="btn sm sec2" onclick="editarOrc('${o.id}')">Editar</button>
+      <button class="btn sm del" onclick="apagar('orcamentos','${o.id}')">✕</button></div></div>`}).join("")
+    :`<p class="muted">${D.orcamentos.length?"Nenhum orçamento nesta lista.":"Nenhum orçamento ainda. Preencha acima e toque em Salvar orçamento."}</p>`;
+}
+$("#oFiltro").addEventListener("click",e=>{const f=e.target.dataset?.f;if(f){filtroOrc=f;renderOrcamentos()}});
+window.editarOrc=id=>{const o=D.orcamentos.find(x=>x.id===id);
+  fO.id.value=o.id;fO.cliente.value=o.cliente;fO.data.value=o.data;fO.validade.value=o.validade||7;fO.frete.value=o.frete||0;fO.valor.value=o.valor;fO.obs.value=o.obs||"";
+  edO.set(o.itens);valorManual=true;$("#oTitulo").textContent="✏️ Editando orçamento de "+o.cliente;calcOrc();scrollTo({top:0,behavior:"smooth"})};
+window.recusarOrc=id=>{D.orcamentos.find(x=>x.id===id).status="recusado";salvar();renderOrcamentos()};
+window.reabrirOrc=id=>{D.orcamentos.find(x=>x.id===id).status="aberto";filtroOrc="aberto";salvar();renderOrcamentos()};
+window.aprovarOrc=id=>{const o=D.orcamentos.find(x=>x.id===id);
+  document.querySelector("#nav [data-s=vendas]").click();
+  limparVenda();orcEmVenda=o.id;
+  fV.cliente.value=o.cliente;fV.frete.value=o.frete||0;edV.set(o.itens);fV.cobrado.value=o.valor;cobradoManual=true;
+  $("#vTitulo").textContent="Venda do orçamento de "+o.cliente;
+  $("#vOrc").hidden=false;
+  $("#vOrc").innerHTML=`📝 Vindo do orçamento de <b>${esc(o.cliente)}</b> (${fmtData(o.data)}). Confira a data e a forma de pagamento e toque em <b>Salvar venda</b>. O orçamento fica como aprovado.`;
+  calcVenda();scrollTo({top:0,behavior:"smooth"})};
+window.verVendaOrc=id=>{const o=D.orcamentos.find(x=>x.id===id),v=D.vendas.find(x=>x.id===o.vendaId);if(!v)return;
+  document.querySelector("#nav [data-s=vendas]").click();$("#vMes").value=v.data.slice(0,7);renderVendas();editarVenda(v.id)};
+// Texto do orçamento para mandar ao cliente (WhatsApp): abre o compartilhar do celular ou copia.
+window.enviarOrc=async id=>{const o=D.orcamentos.find(x=>x.id===id);
+  const txt=`*Orçamento*\nCliente: ${o.cliente}\nData: ${fmtData(o.data)}\n\n`+o.itens.map(x=>`${num(x.qtd,0)}× ${x.nome}: ${brl(x.preco*x.qtd)}`).join("\n")+
+    (o.frete?`\nFrete: ${brl(o.frete)}`:"")+`\n\n*Total: ${brl(o.valor)}*\nVálido até ${fmtData(venceEm(o))}.`+(o.obs?`\n\n${o.obs}`:"");
+  if(navigator.share){try{await navigator.share({text:txt});return}catch(e){if(e.name==="AbortError")return}}
+  try{await navigator.clipboard.writeText(txt);avisar("Texto do orçamento copiado. Cole no WhatsApp para mandar ao cliente.")}
+  catch{avisar(txt)}};
 
 /* ---------- despesas ---------- */
 const fD=$("#fDesp");
@@ -976,11 +1102,11 @@ fD.onsubmit=e=>{e.preventDefault();
   $("#dMes").value=d.data.slice(0,7);salvar();fD.reset();fD.id.value="";fD.data.value=hoje();renderDesp();
 };
 $("#dCancelar").onclick=()=>{fD.reset();fD.id.value="";fD.data.value=hoje()};
-$("#dCopiar").onclick=()=>{
+$("#dCopiar").onclick=async()=>{
   const mes=$("#dMes").value;const [y,m]=mes.split("-").map(Number);const ant=new Date(y,m-2,1).toLocaleDateString("sv-SE").slice(0,7);
   const fixas=D.despesas.filter(d=>d.data.startsWith(ant)&&FIXAS.includes(d.categoria));
-  if(!fixas.length)return alert("Nenhuma despesa fixa ("+FIXAS.join(", ")+") em "+ant);
-  if(D.despesas.some(d=>d.data.startsWith(mes)&&FIXAS.includes(d.categoria))&&!confirm("Este mês já tem despesas fixas. Copiar mesmo assim?"))return;
+  if(!fixas.length)return avisar("Nenhuma despesa fixa ("+FIXAS.join(", ")+") em "+ant);
+  if(D.despesas.some(d=>d.data.startsWith(mes)&&FIXAS.includes(d.categoria))&&!await confirmar("Este mês já tem despesas fixas. Copiar mesmo assim?"))return;
   fixas.forEach(d=>D.despesas.push({...d,id:novoId("d"),data:mes+"-01"}));salvar();renderDesp();
 };
 window.editarDesp=id=>{const d=D.despesas.find(x=>x.id===id);for(const k in d)if(fD[k])fD[k].value=d[k];scrollTo({top:0,behavior:"smooth"})};
@@ -1013,123 +1139,6 @@ function renderClientes(){
 }
 $("#cDias").oninput=renderClientes;$("#cBusca").oninput=renderClientes;
 
-/* ---------- venda por voz (Gemini) ----------
-   Igual ao Painel da Oficina: a fala vira texto no navegador e a Gemini transforma o texto nos campos.
-   A chave fica no dados.json (D.gemini.chave). Quem salva é sempre o usuário. */
-const GEM_API="https://generativelanguage.googleapis.com/v1beta";
-async function gemModelos(){
-  if(!gemModelos.lista){
-    const r=await fetch(`${GEM_API}/models?pageSize=200`,{headers:{"x-goog-api-key":D.gemini.chave}});
-    if(!r.ok)throw new Error("chave da Gemini recusada ("+r.status+")");
-    const ver=n=>parseFloat((n.match(/gemini-(\d+(\.\d+)?)/)||[0,0])[1]);
-    const grupo=n=>/lite/.test(n)?2:/preview/.test(n)?1:0;
-    gemModelos.lista=(await r.json()).models
-      .filter(m=>m.supportedGenerationMethods?.includes("generateContent")&&/gemini-\d.*flash/.test(m.name)&&!/image|tts|live|audio|thinking|exp|transcribe|omni/.test(m.name))
-      .map(m=>m.name.replace("models/","")).sort((a,b)=>grupo(a)-grupo(b)||ver(b)-ver(a));
-    if(!gemModelos.lista.length)throw new Error("nenhum modelo Gemini Flash disponível para esta chave");
-  }
-  const ok=D.gemini.modelo;
-  return ok&&gemModelos.lista.includes(ok)?[ok,...gemModelos.lista.filter(m=>m!==ok)]:gemModelos.lista;
-}
-const esperar=ms=>new Promise(r=>setTimeout(r,ms));
-async function gemGerar(corpo){
-  let ultimo={codigo:0,txt:""};
-  for(let rodada=0;rodada<2;rodada++){
-    if(rodada){const s=Math.min(ultimo.espera||8,20);vozStatus(`Gemini ocupada, tentando de novo em ${s} s…`);await esperar(s*1000)}
-    for(const modelo of (await gemModelos()).slice(0,6)){
-      for(const pensar of [true,false]){
-        const gc={...corpo.generationConfig,...(pensar?{thinkingConfig:{thinkingBudget:0}}:{})};
-        const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),10000);
-        try{
-          const r=await fetch(`${GEM_API}/models/${modelo}:generateContent`,{method:"POST",signal:ctl.signal,
-            headers:{"Content-Type":"application/json","x-goog-api-key":D.gemini.chave},body:JSON.stringify({...corpo,generationConfig:gc})});
-          if(r.ok){const txt=(await r.json()).candidates?.[0]?.content?.parts?.map(p=>p.text).join("")||"";
-            if(D.gemini.modelo!==modelo){D.gemini.modelo=modelo;salvar()}
-            return txt}
-          if(r.status===400&&pensar)continue;
-          if(r.status===404){gemModelos.lista=gemModelos.lista.filter(m=>m!==modelo);if(D.gemini.modelo===modelo)delete D.gemini.modelo;break}
-          if(r.status===401||r.status===403)throw new Error("chave da Gemini recusada ("+r.status+")");
-          const err=(await r.json().catch(()=>({}))).error||{};
-          const atraso=(err.details||[]).map(d=>d.retryDelay).find(Boolean);
-          ultimo={codigo:r.status,espera:atraso?Math.ceil(parseFloat(atraso)):0,txt:modelo+": "+r.status};
-        }catch(e){if(/recusada/.test(e.message))throw e;ultimo={codigo:0,txt:modelo+": "+(e.name==="AbortError"?"demorou demais":e.message)}}
-        finally{clearTimeout(t)}
-        break;
-      }
-    }
-  }
-  throw new Error(ultimo.codigo===429
-    ?"limite de uso gratuito da Gemini atingido por agora. Espere 1 minuto e toque em Preencher ("+ultimo.txt+")"
-    :"a Gemini está sobrecarregada agora. Toque em Preencher de novo em instantes ("+ultimo.txt+")");
-}
-async function gemInterpretar(frase){
-  const nomes=[...new Map(D.vendas.slice(-600).map(v=>[norm(v.cliente),v.cliente])).values()];
-  const prods=D.produtos.map(p=>`${p.nome} (R$ ${precoDe(p)})`);
-  const prompt=`Você preenche o cadastro de uma venda de peças feitas em impressora 3D a partir do que o vendedor falou.
-Hoje é ${hoje()} (formato AAAA-MM-DD).
-Campos:
-- cliente: nome do cliente (pode ter várias palavras). Se combinar com um destes clientes já cadastrados, use exatamente a grafia da lista: ${nomes.join("; ")||"(nenhum ainda)"}.
-- data: AAAA-MM-DD. Se não falar, use hoje. Entenda "ontem", "sexta passada" etc.
-- itens: lista de produtos vendidos. "produto" deve ser exatamente o nome de um produto do catálogo quando combinar (singular/plural não importam): ${prods.join("; ")||"(catálogo vazio)"}. Se não combinar, use o nome falado. "qtd" é a quantidade (1 se não falar). "preco" é o preço de UMA unidade, só se o vendedor falar; senão null.
-- cobrado: valor total cobrado do cliente. null se não falar.
-- metodo: forma de pagamento, exatamente uma destas: ${Object.keys(D.taxas).join(", ")}. "pix" = Pix; "dinheiro" = Dinheiro; "débito" = Débito; "crédito em N vezes" = Crédito Nx; crédito sem parcelas = Crédito 1x. null se não falar.
-Números falados por extenso viram números ("trinta e cinco" = 35).
-Frase do vendedor: """${frase}"""`;
-  const schema={type:"OBJECT",properties:{
-    cliente:{type:"STRING"},data:{type:"STRING"},
-    itens:{type:"ARRAY",items:{type:"OBJECT",properties:{produto:{type:"STRING"},qtd:{type:"NUMBER"},preco:{type:"NUMBER",nullable:true}},required:["produto","qtd"]}},
-    cobrado:{type:"NUMBER",nullable:true},metodo:{type:"STRING",nullable:true}},
-    required:["cliente","data","itens"]};
-  const txt=await gemGerar({contents:[{role:"user",parts:[{text:prompt}]}],
-    generationConfig:{temperature:0,responseMimeType:"application/json",responseSchema:schema}});
-  return JSON.parse(txt);
-}
-function preencherVenda(x){
-  limparVenda();
-  if(x.cliente)fV.cliente.value=nomeProprio(x.cliente);
-  if(/^\d{4}-\d{2}-\d{2}$/.test(x.data||""))fV.data.value=x.data;
-  const L=(x.itens||[]).map(it=>{const p=produtoPorNome(it.produto);
-    return{produtoId:p?.id||null,nome:p?.nome||it.produto,qtd:Math.max(1,+it.qtd||1),preco:it.preco!=null?r2(it.preco):(p?precoDe(p):0),custo:p?r2(custoProduto(p).unit):0}});
-  if(L.length)itens=L;rowsItens();
-  if(x.cobrado!=null){fV.cobrado.value=r2(x.cobrado);cobradoManual=true}
-  if(x.metodo&&D.taxas[x.metodo]!=null)fV.metodo.value=x.metodo;
-  calcVenda();
-}
-const Reconhecedor=window.SpeechRecognition||window.webkitSpeechRecognition;
-let ouvindo=null;
-function vozStatus(t,erro){const s=$("#vVozMsg");s.textContent=t;s.style.color=erro?"var(--bad)":""}
-async function processarFrase(frase){
-  frase=frase.trim();if(!frase)return;
-  $("#vVozTexto").value=frase;vozStatus("Gemini preenchendo…");
-  try{preencherVenda(await gemInterpretar(frase));vozStatus("Pronto: confira os campos e clique em Salvar venda.")}
-  catch(e){vozStatus("Erro: "+e.message,true)}
-}
-$("#vVoz").onclick=()=>{
-  $("#vVozBox").hidden=false;
-  if(!D.gemini?.chave){vozStatus("Cole a chave da Gemini em Config primeiro.",true);return}
-  if(ouvindo){ouvindo.parar();return}
-  if(!Reconhecedor){vozStatus("Este navegador não reconhece voz: digite a frase ao lado e toque em Preencher.",true);return}
-  let final="", parando=false, rec=null;
-  const inicio=Date.now();
-  const mostrar=parcial=>{$("#vVozTexto").value=(final+parcial).trim()};
-  const terminar=()=>{ouvindo=null;$("#vVoz").textContent="🎤 Falar venda";$("#vVoz").classList.remove("gravando");processarFrase($("#vVozTexto").value)};
-  const ouvir=()=>{
-    rec=new Reconhecedor();rec.lang="pt-BR";rec.interimResults=true;rec.continuous=false;
-    let trecho="";
-    rec.onresult=e=>{let parcial="";for(let i=0;i<e.results.length;i++){const t=e.results[i][0].transcript;e.results[i].isFinal?trecho=t:parcial+=t}mostrar(trecho+" "+parcial)};
-    rec.onerror=e=>{if(e.error==="not-allowed"||e.error==="service-not-allowed"){parando=true;vozStatus("Permita o uso do microfone para este site.",true)}};
-    rec.onend=()=>{if(trecho)final+=trecho+" ";mostrar("");
-      if(parando||Date.now()-inicio>120000)terminar();else{try{ouvir()}catch{terminar()}}};
-    rec.start();
-  };
-  $("#vVozTexto").value="";
-  ouvindo={parar(){parando=true;try{rec.stop()}catch{terminar()}}};
-  ouvir();
-  $("#vVoz").textContent="⏹ Parar e preencher";$("#vVoz").classList.add("gravando");
-  vozStatus("Ouvindo… fale cliente, produtos e quantidades, valor cobrado e pagamento. Toque em Parar quando terminar.");
-};
-$("#vVozIr").onclick=()=>{if(!D.gemini?.chave){vozStatus("Cole a chave da Gemini em Config primeiro.",true);return}processarFrase($("#vVozTexto").value)};
-
 /* ---------- dízimo (mesma regra da Oficina) ---------- */
 const NDIZ=4, NOME_AUTO="Impressão 3D";
 let _M=null; const MM=()=>_M??=agregar();
@@ -1158,15 +1167,15 @@ function renderDizimo(){
   $("#zCopiar").onclick=()=>copiarDizimo(mes);
   totaisDizimo(it);renderDizHist();
 }
-function copiarDizimo(mes){
+async function copiarDizimo(mes){
   const [y,m]=mes.split("-").map(Number), ant=new Date(y,m-2,1).toLocaleDateString("sv-SE").slice(0,7);
   const copiar=dizMes(ant).filter(x=>!x.auto&&(x.nome||x.valor));
-  if(!copiar.length)return alert(`Não há valores para copiar em ${MESES[+ant.slice(5)-1]}/${ant.slice(0,4)}.`);
+  if(!copiar.length)return avisar(`Não há valores para copiar em ${MESES[+ant.slice(5)-1]}/${ant.slice(0,4)}.`);
   const atual=dizMes(mes), auto=atual.filter(x=>x.auto), outros=atual.filter(x=>!x.auto&&(x.nome||x.valor));
-  if(outros.length&&!confirm("Este mês já tem valores lançados. Substituir pelos do mês anterior?"))return;
+  if(outros.length&&!await confirmar("Este mês já tem valores lançados. Substituir pelos do mês anterior?"))return;
   gravarDiz(mes,[...auto,...copiar].slice(0,NDIZ));renderDizimo();
 }
-window.excluirDizimo=mes=>{if(!confirm(`Excluir o dízimo de ${MESES[+mes.slice(5)-1]}/${mes.slice(0,4)}?`))return;D.dizimos[mes]={itens:[]};salvar();render()};
+window.excluirDizimo=async mes=>{if(!await confirmar(`Excluir o dízimo de ${MESES[+mes.slice(5)-1]}/${mes.slice(0,4)}?`,"Excluir",true))return;D.dizimos[mes]={itens:[]};salvar();render()};
 const excluirDizimo=window.excluirDizimo;
 function totaisDizimo(it){const t=it.reduce((s,x)=>s+(+x.valor||0),0);$("#zTot").textContent=brl(t);$("#zTot10").textContent=brl(t*0.1)}
 $("#tDiz").addEventListener("input",e=>{
@@ -1255,20 +1264,15 @@ function montarExcel(mes){
   const wR=wb.Sheets.Resumo;for(let i=1;i<=7;i++){const c=wR[XLSX.utils.encode_cell({r:i,c:1})];if(c)c.z='"R$" #,##0.00'}
   return {wb,nome:`${+m} - Impressao 3D - ${nomeMes} ${ano}.xlsx`,n:V.length};
 }
-$("#vExcel").onclick=()=>{
-  if(!window.XLSX)return alert("Não foi possível carregar o gerador de Excel. Verifique a internet.");
-  const mes=$("#vMes").value;if(!mes)return alert("Escolha o mês.");
+$("#vExcel").onclick=async()=>{
+  if(!window.XLSX)return avisar("Não foi possível carregar o gerador de Excel. Verifique a internet.");
+  const mes=$("#vMes").value;if(!mes)return avisar("Escolha o mês.");
   const {wb,nome,n}=montarExcel(mes);
-  if(!n&&!confirm("Este mês não tem vendas. Gerar mesmo assim?"))return;
+  if(!n&&!await confirmar("Este mês não tem vendas. Gerar mesmo assim?"))return;
   XLSX.writeFile(wb,nome);status("Excel baixado: "+nome);
 };
 
 /* ---------- config ---------- */
-const TAMANHOS=[["Pequena",.9],["Normal",1],["Grande",1.15],["Maior",1.3],["Muito grande",1.5]];
-function aplicarFonte(z){document.documentElement.style.fontSize=(14*z)+"px";LS.set("zoom",z);charts&&Object.values(charts).forEach(c=>c.resize?.())}
-function renderFonte(){const z=LS.get("zoom")||1;
-  $("#cfgFonte").innerHTML=TAMANHOS.map(([n,v])=>`<button class="btn ${v===z?"":"sec2"}" style="font-size:${14*v}px" onclick="aplicarFonte(${v});renderFonte()">${n}</button>`).join("")}
-aplicarFonte(LS.get("zoom")||1);
 if(LS.get("jaAbriu"))document.querySelectorAll(".orienta").forEach(e=>e.remove());
 $("#fCfg").addEventListener("change",e=>{const k=e.target.dataset.c;if(!k)return;
   D.config[k]=k==="arredondar"?e.target.value:(+e.target.value||0);salvar();renderConfig()});
@@ -1284,24 +1288,20 @@ function tabelaCfg(col,extra){
 }
 const usos=(col,id)=>D.produtos.filter(p=>col==="impressoras"?p.impressoraId===id:(p.filamentos||[]).some(f=>f.filamentoId===id)).length;
 $("#s-config").addEventListener("change",e=>{const el=e.target,col=el.dataset.t;if(!col)return;
-  const x=D[col][el.dataset.i];x[el.dataset.k]=el.type==="number"?(+el.value||0):el.value.trim();salvar();renderConfig()});
-window.apagarCfg=(col,id)=>{const n=usos(col,id);
-  if(!confirm(n?`Isto está em ${n} produto(s); o custo deles vai ficar sem essa parte. Apagar mesmo assim?`:"Apagar?"))return;
+  const x=D[col][el.dataset.i];x[el.dataset.k]=el.type==="number"?(+el.value||0):el.value.trim();salvar();
+  setTimeout(renderConfig,250)}); // espera um pouco: se o toque foi num ✕, ele acontece antes de redesenhar
+window.apagarCfg=async(col,id)=>{const n=usos(col,id),x=D[col].find(y=>y.id===id);
+  if(!await confirmar(n?`"${x?.nome}" está em ${n} produto(s); o custo deles vai ficar sem essa parte. Apagar mesmo assim?`:`Apagar "${x?.nome}"?`,"Apagar",true))return;
   D[col]=D[col].filter(x=>x.id!==id);salvar();renderConfig()};
 $("#cfgAddImp").onclick=()=>{D.impressoras.push({id:novoId("i"),nome:"Impressora "+(D.impressoras.length+1),potenciaW:120,valor:2500,vidaUtilH:4000,manutHora:0.3});salvar();renderConfig()};
 $("#cfgAddFil").onclick=()=>{D.filamentos.push({id:novoId("f"),nome:"Novo filamento",material:"PLA",precoKg:110});salvar();renderConfig()};
-$("#cfgGemini").onchange=e=>{const k=e.target.value.trim();if(k){D.gemini={chave:k}}else delete D.gemini;salvar();$("#cfgGemMsg").textContent=k?"chave salva":"chave removida"};
-$("#cfgGemTestar").onclick=async()=>{const m=$("#cfgGemMsg");if(!D.gemini?.chave){m.textContent="cole a chave primeiro";return}
-  m.textContent="testando…";try{gemModelos.lista=null;await gemGerar({contents:[{role:"user",parts:[{text:"Responda apenas: ok"}]}],generationConfig:{temperature:0}});m.textContent="funcionando, modelo "+D.gemini.modelo}catch(e){m.textContent="Erro: "+e.message}};
 function renderConfig(){
   document.querySelectorAll("#fCfg [data-c]").forEach(el=>el.value=D.config[el.dataset.c]);
   $("#tImp").innerHTML=tabelaCfg("impressoras",["Custo por hora",i=>brl(custoHoraImp(i))]);
   $("#tFilCfg").innerHTML=tabelaCfg("filamentos",["R$ por grama",f=>brl((+f.precoKg||0)/1000).replace(/(\d),(\d\d)$/,"$1,$2")+" "]);
-  $("#cfgGemini").value=D.gemini?.chave||"";
-  renderFonte();
   $("#tTaxas").innerHTML=`<tr><th>Forma</th><th class="n">Taxa (%)</th></tr>`+Object.entries(D.taxas).map(([k,v])=>
     `<tr><td>${esc(k)}</td><td class="n"><input type="number" step="0.01" value="${r2(v*100)}" style="width:90px;text-align:right;min-height:36px" onchange="D.taxas['${k}']=this.value/100;salvar()"></td></tr>`).join("");
-  $("#cfgInfo").innerHTML=`${D.produtos.length} produtos, ${D.vendas.length} vendas, ${D.despesas.length} despesas. Última alteração: ${D.atualizado?.replace("T"," ")||"–"}.`;
+  $("#cfgInfo").innerHTML=`${D.produtos.length} produtos, ${D.orcamentos.length} orçamentos, ${D.vendas.length} vendas, ${D.despesas.length} despesas. Última alteração: ${D.atualizado?.replace("T"," ")||"–"}.`;
 }
 function baixar(nome,conteudo,tipo){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([conteudo],{type:tipo}));a.download=nome;a.click()}
 const csv=(L,cols)=>"﻿"+cols.join(";")+"\n"+L.map(x=>cols.map(c=>typeof x[c]==="number"?String(x[c]).replace(".",","):`"${String(x[c]??"").replace(/"/g,'""')}"`).join(";")).join("\n");
@@ -1321,7 +1321,7 @@ function iniciar(){
   const mesAtual=hoje().slice(0,7);
   $("#vMes").value=mesAtual;$("#dMes").value=mesAtual;$("#zMes").value=mesAtual;$("#rMes").value=mesAtual;
   fD.data.value=hoje();
-  limparVenda();limparProduto();render();
+  limparVenda();limparProduto();limparOrc();render();
   setTimeout(mostrarAvisos,400);
 }
 function render(){
@@ -1331,7 +1331,7 @@ function render(){
   $("#dlClientes").innerHTML=nomes.map(n=>`<option value="${esc(n)}">`).join("");
   $("#dlProdutos").innerHTML=D.produtos.map(p=>`<option value="${esc(p.nome)}">${brl(precoDe(p))}</option>`).join("");
   const s=document.querySelector(".sec.on").id;
-  ({"s-geral":renderGeral,"s-vendas":renderVendas,"s-produtos":renderProdutos,"s-despesas":renderDesp,"s-clientes":renderClientes,"s-dizimo":renderDizimo,"s-resumo":renderResumo,"s-config":renderConfig})[s]();
+  ({"s-geral":renderGeral,"s-orcamentos":renderOrcamentos,"s-vendas":renderVendas,"s-produtos":renderProdutos,"s-despesas":renderDesp,"s-clientes":renderClientes,"s-dizimo":renderDizimo,"s-resumo":renderResumo,"s-config":renderConfig})[s]();
 }
 
 /* ---------- boas-vindas e novidades ----------
@@ -1342,6 +1342,15 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.2.0",data:"2026-11-07",titulo:"Orçamentos, exclusão corrigida e Config mais simples",itens:[
+    {novo:"Nova aba Orçamentos, antes de Vendas: monte a proposta com os produtos, veja o custo e o lucro previsto e mande para o cliente.",
+     uso:"Orçamentos › preencha cliente e produtos › Salvar orçamento. Toque em 📤 Enviar para mandar pelo WhatsApp. Quando o cliente aprovar, toque em ✅ Aprovar: a aba Vendas abre preenchida; confira o pagamento e toque em Salvar venda."},
+    {novo:"Os botões de excluir (✕) voltaram a funcionar em todas as abas, inclusive impressoras e filamentos.",
+     uso:"Toque no ✕ e confirme em Apagar na janela que aparece."},
+    {novo:"Config com os valores da Bambu Lab A1 e da energia da EDP (Mogi das Cruzes).",
+     uso:"Confira em Config › Impressoras o valor que você pagou na A1 e, em Custos de produção, o preço do kWh da sua conta de luz."},
+    {novo:"Saíram a venda por voz (Gemini) e o tamanho da letra.",
+     uso:"Nada muda no uso: as vendas são lançadas pelo formulário da aba Vendas."}]},
   {v:"1.1.0",data:"2026-11-06",titulo:"Passo a passo e novidades",itens:[
     {novo:"Na primeira vez que o painel abre em um aparelho, aparece um passo a passo explicando como usar.",
      uso:"Ele aparece sozinho. Para ver de novo: Config › Ajuda › Ver passo a passo."},
@@ -1359,7 +1368,7 @@ const NOVIDADES=[
 ];
 const PASSOS=[
   {ico:"👋",titulo:"Bem-vindo ao Painel Impressão 3D",texto:`<p>Aqui você descobre <b>quanto custa</b> cada peça que imprime, <b>por quanto vender</b>, lança as <b>vendas</b> e vê o <b>lucro do mês</b>.</p>
-    <p>Tudo fica salvo sozinho no seu Google Drive e aparece igual no computador e no celular.</p><p>Veja em 5 passos como usar.</p>`},
+    <p>Tudo fica salvo sozinho no seu Google Drive e aparece igual no computador e no celular.</p><p>Veja em 6 passos como usar.</p>`},
   {ico:"⚙️",titulo:"1. Ajuste seus custos",aba:"config",texto:`<p>Na aba <b>Config</b>, preencha uma vez só:</p><ol>
     <li><b>Energia</b>: o preço do kWh da sua conta de luz.</li>
     <li><b>Mão de obra</b>: quanto vale uma hora do seu trabalho.</li>
@@ -1370,14 +1379,17 @@ const PASSOS=[
     <li>Coloque o <b>tempo</b> e os <b>gramas</b> que o fatiador mostra.</li>
     <li>Diga quantas <b>peças saem por impressão</b>.</li></ol>
     <p>Ao lado aparecem o <b>custo por peça</b>, o <b>preço sugerido</b> e o lucro. Toque em <b>Salvar produto</b>.</p>`},
-  {ico:"🧾",titulo:"3. Lance cada venda",aba:"vendas",texto:`<p>Na aba <b>Vendas</b>:</p><ol>
+  {ico:"📝",titulo:"3. Faça orçamentos",aba:"orcamentos",texto:`<p>Na aba <b>Orçamentos</b>, monte a proposta com os produtos e a quantidade e toque em <b>Salvar orçamento</b>.</p>
+    <p>Toque em <b>📤 Enviar</b> para mandar ao cliente pelo WhatsApp.</p>
+    <p>Quando o cliente aprovar, toque em <b>✅ Aprovar</b>: a venda já abre preenchida.</p>`},
+  {ico:"🧾",titulo:"4. Lance cada venda",aba:"vendas",texto:`<p>Na aba <b>Vendas</b>:</p><ol>
     <li>Digite o <b>cliente</b>.</li>
     <li>Escolha o <b>produto</b> e a <b>quantidade</b>: preço e custo vêm sozinhos.</li>
     <li>Toque na <b>forma de pagamento</b> e em <b>Salvar venda</b>.</li></ol>
-    <p>Dica: com a chave da Gemini em Config, dá para <b>🎤 falar a venda</b>.</p>`},
-  {ico:"💸",titulo:"4. Lance as despesas",aba:"despesas",texto:`<p>Na aba <b>Despesas</b>, coloque os gastos do mês: MEI, embalagens, manutenção da impressora…</p>
+    <p>Venda que veio de orçamento já chega preenchida.</p>`},
+  {ico:"💸",titulo:"5. Lance as despesas",aba:"despesas",texto:`<p>Na aba <b>Despesas</b>, coloque os gastos do mês: MEI, embalagens, manutenção da impressora…</p>
     <p>A compra de filamento <b>não</b> entra aqui, porque já é descontada em cada venda.</p>`},
-  {ico:"📈",titulo:"5. Acompanhe o resultado",aba:"geral",texto:`<ul>
+  {ico:"📈",titulo:"6. Acompanhe o resultado",aba:"geral",texto:`<ul>
     <li><b>Geral</b>: faturamento, lucro e produtos mais vendidos.</li>
     <li><b>Resumo</b>: lucro − despesas − dízimo = lucro líquido do mês.</li>
     <li><b>Vendas › Exportar</b>: planilha Excel do mês.</li></ul>`},
@@ -1395,7 +1407,7 @@ function mostrarPasso(i){
   abrirModal(`<div class="grande">${p.ico}</div><h2>${p.titulo}</h2><div class="texto">${p.texto}</div>
     <div class="pontos">${PASSOS.map((_,j)=>`<i class="${j===i?"on":""}"></i>`).join("")}</div>
     <div class="botoes">${i?`<button class="btn sec2" id="pVoltar">‹ Voltar</button>`:`<button class="btn sec2" id="pPular">Pular</button>`}
-      <div class="dir">${p.aba?`<button class="btn sec2" id="pAba">Abrir ${p.aba==="geral"?"Geral":p.aba[0].toUpperCase()+p.aba.slice(1)}</button>`:""}
+      <div class="dir">${p.aba?`<button class="btn sec2" id="pAba">Abrir ${document.querySelector(`#nav [data-s=${p.aba}] .txt`).textContent.replace("OrçamentosOrçar","Orçamentos")}</button>`:""}
       <button class="btn" id="pProx">${ult?"Começar":i?"Próximo ›":"Começar o passo a passo ›"}</button></div></div>`);
   $("#pVoltar")&&($("#pVoltar").onclick=()=>mostrarPasso(i-1));
   $("#pPular")&&($("#pPular").onclick=()=>$("#mFechar").click());

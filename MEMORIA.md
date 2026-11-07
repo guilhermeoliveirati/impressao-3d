@@ -25,10 +25,11 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
 1. **Toda alteração aumenta a versão** (`VERSAO` em `painel.html`) e ganha uma linha em **Versões**.
    Correção `x.x.+1`; recurso novo `x.+1.0`; quebra do formato do `dados.json` `+1.0.0`.
 2. **Nunca enviar dados para o GitHub**: `dados.json`, `.xlsx`, `.csv` estão no `.gitignore`.
-3. **Nunca gravar chaves no código.** A chave da Gemini fica no `dados.json` (`gemini.chave`).
-   As únicas credenciais no código são as públicas do Google (`GOOGLE` em `painel.html`).
+3. **Nunca gravar chaves no código.** As únicas credenciais no código são as públicas do Google (`GOOGLE` em `painel.html`).
 4. Interface em **português do Brasil**, letras em `rem`, **sem CSS `zoom`**, valores com `brl()`.
-5. A venda **nunca é salva sozinha**: voz/Gemini só preenchem o formulário.
+5. A venda **nunca é salva sozinha**: o orçamento aprovado só preenche o formulário; quem salva é o usuário.
+   Não usar `confirm()`/`alert()` do navegador (no app instalado podem não aparecer e os botões "não funcionam"):
+   usar `confirmar()` e `avisar()` do próprio painel.
 6. Antes de mexer no `dados.json` por fora do painel, fazer cópia de segurança.
 7. **Toda versão ganha uma entrada no topo de `NOVIDADES`** (em `painel.html`), em linguagem simples, com `novo`
    (o que mudou) e `uso` (como usar). O painel mostra essa janela uma vez em cada aparelho depois da atualização.
@@ -45,6 +46,8 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
   "config": { "energiaKwh": 0.95, "maoDeObraHora": 25, "falhaPct": 10, "margemPct": 100, "arredondar": "90" },  // arredondar: nao | 1 | 90 | 5
   "impressoras": [ { "id", "nome", "potenciaW", "valor", "vidaUtilH", "manutHora" } ],
   "filamentos":  [ { "id", "nome", "material", "precoKg" } ],
+  "orcamentos": [ { "id", "data", "cliente", "validade" /* dias */, "itens": [ …iguais aos da venda… ], "frete", "valor", "custo", "obs",
+                    "status": "aberto" | "aprovado" | "recusado", "vendaId": null } ],
   "produtos": [ { "id", "nome", "categoria", "impressoraId", "horas", "minutos", "unidades", "maoMin", "extras",
                   "falhaPct": null, "margemPct": null, "precoVenda": null,   // null = usa o padrão de Config / o preço sugerido
                   "filamentos": [ { "filamentoId", "g" } ], "obs" } ],
@@ -52,7 +55,6 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
                 "frete", "cobrado", "metodo", "custo", "taxa", "lucro", "obs" } ],
   "despesas": [ { "id", "data", "categoria", "descricao", "valor" } ],
   "dizimos": { "AAAA-MM": { "itens": [ { "nome", "valor" } | { "nome", "auto": true } ] } },
-  "gemini": { "chave": "…", "modelo": "…" }   // opcional
 }
 ```
 
@@ -77,6 +79,10 @@ A tabela "Preço por forma de pagamento" mostra o preço para receber o mesmo qu
 - **Lucro da venda = cobrado − custo de produção dos itens − taxa.**
 - Mão de obra entra como custo; quem quiser que conte como lucro coloca R$ 0/h em Config.
 
+**Orçamento**: mesmos itens da venda, mas não entra em faturamento nem lucro. "✅ Aprovar" abre Vendas preenchida
+(`orcEmVenda`); ao salvar a venda, o orçamento vira `aprovado` com `vendaId`. Apagar essa venda devolve o orçamento para `aberto`.
+"📤 Enviar" monta um texto para WhatsApp (compartilhar do celular ou copiar).
+
 **Despesas**: compra de filamento **não** é despesa (já entra no custo de cada venda). Fixas copiáveis: MEI, Aluguel, Internet.
 **Dízimo e Resumo**: mesmas regras da Oficina; o item automático se chama "Impressão 3D" (= lucro − despesas do mês).
 
@@ -89,8 +95,12 @@ A tabela "Preço por forma de pagamento" mostra o preço para receber o mesmo qu
 ## Abas
 
 Geral (KPIs, gráfico mensal, produtos mais vendidos, formas de pagamento, mapa mês × ano, fechamento) ·
-Vendas (itens, pagamento em botões, voz/Gemini, lista do mês, Excel) · **Produtos** (calculadora + catálogo) ·
-Despesas · Clientes · Dízimo · Resumo · Config (custos de produção, impressoras, filamentos, taxas, Gemini, letra, exportar).
+**Orçamentos** (proposta, enviar, aprovar → venda) · Vendas (itens, pagamento em botões, lista do mês, Excel) · **Produtos** (calculadora + catálogo) ·
+Despesas · Clientes · Dízimo · Resumo · Config (custos de produção, impressoras, filamentos, taxas, ajuda, exportar).
+
+**Valores usados em Config (2026-11-07)**: energia R$ 1,00/kWh (EDP São Paulo, que atende Mogi das Cruzes: ~R$ 0,80 sem impostos,
+~R$ 0,95–1,00 com ICMS, PIS/COFINS e bandeira; o certo é conta de luz ÷ kWh). Bambu Lab A1: 95 W médios em PLA (wiki da Bambu),
+R$ 3.000, vida útil 5.000 h, manutenção R$ 0,20/h (bico, placa PEI, correias). Cópias de segurança do `dados.json` ficam em `backup/` (fora do git).
 
 ## Como testar sem mexer nos dados reais
 
@@ -122,3 +132,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.0.3 | 2026-11-05 | Manifest sem o campo `id` (igual à Oficina): a troca de identidade do app deixava o Android achar que ele já estava instalado e não abrir. Não colocar `id` de volta, nem mudar `start_url`, sem desinstalar o app dos aparelhos |
 | 1.0.4 | 2026-11-05 | Endereço novo: repositório renomeado para `impressao-3d` (site `/impressao-3d/painel.html`), para o Android instalar o app do zero, sem o registro quebrado do endereço antigo |
 | 1.1.0 | 2026-11-06 | Passo a passo no primeiro acesso e janela de novidades a cada versão (o que mudou + como usar); Config › Ajuda e versão no rodapé abrem as duas. Regra: toda versão ganha entrada em `NOVIDADES` |
+| 1.2.0 | 2026-11-07 | Aba Orçamentos (proposta, enviar pelo WhatsApp, aprovar → venda preenchida); excluir volta a funcionar (confirmação dentro do painel no lugar de `confirm()`); saem a venda por voz (Gemini) e o tamanho da letra; Config com Bambu Lab A1 e energia da EDP |

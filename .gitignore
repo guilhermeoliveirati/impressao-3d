@@ -1,3 +1,5 @@
-dados.json
-*.xlsx
 *.csv
+*.xlsx
+backup/
+dados*.json
+dados.json
