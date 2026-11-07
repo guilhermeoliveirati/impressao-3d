@@ -12,9 +12,17 @@ Os dados ficam no arquivo `dados.json` (Google Drive › Meu Drive › Impressor
 
 1. **Config › Custos de produção:** preço da energia (R$/kWh), valor da sua hora de trabalho, % de perdas e margem padrão.
 2. **Config › Impressoras:** potência média, quanto pagou e vida útil estimada.
-3. **Config › Filamentos:** cada cor/material com o preço por kg.
+3. **Config › Materiais e estoque:** cada filamento com o preço por kg e o que você tem em casa (e as compras de rolos).
 4. **Produtos:** para cada peça, o tempo e os gramas que o fatiador mostra. O painel calcula custo e preço.
-5. **Vendas:** escolha os produtos, a quantidade e a forma de pagamento.
+5. **Orçamentos:** monte a proposta (do catálogo ou peça sob medida), envie pelo WhatsApp e aprove para virar venda.
+6. **Vendas:** escolha os produtos, a quantidade e a forma de pagamento.
+
+O próprio painel mostra um passo a passo no primeiro acesso e as novidades depois de cada atualização (Config › Ajuda).
+
+## Para continuar o desenvolvimento (em qualquer máquina ou IA)
+
+Ler `MEMORIA.md` (tudo sobre o projeto, estado atual e histórico) e `AGENTS.md` (regras para IAs).
+O `CLAUDE.md` e o `GEMINI.md` só apontam para esses dois.
 
 ## Configuração do Google (feita uma vez, na conta do projeto)
 

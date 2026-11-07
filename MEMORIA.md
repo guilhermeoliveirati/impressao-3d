@@ -20,6 +20,21 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
   Se a instalação no celular travar de novo ("Não foi possível abrir o aplicativo"), a saída é a mesma: renomear o repositório.
 - Dados: `dados.json` nessa pasta do Drive, compartilhado por todos os aparelhos (computador abre pela pasta, tablet/celular pelo Google Drive). Nunca no git.
 
+## Como continuar em outra máquina (pessoa ou IA)
+
+1. **Ler primeiro:** este `MEMORIA.md` inteiro e o `AGENTS.md`. O estado atual está em **Estado atual** e **Versões** (no fim).
+2. **Pegar o código:**
+   - Máquina com o Google Drive da conta do projeto: abrir a pasta `Meu Drive/Impressora 3D` (já é o repositório git, com o `dados.json`).
+     Rodar `git pull` antes de mexer, porque pode haver versão mais nova no GitHub.
+   - Máquina sem o Drive: `git clone https://github.com/guilhermeoliveirati/impressao-3d.git`. O `dados.json` **não** vem junto
+     (não está no git); para testar, usar um `dados.json` de exemplo ou baixar uma cópia em Config › Baixar cópia do dados.json.
+3. **Mexer:** tudo fica em `painel.html` (HTML + CSS + JS, sem build). Seguir as **Regras obrigatórias** abaixo:
+   versão nova, linha em **Versões**, entrada em `NOVIDADES` (e em `PASSOS`, se mudar o uso básico).
+4. **Testar** sem mexer nos dados reais: ver **Como testar**. Conferir sintaxe com `node --check` e a tela do celular (375 px de largura, sem rolagem lateral).
+5. **Publicar:** `git add -A`, conferir com `git status` que `dados.json` e `backup/` **não** entram, `git commit` e `git push`
+   (conta do GitHub `guilhermeoliveirati`; o GitHub Pages publica em ~1 minuto). Conferir o site e a versão no rodapé.
+6. **Atualizar este arquivo** no fim: Estado atual, Versões e o que for novo em regras/formato.
+
 ## Regras obrigatórias (iguais às da Oficina)
 
 1. **Toda alteração aumenta a versão** (`VERSAO` em `painel.html`) e ganha uma linha em **Versões**.
@@ -42,7 +57,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
 
 ```jsonc
 {
-  "versao": 1, "atualizado": "…", "proximoId": 10,     // ids: v vendas, d despesas, p produtos, i impressoras, f filamentos
+  "versao": 1, "atualizado": "…", "proximoId": 10,     // ids: v vendas, d despesas, p produtos, i impressoras, f filamentos, o orçamentos, c clientes, e estoque, pc parcelamentos
   "taxas": { "Pix": 0, "Débito": 0.0137, "Crédito 1x": 0.0315, … },
   "config": { "energiaKwh": 0.95, "maoDeObraHora": 25, "falhaPct": 10, "margemPct": 100, "arredondar": "90", "estoqueMinimoG": 200 },  // arredondar: nao | 1 | 90 | 5
   "impressoras": [ { "id", "nome", "potenciaW", "valor", "vidaUtilH", "manutHora" } ],
@@ -103,16 +118,15 @@ Compra com valor pode atualizar o preço do kg. Abaixo de `estoqueMinimoG` apare
 Perdas reais (falhas, testes) só entram se registradas como "perda" — o % de perdas de Config é só para o preço.
 
 **Parcelamentos** (aba Despesas): parcela = total ÷ parcelas; parte = parcela ÷ pessoas; ✓ por mês e pessoa em `pagos`.
-**Não** entram como despesa: o valor da impressora já entra no custo das peças (desgaste). Cadastrado: Bambu Lab A1, R$ 4.499,10,
-10x a partir de dez/2026, 3 pessoas: Eu, Luan e Caique (R$ 449,91 por mês, R$ 149,97 cada).
+Quantidade de parcelas escolhida numa lista de 1x a 36x. **Não** entram como despesa: o valor da impressora já entra no custo das peças (desgaste). Cadastrado: Bambu Lab A1, R$ 4.499,10,
+10x a partir de dez/2026, 3 sócios (R$ 449,91 por mês, R$ 149,97 cada).
 
 **Despesas**: compra de filamento **não** é despesa (já entra no custo de cada venda). Fixas copiáveis: MEI, Aluguel, Internet.
 **Dízimo e Resumo**: mesmas regras da Oficina; o item automático se chama "Impressão 3D" (= lucro − despesas do mês).
 
 ## Boas-vindas e novidades (desde 1.1.0)
 
-- Parcelas do parcelamento: lista de 1x a 36x (muda na hora).
-- **Primeiro acesso** em cada aparelho: janela com o passo a passo (`PASSOS`): custos em Config → Produtos → Vendas → Despesas → Geral/Resumo.
+- **Primeiro acesso** em cada aparelho: janela com o passo a passo (`PASSOS`): custos e materiais em Config → Produtos → Orçamentos → Vendas → Despesas → Geral/Resumo.
 - **Depois de cada atualização**: janela com as entradas de `NOVIDADES` mais novas que a última versão vista no aparelho.
 - Guardado só no aparelho: `p3d.passosVistos` e `p3d.versaoVista`. Rever a qualquer hora: Config › Ajuda, ou tocando na versão no rodapé.
 
@@ -120,7 +134,7 @@ Perdas reais (falhas, testes) só entram se registradas como "perda" — o % de 
 
 Geral (KPIs, gráfico mensal, produtos mais vendidos, formas de pagamento, mapa mês × ano, fechamento) ·
 **Orçamentos** (proposta, peça sob medida, enviar, aprovar → venda) · Vendas (itens, pagamento em botões, lista do mês, Excel) · **Produtos** (calculadora + catálogo) ·
-Despesas (e parcelamentos) · Clientes (cadastro com código) · Dízimo · Resumo · Config (custos de produção, impressoras, filamentos, taxas, ajuda, exportar).
+Despesas (e parcelamentos) · Clientes (cadastro com código) · Dízimo · Resumo · Config (custos de produção, impressoras, materiais e estoque, taxas, ajuda, exportar).
 
 **Valores usados em Config (2026-11-07)**: energia R$ 1,00/kWh (EDP São Paulo, que atende Mogi das Cruzes: ~R$ 0,80 sem impostos,
 ~R$ 0,95–1,00 com ICMS, PIS/COFINS e bandeira; o certo é conta de luz ÷ kWh). Bambu Lab A1: 95 W médios em PLA (wiki da Bambu),
@@ -141,9 +155,13 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Pendências
+## Estado atual (2026-11-07, versão 1.4.0)
 
-- Colocar o `dados.json` no Google Drive da conta do projeto e testar o login no tablet/celular.
+- Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
+- Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
+- Para o dono fazer: conferir preço por kg dos filamentos e o valor da hora de trabalho em Config; registrar o estoque inicial
+  dos materiais; trocar os 3 produtos "(exemplo)" pelos de verdade.
+- Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
 ## Versões
@@ -158,5 +176,5 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.1.0 | 2026-11-06 | Passo a passo no primeiro acesso e janela de novidades a cada versão (o que mudou + como usar); Config › Ajuda e versão no rodapé abrem as duas. Regra: toda versão ganha entrada em `NOVIDADES` |
 | 1.2.0 | 2026-11-07 | Aba Orçamentos (proposta, enviar pelo WhatsApp, aprovar → venda preenchida); excluir volta a funcionar (confirmação dentro do painel no lugar de `confirm()`); saem a venda por voz (Gemini) e o tamanho da letra; Config com Bambu Lab A1 e energia da EDP |
 | 1.3.0 | 2026-11-07 | Cadastro de clientes com código automático e telefone (WhatsApp); parcelamentos com ✓ por mês e pessoa (A1 em 10x dividida em 3); peça sob medida no orçamento pelos materiais; Enviar abre o WhatsApp do cliente |
-| 1.3.1 | 2026-11-07 | Aviso falso de “alterado em outro lugar”: o painel compara o conteúdo do arquivo, não só a data (o Google Drive do computador muda a data ao sincronizar); parcelamento com Luan e Caique |
+| 1.3.1 | 2026-11-07 | Aviso falso de “alterado em outro lugar”: o painel compara o conteúdo do arquivo, não só a data (o Google Drive do computador muda a data ao sincronizar); nomes das pessoas do parcelamento |
 | 1.4.0 | 2026-11-07 | Estoque de materiais (compras, estoque inicial, perdas; vendas descontam os gramas; aviso de material acabando em Geral e resumo com barras); parcelas escolhidas numa lista de 1x a 36x |
