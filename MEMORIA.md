@@ -60,7 +60,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
   "versao": 1, "atualizado": "…", "proximoId": 10,     // ids: v vendas, d despesas, p produtos, i impressoras, f filamentos, o orçamentos, c clientes, e estoque, pc parcelamentos
   "taxas": { "Pix": 0, "Débito": 0.0137, "Crédito 1x": 0.0315, … },
   "config": { "energiaKwh": 0.95, "maoDeObraHora": 25, "falhaPct": 10, "margemPct": 100, "arredondar": "90", "estoqueMinimoG": 200 },  // arredondar: nao | 1 | 90 | 5
-  "impressoras": [ { "id", "nome", "potenciaW", "valor", "vidaUtilH", "manutHora" } ],
+  "impressoras": [ { "id", "nome", "preparoMin" /* aquecer e calibrar, 1x por impressão */, "potenciaW", "valor", "vidaUtilH", "manutHora" } ],
   "filamentos":  [ { "id", "nome", "material", "precoKg" } ],
   "proximoCliente": 3,                // próximo código de cliente (#001, #002…)
   "clientes": [ { "id", "codigo", "nome", "telefone" /* só números */ } ],
@@ -70,6 +70,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
                     "status": "aberto" | "aprovado" | "recusado", "vendaId": null, "clienteId" } ],   // item pode ter "detalhe" (peça sob medida)
   "produtos": [ { "id", "nome", "categoria", "impressoraId", "horas", "minutos", "unidades", "maoMin", "extras",
                   "falhaPct": null, "margemPct": null, "precoVenda": null,   // null = usa o padrão de Config / o preço sugerido
+                  "porPeca": true,   // desde 1.7.0: horas/minutos e filamentos.g são de 1 peça (sem: da impressão inteira)
                   "filamentos": [ { "filamentoId", "g" } ], "obs" } ],
   "vendas": [ { "id", "data", "cliente", "itens": [ { "produtoId"|null, "nome", "qtd", "preco", "custo" } ],
                 "frete", "cobrado", "metodo", "custo", "taxa", "lucro", "obs", "clienteId" } ],
@@ -81,7 +82,9 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
 ## Regras de negócio
 
 **Custo de uma impressão** (`custoProduto`):
-- filamento = Σ gramas × preço do kg ÷ 1000
+- tempo da impressão = `preparoMin` da impressora (aquecer e calibrar, 1x) + tempo de 1 peça × peças por impressão, para produto `porPeca`;
+  produto antigo sem `porPeca` usa o tempo e os gramas como total da impressão. Editar um antigo converte para 1 peça (tira o preparo e divide)
+- filamento = Σ gramas × preço do kg ÷ 1000 (gramas de 1 peça × peças, se `porPeca`)
 - energia = potência (W) ÷ 1000 × horas × R$/kWh
 - tempo: na tela é um campo só com unidade (horas ou minutos, `lerTempo`/`mostrarTempo`); no `dados.json` continua `horas` + `minutos`
 - desgaste e manutenção = horas × (valor da impressora ÷ vida útil em horas + manutenção por hora)
@@ -161,7 +164,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-07, versão 1.6.1)
+## Estado atual (2026-11-07, versão 1.7.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -170,6 +173,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.5.0: materiais e estoque viraram a aba Estoque; dízimo removido (aba, Resumo e Excel).
 - 1.6.0: orçamento só com cliente e produtos do cadastro (listas), com ida e volta para cadastrar.
 - 1.6.1: tempo de impressão num campo só, em horas ou minutos (Produtos e peça sob medida).
+- 1.7.0: aquecer e calibrar por impressora (A1: 7 min); tempo e gramas de produto/peça sob medida são de 1 peça.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -190,3 +194,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.5.0 | 2026-11-07 | Materiais e estoque saem de Config para a aba própria Estoque (no lugar do Dízimo no menu); dízimo removido do painel (aba, Resumo, Excel, `dados.json`) |
 | 1.6.0 | 2026-11-07 | Orçamento escolhe cliente e produtos em listas do cadastro; se não existir, leva para Clientes/Produtos e volta ao orçamento com o novo escolhido; peça sob medida vira produto ao entrar no orçamento |
 | 1.6.1 | 2026-11-07 | Tempo de impressão num campo só, escolhendo horas ou minutos (Produtos e peça sob medida); formato do `dados.json` igual |
+| 1.7.0 | 2026-11-07 | Aquecer e calibrar por impressora (`preparoMin`, A1 = 7 min), somado 1x por impressão; tempo e gramas de Produtos e peça sob medida passam a ser de 1 peça (`porPeca`); produtos antigos continuam com a conta antiga até serem editados |

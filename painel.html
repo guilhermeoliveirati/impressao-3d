@@ -285,15 +285,15 @@ nav .ct{display:none}
             <label class="largo">Nome da peça<input id="ocNome" placeholder="ex.: Suporte de celular personalizado"></label>
             <label>Impressora<select id="ocImp"></select></label>
             <label>Quantidade de peças<input id="ocQtd" type="number" min="1" step="1" value="1"></label>
-            <label class="largo">Tempo de impressão<span class="campoBtn"><input id="ocT" type="number" min="0" step="any" value="0" style="flex:1;min-width:0"><select id="ocTU" aria-label="unidade do tempo" style="width:auto"><option value="h">horas</option><option value="min">minutos</option></select></span></label>
+            <label class="largo">Tempo de impressão de 1 peça<span class="campoBtn"><input id="ocT" type="number" min="0" step="any" value="0" style="flex:1;min-width:0"><select id="ocTU" aria-label="unidade do tempo" style="width:auto"><option value="h">horas</option><option value="min">minutos</option></select></span></label>
             <label>Trabalho manual (min)<input id="ocMao" type="number" min="0" step="1" value="0"></label>
             <label>Extras por peça (R$)<input id="ocExt" type="number" min="0" step="0.01" value="0"></label>
             <label>Margem de lucro (%)<input id="ocMarg" type="number" min="0" step="1"></label>
           </div>
-          <h3>Materiais usados (total de todas as peças)</h3>
+          <h3>Materiais de 1 peça</h3>
           <div id="ocFil"></div>
           <button type="button" class="btn sm sec2" id="ocAddFil">＋ Outro material</button>
-          <p class="muted" style="margin:6px 0 0">Tempo e gramas: o total que o fatiador mostra para todas as peças juntas. A peça fica salva em Produtos (categoria “Sob medida”) para poder ser escolhida de novo.</p>
+          <p class="muted" style="margin:6px 0 0">Tempo e gramas de 1 peça, sem aquecer e calibrar (o painel soma o tempo da impressora uma vez). A peça fica salva em Produtos (categoria “Sob medida”) para poder ser escolhida de novo.</p>
           <div id="ocRes" style="margin-top:12px"></div>
           <div class="row" style="margin-top:10px">
             <button type="button" class="btn" id="ocAdd">＋ Salvar em Produtos e adicionar ao orçamento</button>
@@ -384,14 +384,14 @@ nav .ct{display:none}
         <label style="grid-column:span 2">Nome do produto<input name="nome" required placeholder="ex.: Chaveiro personalizado"></label>
         <label>Categoria<input name="categoria" list="dlCats" placeholder="ex.: Chaveiros"></label>
         <label>Impressora<select name="impressoraId" id="pImp"></select></label>
-        <label style="grid-column:span 2">Tempo de impressão<span class="campoBtn"><input name="tempo" type="number" step="any" min="0" value="0" style="flex:1;min-width:0"><select name="tempoUn" aria-label="unidade do tempo" style="width:auto"><option value="h">horas</option><option value="min">minutos</option></select></span></label>
+        <label style="grid-column:span 2" title="Só a impressão de 1 peça, sem aquecer e calibrar: isso a impressora já soma (Config)">Tempo de impressão de 1 peça<span class="campoBtn"><input name="tempo" type="number" step="any" min="0" value="0" style="flex:1;min-width:0"><select name="tempoUn" aria-label="unidade do tempo" style="width:auto"><option value="h">horas</option><option value="min">minutos</option></select></span></label>
         <label title="Quantas peças saem de uma impressão (mesa cheia)">Peças por impressão<input name="unidades" type="number" step="1" min="1" value="1"></label>
         <label title="Preparar o arquivo, tirar da mesa, lixar, pintar, montar… (tempo total da impressão)">Trabalho manual (min)<input name="maoMin" type="number" step="1" min="0" value="0"></label>
         <div style="grid-column:1/-1">
-          <h3 style="margin-top:4px">Filamento usado na impressão inteira</h3>
+          <h3 style="margin-top:4px">Filamento de 1 peça</h3>
           <div id="pFil"></div>
           <button type="button" class="btn sm sec2" id="pAddFil">＋ Outra cor / filamento</button>
-          <p class="muted" style="margin:6px 0 0">O peso em gramas aparece no fatiador (Bambu Studio, Orca, Cura…) depois de fatiar.</p>
+          <p class="muted" style="margin:6px 0 0">Tempo e gramas de 1 peça, como o fatiador mostra (Bambu Studio, Orca, Cura…), sem o aquecimento e a calibração: o painel soma o tempo de “Aquecer e calibrar” da impressora uma vez por impressão.</p>
         </div>
         <label title="Embalagem, argola, ímã, parafuso, adesivo… valor por peça">Extras por peça (R$)<input name="extras" type="number" step="0.01" min="0" value="0"></label>
         <label>Perda / falhas (%)<input name="falhaPct" type="number" step="1" min="0" placeholder="padrão"></label>
@@ -554,7 +554,8 @@ nav .ct{display:none}
     <div class="scroll"><table class="cfgtab" id="tImp"></table></div>
     <button class="btn sm sec2" id="cfgAddImp" style="margin-top:8px">＋ Impressora</button>
     <p class="muted">Potência média imprimindo (não a da fonte): ~100 W para Bambu A1/P1, ~120–150 W para Ender e similares com mesa aquecida.
-      O desgaste divide o valor da impressora pela vida útil em horas; a manutenção cobre bico, correias, PEI, graxa.</p>
+      O desgaste divide o valor da impressora pela vida útil em horas; a manutenção cobre bico, correias, PEI, graxa.
+      <b>Aquecer e calibrar</b>: o tempo que ela leva antes de começar a imprimir (A1: ~7 min). Entra uma vez em cada impressão, não em cada peça.</p>
   </div>
   <div class="grid2">
     <div class="card"><h2>Taxas da maquininha</h2><table id="tTaxas"></table>
@@ -617,7 +618,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.6.1";
+const VERSAO="1.7.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -791,6 +792,7 @@ function normalizar(){
   for(const k of ["impressoras","filamentos","produtos","clientes","orcamentos","vendas","despesas","parcelamentos","estoque"])D[k]??=[];
   delete D.dizimos; // o dízimo saiu do painel na 1.5.0
   D.proximoCliente??=1;
+  D.impressoras.forEach(i=>i.preparoMin??=7); // aquecer e calibrar antes de cada impressão (Bambu A1: ~7 min)
   // clientes que só existiam pelo nome em vendas/orçamentos entram no cadastro (sem telefone)
   [...D.vendas,...D.orcamentos].sort((a,b)=>a.data.localeCompare(b.data)).forEach(x=>{if(x.cliente&&!clientePorNome(x.cliente))novoCliente(x.cliente)});
 }
@@ -810,15 +812,19 @@ $("#nav").onclick=e=>{const b=e.target.closest("button");if(!b)return;
      perdas      = (filamento + energia + impressora) × % de perda
      mão de obra = minutos ÷ 60 × R$/hora
    Custo por peça = custo da impressão ÷ peças por impressão + extras por peça.
+   Produto "porPeca" (desde 1.7.0): tempo e gramas são de 1 peça. Tempo da impressão = aquecer e calibrar
+   (preparoMin da impressora, uma vez) + tempo de 1 peça × peças; gramas = gramas de 1 peça × peças.
+   Produto antigo (sem porPeca): tempo e gramas são da impressão inteira, como antes.
    Preço sugerido = custo por peça × (1 + margem), arredondado (Config). */
 const impressoraDe=id=>D.impressoras.find(i=>i.id===id);
 const filamentoDe=id=>D.filamentos.find(f=>f.id===id);
 const custoHoraImp=i=>i?((+i.potenciaW||0)/1000*D.config.energiaKwh)+((+i.valor||0)/Math.max(1,+i.vidaUtilH||1))+(+i.manutHora||0):0;
 function custoProduto(p){
   const C=D.config, imp=impressoraDe(p.impressoraId)||{};
-  const h=(+p.horas||0)+(+p.minutos||0)/60, un=Math.max(1,Math.round(+p.unidades||1));
-  const gramas=soma(p.filamentos||[],f=>f.g);
-  const fil=soma(p.filamentos||[],f=>(filamentoDe(f.filamentoId)?.precoKg||0)*(+f.g||0)/1000);
+  const t=(+p.horas||0)+(+p.minutos||0)/60, un=Math.max(1,Math.round(+p.unidades||1));
+  const prep=p.porPeca?(+imp.preparoMin||0)/60:0, h=p.porPeca?prep+t*un:t, fator=p.porPeca?un:1;
+  const gramas=soma(p.filamentos||[],f=>f.g)*fator;
+  const fil=soma(p.filamentos||[],f=>(filamentoDe(f.filamentoId)?.precoKg||0)*(+f.g||0)/1000)*fator;
   const kwh=(+imp.potenciaW||0)/1000*h, energia=kwh*C.energiaKwh;
   const maquina=h*((+imp.valor||0)/Math.max(1,+imp.vidaUtilH||1)+(+imp.manutHora||0));
   const falhaPct=p.falhaPct??C.falhaPct;
@@ -826,7 +832,7 @@ function custoProduto(p){
   const mao=(+p.maoMin||0)/60*C.maoDeObraHora;
   const extras=+p.extras||0;
   const impressao=fil+energia+maquina+falha+mao;
-  return{fil,energia,maquina,falha,mao,extras,impressao,un,horas:h,gramas,kwh,falhaPct,
+  return{fil,energia,maquina,falha,mao,extras,impressao,un,horas:h,gramas,kwh,falhaPct,prep,tPeca:p.porPeca?t:null,
     unit:impressao/un+extras};
 }
 function arredondar(v){
@@ -841,6 +847,8 @@ const precoSugerido=(p,c=custoProduto(p))=>r2(arredondar(c.unit*(1+margemDe(p)/1
 const precoDe=p=>p.precoVenda!=null?p.precoVenda:precoSugerido(p);
 const produtoPorNome=n=>{const k=norm(n);return k?D.produtos.find(p=>norm(p.nome)===k):null};
 const fmtTempo=h=>{const t=Math.round(h*60);return t>=60?`${Math.floor(t/60)}h${String(t%60).padStart(2,"0")}`:`${t} min`};
+// "⏱️ 7 min (aquecer e calibrar) + 8 min × 4 peças = 39 min"
+const contaTempo=c=>c.tPeca==null?"":`<div class="calc" style="margin-bottom:8px">⏱️ Tempo da impressão: ${fmtTempo(c.prep)} (aquecer e calibrar) + ${fmtTempo(c.tPeca)} × ${c.un} ${c.un>1?"peças":"peça"} = <b>${fmtTempo(c.horas)}</b></div>`;
 
 /* ---------- agregações ---------- */
 const qtdItens=v=>soma(v.itens||[],x=>x.qtd);
@@ -941,7 +949,7 @@ const lerTempo=(v,un)=>un==="min"?{horas:0,minutos:+v||0}:{horas:+v||0,minutos:0
 const mostrarTempo=p=>{const t=r2((+p.horas||0)*60+(+p.minutos||0));return t>0&&t%60===0?[t/60,"h"]:t>0?[t,"min"]:[0,"h"]};
 function lerProduto(){
   return{id:fP.id.value,nome:fP.nome.value.trim(),categoria:fP.categoria.value.trim(),impressoraId:fP.impressoraId.value,
-    ...lerTempo(fP.tempo.value,fP.tempoUn.value),unidades:Math.max(1,Math.round(+fP.unidades.value||1)),maoMin:+fP.maoMin.value||0,
+    ...lerTempo(fP.tempo.value,fP.tempoUn.value),porPeca:true,unidades:Math.max(1,Math.round(+fP.unidades.value||1)),maoMin:+fP.maoMin.value||0,
     extras:r2(fP.extras.value),falhaPct:vazioNull(fP.falhaPct.value),margemPct:vazioNull(fP.margemPct.value),
     precoVenda:fP.precoVenda.value===""?null:r2(fP.precoVenda.value),
     filamentos:prodFil.filter(f=>f.filamentoId&&f.g>0).map(f=>({filamentoId:f.filamentoId,g:r2(f.g)})),obs:fP.obs.value.trim()};
@@ -965,7 +973,7 @@ function calcProduto(){
     ["📦 Extras",c.extras,""]];
   const mx=Math.max(...linhas.map(l=>l[1]),0.01);
   $("#pRes").innerHTML=
-    (un>1?`<p class="muted" style="margin-top:0">Valores por peça (a impressão rende ${un} peças e custa ${brl(c.impressao)} no total).</p>`:"")+
+    contaTempo(c)+(un>1?`<p class="muted" style="margin-top:0">Valores por peça (a impressão rende ${un} peças e custa ${brl(c.impressao)} no total).</p>`:"")+
     `<div class="decomp">${linhas.map(([l,v,d])=>`<span>${l} <span class="muted">${d}</span></span><div class="bar"><i style="width:${(v/mx*100).toFixed(1)}%"></i></div><span class="v">${brl(v)}</span>`).join("")}</div>
     <div class="destaque" style="margin-top:10px"><span>Custo por peça</span><span class="n">${brl(c.unit)}</span></div>
     <div class="destaque"><span>Preço sugerido <span class="muted">(margem ${num(margemDe(p))}%)</span></span><span class="n" style="color:var(--acc)">${brl(sug)}</span></div>
@@ -996,9 +1004,13 @@ function carregarProduto(p,copia){
   limparProduto();
   for(const k of ["id","nome","categoria","impressoraId","horas","minutos","unidades","maoMin","extras","falhaPct","margemPct","precoVenda","obs"])
     if(fP[k])fP[k].value=p[k]??"";
-  [fP.tempo.value,fP.tempoUn.value]=mostrarTempo(p);
+  // produto antigo (tempo e gramas da impressão inteira): converte para 1 peça, tirando o aquecer e calibrar
+  let q=p;if(!p.porPeca){const un=Math.max(1,Math.round(+p.unidades||1)),prep=+impressoraDe(p.impressoraId)?.preparoMin||0,tot=(+p.horas||0)*60+(+p.minutos||0);
+    q={...p,horas:0,minutos:r2(Math.max(0,tot-prep)/un),filamentos:(p.filamentos||[]).map(f=>({...f,g:r2(f.g/un)}))};
+    status("tempo e gramas convertidos para 1 peça: confira antes de salvar")}
+  [fP.tempo.value,fP.tempoUn.value]=mostrarTempo(q);
   if(copia){fP.id.value="";fP.nome.value=p.nome+" (cópia)"}
-  prodFil=p.filamentos?.length?p.filamentos.map(f=>({...f})):[{filamentoId:D.filamentos[0]?.id||"",g:0}];
+  prodFil=q.filamentos?.length?q.filamentos.map(f=>({...f})):[{filamentoId:D.filamentos[0]?.id||"",g:0}];
   $("#pTitulo").textContent=copia?"🧮 Novo produto (cópia)":"✏️ Editando "+p.nome;
   rowsFil();calcProduto();scrollTo({top:0,behavior:"smooth"});
 }
@@ -1242,7 +1254,7 @@ window.enviarOrc=async id=>{const o=D.orcamentos.find(x=>x.id===id);
    perdas, mão de obra e extras. Tempo e gramas são do total; dividindo pela quantidade sai o custo por peça.
    Preço por peça = custo × (1 + margem), arredondado como em Config. */
 let ocFil=[];
-function ocLer(){return{nome:$("#ocNome").value.trim(),categoria:"Sob medida",impressoraId:$("#ocImp").value,...lerTempo($("#ocT").value,$("#ocTU").value),
+function ocLer(){return{nome:$("#ocNome").value.trim(),categoria:"Sob medida",impressoraId:$("#ocImp").value,...lerTempo($("#ocT").value,$("#ocTU").value),porPeca:true,
   unidades:Math.max(1,Math.round(+$("#ocQtd").value||1)),maoMin:+$("#ocMao").value||0,extras:r2($("#ocExt").value),
   falhaPct:null,margemPct:$("#ocMarg").value===""?null:+$("#ocMarg").value,precoVenda:null,
   filamentos:ocFil.filter(f=>f.filamentoId&&f.g>0).map(f=>({filamentoId:f.filamentoId,g:r2(f.g)})),obs:""}}
@@ -1261,7 +1273,7 @@ function ocCalc(){
     ["🖨️ Desgaste e manutenção",c.maquina,`${fmtTempo(c.horas)}${imp?` · manutenção ${brl(imp.manutHora)}/h`:""}`],
     ["⚠️ Perdas / falhas",c.falha,`${num(c.falhaPct)}%`],["✋ Mão de obra",c.mao,`${num(p.maoMin,0)} min`],["📦 Extras",c.extras*un,""]];
   const mx=Math.max(...L.map(l=>l[1]),.01);
-  $("#ocRes").innerHTML=`<div class="decomp">${L.map(([l,v,d])=>`<span>${l} <span class="muted">${d}</span></span><div class="bar"><i style="width:${(v/mx*100).toFixed(1)}%"></i></div><span class="v">${brl(v)}</span>`).join("")}</div>
+  $("#ocRes").innerHTML=contaTempo(c)+`<div class="decomp">${L.map(([l,v,d])=>`<span>${l} <span class="muted">${d}</span></span><div class="bar"><i style="width:${(v/mx*100).toFixed(1)}%"></i></div><span class="v">${brl(v)}</span>`).join("")}</div>
     <div class="destaque" style="margin-top:8px"><span>Custo total (${un} ${un>1?"peças":"peça"})</span><span class="n">${brl(c.unit*un)}</span></div>
     <div class="destaque"><span>Custo por peça</span><span class="n">${brl(c.unit)}</span></div>
     <div class="destaque"><span>Preço de venda por peça <span class="muted">(margem ${num(margemDe(p))}%)</span></span><span class="n" style="color:var(--acc)">${brl(sug)}</span></div>
@@ -1285,8 +1297,8 @@ $("#ocAdd").onclick=()=>{const {p,c,sug}=ocCalc();
   if(!p.filamentos.length)return avisar("Coloque pelo menos um material com os gramas usados.");
   if(produtoPorNome(p.nome))return avisar(`Já existe "${p.nome}" em Produtos. Escolha ele na lista do orçamento ou dê outro nome para a peça.`);
   const novo={...p,id:novoId("p")};D.produtos.push(novo);D.produtos.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
-  const detalhe=p.filamentos.map(f=>`${num(f.g)} g ${filamentoDe(f.filamentoId)?.nome||""}`).join(" + ")+` · ${fmtTempo(c.horas)}`;
-  const mat=p.filamentos.map(f=>({f:f.filamentoId,g:r2(f.g/c.un)}));
+  const detalhe=p.filamentos.map(f=>`${num(f.g)} g ${filamentoDe(f.filamentoId)?.nome||""}`).join(" + ")+` por peça · ${fmtTempo(c.horas)} de impressão`;
+  const mat=p.filamentos.map(f=>({f:f.filamentoId,g:r2(f.g)}));
   const L=edO.validos();L.push({produtoId:novo.id,nome:p.nome,qtd:c.un,preco:sug,custo:r2(c.unit),detalhe,mat});edO.set(L);
   salvar();ocLimpar();calcOrc();status(`"${p.nome}" salvo em Produtos e adicionado ao orçamento`)};
 
@@ -1493,7 +1505,7 @@ $("#fCfg").addEventListener("change",e=>{const k=e.target.dataset.c;if(!k)return
    Estoque (g) = compras + estoque inicial − perdas − o que as vendas usaram.
    Cada item de venda/orçamento guarda "mat": gramas de cada material por UNIDADE ([{f: filamentoId, g}]),
    tirados do produto (gramas ÷ peças por impressão) ou da peça sob medida. Item antigo sem "mat" usa o produto atual. */
-const matDeProduto=p=>p?(p.filamentos||[]).filter(f=>f.filamentoId&&+f.g>0).map(f=>({f:f.filamentoId,g:r2((+f.g)/Math.max(1,Math.round(+p.unidades||1)))})):[];
+const matDeProduto=p=>p?(p.filamentos||[]).filter(f=>f.filamentoId&&+f.g>0).map(f=>({f:f.filamentoId,g:r2(p.porPeca?+f.g:(+f.g)/Math.max(1,Math.round(+p.unidades||1)))})):[];
 const matDoItem=x=>x.mat||(x.produtoId?matDeProduto(D.produtos.find(p=>p.id===x.produtoId)):[]);
 function estoques(){
   const e={};D.filamentos.forEach(f=>e[f.id]={entrou:0,perdas:0,usado:0});
@@ -1542,7 +1554,7 @@ function renderEstoque(){
 }
 
 const COLS={
-  impressoras:[["nome","Nome","text"],["potenciaW","Potência (W)","number"],["valor","Valor pago (R$)","number"],["vidaUtilH","Vida útil (h)","number"],["manutHora","Manutenção (R$/h)","number"]],
+  impressoras:[["nome","Nome","text"],["preparoMin","Aquecer e calibrar (min)","number"],["potenciaW","Potência (W)","number"],["valor","Valor pago (R$)","number"],["vidaUtilH","Vida útil (h)","number"],["manutHora","Manutenção (R$/h)","number"]],
   filamentos:[["nome","Nome / cor","text"],["material","Material","text"],["precoKg","Preço por kg (R$)","number"]]};
 function tabelaCfg(col,extra){
   const C=COLS[col];
@@ -1558,7 +1570,7 @@ $("#s-config").addEventListener("change",editaCfg);$("#s-estoque").addEventListe
 window.apagarCfg=async(col,id)=>{const n=usos(col,id),x=D[col].find(y=>y.id===id);
   if(!await confirmar(n?`"${x?.nome}" está em ${n} produto(s); o custo deles vai ficar sem essa parte. Apagar mesmo assim?`:`Apagar "${x?.nome}"?`,"Apagar",true))return;
   D[col]=D[col].filter(x=>x.id!==id);salvar();render()};
-$("#cfgAddImp").onclick=()=>{D.impressoras.push({id:novoId("i"),nome:"Impressora "+(D.impressoras.length+1),potenciaW:120,valor:2500,vidaUtilH:4000,manutHora:0.3});salvar();renderConfig()};
+$("#cfgAddImp").onclick=()=>{D.impressoras.push({id:novoId("i"),nome:"Impressora "+(D.impressoras.length+1),potenciaW:120,valor:2500,vidaUtilH:4000,manutHora:0.3,preparoMin:7});salvar();renderConfig()};
 $("#cfgAddFil").onclick=()=>{D.filamentos.push({id:novoId("f"),nome:"Novo material",material:"PLA",precoKg:110});salvar();render()};
 function renderConfig(){
   document.querySelectorAll("#fCfg [data-c]").forEach(el=>el.value=D.config[el.dataset.c]);
@@ -1607,6 +1619,11 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.7.0",data:"2026-11-07",titulo:"Tempo de aquecer e calibrar já incluso",itens:[
+    {novo:"Cada impressora tem o tempo de aquecer e calibrar antes de imprimir. A Bambu Lab A1 já vem com 7 minutos. Esse tempo entra uma vez em cada impressão, não em cada peça.",
+     uso:"Config › Impressoras › Aquecer e calibrar (min). Mude se a sua levar mais ou menos tempo."},
+    {novo:"Em Produtos e na peça sob medida, o tempo e os gramas agora são de 1 peça. O painel mostra a conta: aquecer e calibrar + tempo de 1 peça × peças = tempo da impressão.",
+     uso:"Ex.: peça de 8 min, 4 por impressão → 7 + 8 × 4 = 39 min. Quanto mais peças de uma vez, mais barata cada uma. Produtos antigos: ao tocar em Editar, o tempo e os gramas já aparecem convertidos para 1 peça; confira e salve."}]},
   {v:"1.6.1",data:"2026-11-07",titulo:"Tempo de impressão em horas ou minutos",itens:[
     {novo:"O tempo de impressão agora é um campo só: você digita o número e escolhe ao lado se é em horas ou em minutos.",
      uso:"Produtos e Orçamentos › peça sob medida › Tempo de impressão. Ex.: 2,5 horas ou 150 minutos. Produtos já salvos abrem com o tempo certo."}]},
@@ -1677,7 +1694,7 @@ const PASSOS=[
     <li>Na aba <b>Estoque</b>: cada filamento com o preço do kg e quanto você tem (registre o estoque e as compras).</li></ol>`},
   {ico:"🧊",titulo:"2. Cadastre seus produtos",aba:"produtos",texto:`<p>Na aba <b>Produtos</b>, para cada peça:</p><ol>
     <li>Digite o <b>nome</b> e escolha a impressora.</li>
-    <li>Coloque o <b>tempo</b> e os <b>gramas</b> que o fatiador mostra.</li>
+    <li>Coloque o <b>tempo</b> e os <b>gramas de 1 peça</b> que o fatiador mostra (o aquecer e calibrar o painel soma sozinho).</li>
     <li>Diga quantas <b>peças saem por impressão</b>.</li></ol>
     <p>Ao lado aparecem o <b>custo por peça</b>, o <b>preço sugerido</b> e o lucro. Toque em <b>Salvar produto</b>.</p>`},
   {ico:"📝",titulo:"3. Faça orçamentos",aba:"orcamentos",texto:`<p>Na aba <b>Orçamentos</b>, escolha o <b>cliente</b> e os <b>produtos</b> na lista, coloque a quantidade e toque em <b>Salvar orçamento</b>.</p>
