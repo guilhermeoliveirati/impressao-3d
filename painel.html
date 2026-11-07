@@ -186,6 +186,15 @@ nav .ct{display:none}
 .sobmedida{background:#faf8ff;border:1px solid #ddd6fe;border-radius:14px;padding:14px;margin-top:10px}
 .f2{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end}
 .f2>*{min-width:0}.f2 .largo{grid-column:1/-1}
+/* resumo do estoque */
+.estres{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+.estres .m{background:#f8fafc;border:1px solid var(--brd);border-radius:12px;padding:8px 10px}
+.estres .m.baixo{background:#fef2f2;border-color:#fecaca}
+.estres .m b{display:block;font-size:1.15rem;font-variant-numeric:tabular-nums}
+.estres .m small{color:var(--mut);font-size:.78rem}
+.estres .barra{height:6px;border-radius:3px;background:#e2e8f0;margin-top:6px;overflow:hidden}
+.estres .barra i{display:block;height:100%;background:#16a34a}
+.estres .m.baixo .barra i{background:#dc2626}
 /* Confirmação e avisos dentro do painel (no app instalado as caixas confirm e alert do navegador podem não aparecer) */
 #conf{position:fixed;inset:0;z-index:60;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:16px}
 #conf[hidden]{display:none}
@@ -239,6 +248,7 @@ nav .ct{display:none}
     <label>Ano <select id="gAno"></select></label>
     <span class="muted" id="gObs"></span>
   </div>
+  <div class="infobox" id="gAlerta" hidden style="margin-bottom:12px;background:#fef2f2;border-color:#fecaca"></div>
   <div class="kpis" id="gKpis"></div>
   <div class="card"><h2>📊 Faturamento e lucro por mês</h2><div class="chart"><canvas id="cMes"></canvas></div></div>
   <div class="grid2">
@@ -528,10 +538,29 @@ nav .ct{display:none}
     <p class="muted">Potência média imprimindo (não a da fonte): ~100 W para Bambu A1/P1, ~120–150 W para Ender e similares com mesa aquecida.
       O desgaste divide o valor da impressora pela vida útil em horas; a manutenção cobre bico, correias, PEI, graxa.</p>
   </div>
-  <div class="card"><h2>🧵 Filamentos</h2>
+  <div class="card" id="cardEstoque"><h2>🧵 Materiais e estoque</h2>
+    <div class="estres" id="estResumo"></div>
     <div class="scroll"><table class="cfgtab" id="tFilCfg"></table></div>
-    <button class="btn sm sec2" id="cfgAddFil" style="margin-top:8px">＋ Filamento</button>
-    <p class="muted">Preço do rolo convertido para 1 kg, com frete. Rolo de 500 g por R$ 60 = R$ 120 o kg. Ao mudar um preço, o custo de todos os produtos que usam esse filamento é recalculado (vendas já salvas não mudam).</p>
+    <div class="row" style="margin-top:8px">
+      <button class="btn sm sec2" id="cfgAddFil">＋ Novo material</button>
+      <label style="flex-direction:row;align-items:center;gap:6px">Avisar quando tiver menos de <input id="cfgMinimo" type="number" min="0" step="10" style="width:90px;min-height:36px;text-align:right"> g</label>
+    </div>
+    <p class="muted">Preço do rolo convertido para 1 kg, com frete. Rolo de 500 g por R$ 60 = R$ 120 o kg. Ao mudar um preço, o custo de todos os produtos que usam esse material é recalculado (vendas já salvas não mudam).</p>
+    <h3>Registrar compra ou baixa</h3>
+    <form class="f" id="fEst" autocomplete="off">
+      <label>Material<select name="filamentoId" id="estFil"></select></label>
+      <label>O que foi<select name="tipo"><option value="compra">Compra de rolo</option><option value="inicial">Estoque que já tenho</option><option value="perda">Perda / teste / falha</option></select></label>
+      <label>Quantidade (g)<input name="g" type="number" min="1" step="1" value="1000" required></label>
+      <label class="soCompra">Valor pago (R$)<input name="valor" type="number" min="0" step="0.01" value="0"></label>
+      <label>Data<input name="data" type="date" required></label>
+      <label class="soCompra" style="flex-direction:row;align-items:center;gap:8px;grid-column:1/-1;font-weight:500"><input type="checkbox" name="atualizaPreco" checked style="min-height:0;width:20px;height:20px"> Atualizar o preço por kg deste material com o valor desta compra</label>
+      <div class="row" style="grid-column:1/-1"><button class="btn" type="submit">Registrar</button></div>
+    </form>
+    <h3>Movimentações</h3>
+    <div class="scroll" style="max-height:320px"><table id="tEst"></table></div>
+    <p class="muted">Estoque = compras + estoque que já tinha − perdas − o que as vendas usaram. Cada venda desconta os gramas dos produtos vendidos
+      (pelos materiais cadastrados no produto ou na peça sob medida). Editar ou apagar uma venda devolve os gramas. Orçamento não mexe no estoque.
+      A compra de material não entra em Despesas: o custo dele já sai do lucro de cada venda.</p>
   </div>
   <div class="grid2">
     <div class="card"><h2>Taxas da maquininha</h2><table id="tTaxas"></table>
@@ -594,7 +623,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.3.1";
+const VERSAO="1.4.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -765,8 +794,8 @@ const TAXAS_PADRAO={"Dinheiro":0,"Pix":0,"Débito":0.0137,"Crédito 1x":0.0315,"
 function normalizar(){
   D.versao??=1;D.proximoId??=1;
   D.taxas??={...TAXAS_PADRAO};
-  D.config={energiaKwh:0.95,maoDeObraHora:25,falhaPct:10,margemPct:100,arredondar:"90",...(D.config||{})};
-  for(const k of ["impressoras","filamentos","produtos","clientes","orcamentos","vendas","despesas","parcelamentos"])D[k]??=[];
+  D.config={energiaKwh:0.95,maoDeObraHora:25,falhaPct:10,margemPct:100,arredondar:"90",estoqueMinimoG:200,...(D.config||{})};
+  for(const k of ["impressoras","filamentos","produtos","clientes","orcamentos","vendas","despesas","parcelamentos","estoque"])D[k]??=[];
   D.dizimos??={};D.proximoCliente??=1;
   // clientes que só existiam pelo nome em vendas/orçamentos entram no cadastro (sem telefone)
   [...D.vendas,...D.orcamentos].sort((a,b)=>a.data.localeCompare(b.data)).forEach(x=>{if(x.cliente&&!clientePorNome(x.cliente))novoCliente(x.cliente)});
@@ -842,6 +871,8 @@ function renderGeral(){
   $("#gObs").textContent=p.n?`Comparação com ${ant} no mesmo período (jan–${MESES[ult-1].toLowerCase()})`:"";
   const k=(l,v,vp,f=brl0,inv)=>{let d="";if(p.n&&vp){const r=v/vp-1;const bom=inv?r<0:r>0;d=`<div class="d ${bom?"up":"down"}">${r>0?"▲":"▼"} ${pct(Math.abs(r))} vs ${ant}</div>`}
     return `<div class="kpi"><div class="l">${l}</div><div class="v">${f(v)}</div>${d}</div>`};
+  const ac=acabando();$("#gAlerta").hidden=!ac.length;
+  $("#gAlerta").innerHTML=ac.length?`⚠️ <b>Material acabando:</b> ${ac.map(x=>`${esc(x.f.nome)} (${fmtG(x.saldo)})`).join(", ")}. <a href="#" onclick="abrirEstoque();return false">Registrar compra</a>`:"";
   $("#gKpis").innerHTML=
     k("Faturamento",t.fat,p.fat)+k("Lucro das vendas",t.lucro,p.lucro)+
     k("Despesas",t.desp,p.desp,brl0,true)+k("Lucro final",t.lucro-t.desp,p.desp?p.lucro-p.desp:0)+
@@ -900,7 +931,7 @@ let prodFil=[];
 function rowsFil(){
   if(!D.filamentos.length){$("#pFil").innerHTML='<p class="muted">Cadastre os filamentos em Config primeiro.</p>';return}
   $("#pFil").innerHTML=prodFil.map((f,i)=>`<div class="linha">
-    <select data-i="${i}" data-k="filamentoId">${D.filamentos.map(x=>`<option value="${x.id}"${x.id===f.filamentoId?" selected":""}>${esc(x.nome)} · ${brl(x.precoKg)}/kg</option>`).join("")}</select>
+    <select data-i="${i}" data-k="filamentoId">${D.filamentos.map(x=>`<option value="${x.id}"${x.id===f.filamentoId?" selected":""}>${esc(x.nome)} · ${brl(x.precoKg)}/kg${estTxt(x.id)}</option>`).join("")}</select>
     <input data-i="${i}" data-k="g" type="number" step="0.1" min="0" value="${f.g||0}" style="width:100px" aria-label="gramas"><span class="muted">g</span>
     ${prodFil.length>1?`<button type="button" class="btn sm del" data-rm="${i}" title="Tirar este filamento">✕</button>`:""}</div>`).join("");
 }
@@ -1006,9 +1037,9 @@ function editorItens(box,aoMudar){
   const el=e.target,k=el.dataset.k;if(!k)return;
   const row=el.closest(".item"),x=itens[row.dataset.i];
   if(k==="nome"){x.nome=el.value;const p=produtoPorNome(el.value);
-    if(p&&x.produtoId!==p.id){x.produtoId=p.id;x.nome=p.nome;x.preco=precoDe(p);x.custo=r2(custoProduto(p).unit);
+    if(p&&x.produtoId!==p.id){x.produtoId=p.id;x.nome=p.nome;x.preco=precoDe(p);x.custo=r2(custoProduto(p).unit);x.mat=matDeProduto(p);
       row.querySelector('[data-k="preco"]').value=x.preco;row.querySelector('[data-k="custo"]').value=x.custo}
-    else if(!p)x.produtoId=null}
+    else if(!p){x.produtoId=null;delete x.mat}}
   else x[k]=+el.value||0;
   aoMudar();
   });
@@ -1056,7 +1087,7 @@ fV.onsubmit=e=>{e.preventDefault();
   if(!L.length)return avisar("Coloque pelo menos um produto na venda.");
   edV.set(L);const {taxa,lucro,custo}=calcVenda();
   const v={id:fV.id.value||novoId("v"),data:fV.data.value,cliente:nomeProprio(fV.cliente.value),clienteId:garantirCliente(fV.cliente.value).id,
-    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo)})),
+    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{})})),
     frete:r2(fV.frete.value),cobrado:r2(fV.cobrado.value),metodo:fV.metodo.value,custo,taxa,lucro,obs:D.vendas.find(x=>x.id===fV.id.value)?.obs||""};
   const i=D.vendas.findIndex(x=>x.id===v.id); i>=0?D.vendas[i]=v:D.vendas.push(v);
   D.vendas.sort((a,b)=>a.data.localeCompare(b.data));
@@ -1086,7 +1117,7 @@ window.editarVenda=id=>{const v=D.vendas.find(x=>x.id===id);
   edV.set(v.itens);orcEmVenda=null;$("#vOrc").hidden=true;
   cobradoManual=true;$("#vTitulo").textContent="Editando venda de "+v.cliente;calcVenda();scrollTo({top:0,behavior:"smooth"})};
 window.apagar=async(col,id)=>{
-  let msg={vendas:"Apagar esta venda?",despesas:"Apagar esta despesa?",orcamentos:"Apagar este orçamento?",clientes:"Apagar este cliente do cadastro? As vendas e orçamentos continuam com o nome dele.",parcelamentos:"Apagar este parcelamento e todas as marcações de pago?"}[col]||"Apagar?";
+  let msg={estoque:"Apagar esta movimentação do estoque?",vendas:"Apagar esta venda?",despesas:"Apagar esta despesa?",orcamentos:"Apagar este orçamento?",clientes:"Apagar este cliente do cadastro? As vendas e orçamentos continuam com o nome dele.",parcelamentos:"Apagar este parcelamento e todas as marcações de pago?"}[col]||"Apagar?";
   if(col==="produtos"){const n=D.vendas.filter(v=>(v.itens||[]).some(x=>x.produtoId===id)).length;
     msg=n?`Este produto aparece em ${n} venda(s). As vendas continuam com o nome e o custo gravados. Apagar o produto do catálogo?`:"Apagar este produto?"}
   if(!await confirmar(msg,"Apagar",true))return;
@@ -1117,7 +1148,7 @@ fO.onsubmit=e=>{e.preventDefault();
   edO.set(L);const {custo}=calcOrc();
   const ant=D.orcamentos.find(x=>x.id===fO.id.value);
   const o={id:fO.id.value||novoId("o"),data:fO.data.value,cliente:nomeProprio(fO.cliente.value),clienteId:garantirCliente(fO.cliente.value).id,validade:Math.max(1,Math.round(+fO.validade.value||7)),
-    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(x.detalhe?{detalhe:x.detalhe}:{})})),
+    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{})})),
     frete:r2(fO.frete.value),valor:r2(fO.valor.value),custo,obs:fO.obs.value.trim(),status:ant?.status||"aberto",vendaId:ant?.vendaId||null};
   const i=D.orcamentos.findIndex(x=>x.id===o.id);i>=0?D.orcamentos[i]=o:D.orcamentos.push(o);
   filtroOrc=o.status;salvar();limparOrc();renderOrcamentos();status(`orçamento de ${o.cliente} salvo`);
@@ -1181,7 +1212,7 @@ function ocLer(){return{nome:$("#ocNome").value.trim(),categoria:"Sob medida",im
   filamentos:ocFil.filter(f=>f.filamentoId&&f.g>0).map(f=>({filamentoId:f.filamentoId,g:r2(f.g)})),obs:""}}
 function ocRows(){
   $("#ocFil").innerHTML=D.filamentos.length?ocFil.map((f,i)=>`<div class="linha">
-    <select data-i="${i}" data-k="filamentoId">${D.filamentos.map(x=>`<option value="${x.id}"${x.id===f.filamentoId?" selected":""}>${esc(x.nome)} · ${brl(x.precoKg)}/kg</option>`).join("")}</select>
+    <select data-i="${i}" data-k="filamentoId">${D.filamentos.map(x=>`<option value="${x.id}"${x.id===f.filamentoId?" selected":""}>${esc(x.nome)} · ${brl(x.precoKg)}/kg${estTxt(x.id)}</option>`).join("")}</select>
     <input data-i="${i}" data-k="g" type="number" step="0.1" min="0" value="${f.g||0}" style="width:100px" aria-label="gramas"><span class="muted">g</span>
     ${ocFil.length>1?`<button type="button" class="btn sm del" data-rm="${i}" title="Tirar material">✕</button>`:""}</div>`).join("")
     :'<p class="muted">Cadastre os filamentos em Config primeiro.</p>';
@@ -1217,7 +1248,8 @@ $("#ocAdd").onclick=()=>{const {p,c,sug}=ocCalc();
   if(!p.nome)return avisar("Dê um nome para a peça.");
   if(!p.filamentos.length)return avisar("Coloque pelo menos um material com os gramas usados.");
   const detalhe=p.filamentos.map(f=>`${num(f.g)} g ${filamentoDe(f.filamentoId)?.nome||""}`).join(" + ")+` · ${fmtTempo(c.horas)}`;
-  const L=edO.validos();L.push({produtoId:null,nome:p.nome,qtd:c.un,preco:sug,custo:r2(c.unit),detalhe});edO.set(L);
+  const mat=p.filamentos.map(f=>({f:f.filamentoId,g:r2(f.g/c.un)}));
+  const L=edO.validos();L.push({produtoId:null,nome:p.nome,qtd:c.un,preco:sug,custo:r2(c.unit),detalhe,mat});edO.set(L);
   ocLimpar();calcOrc();status("peça adicionada ao orçamento")};
 $("#ocSalvarProd").onclick=()=>{const {p}=ocCalc();
   if(!p.nome)return avisar("Dê um nome para a peça.");
@@ -1243,7 +1275,7 @@ function renderParcelas(){
       <div class="pcab">
         <label style="flex:2;min-width:180px">Descrição<input data-pc="${ip}" data-k="descricao" value="${esc(pc.descricao)}"></label>
         <label>Valor total (R$)<input data-pc="${ip}" data-k="total" type="number" step="0.01" min="0" value="${pc.total}"></label>
-        <label>Parcelas<input data-pc="${ip}" data-k="parcelas" type="number" min="1" step="1" value="${pc.parcelas}"></label>
+        <label>Parcelas<select data-pc="${ip}" data-k="parcelas">${Array.from({length:Math.max(36,pc.parcelas)},(_,i)=>`<option value="${i+1}"${pc.parcelas===i+1?" selected":""}>${i+1}x</option>`).join("")}</select></label>
         <label>1ª parcela<input data-pc="${ip}" data-k="inicio" type="month" value="${pc.inicio}"></label>
         <label style="flex:2;min-width:200px">Pessoas (separe por vírgula)<input data-pc="${ip}" data-k="pessoas" value="${esc(pc.pessoas.join(", "))}"></label>
       </div>
@@ -1441,6 +1473,7 @@ function renderResumo(){
   $("#tResumoAno").innerHTML=h;
 }
 $("#rMes").oninput=()=>{$("#rAno").value=$("#rMes").value.slice(0,4);renderResumo()};
+window.abrirEstoque=()=>{document.querySelector("#nav [data-s=config]").click();setTimeout(()=>$("#cardEstoque").scrollIntoView({block:"start"}),150)};
 window.abrirMes=(aba,m)=>{const campo={dizimo:"#zMes",despesas:"#dMes"}[aba];if(campo)$(campo).value=m;
   document.querySelector(`#nav [data-s=${aba}]`).click()};
 
@@ -1487,6 +1520,57 @@ if(LS.get("jaAbriu"))document.querySelectorAll(".orienta").forEach(e=>e.remove()
 $("#fCfg").addEventListener("change",e=>{const k=e.target.dataset.c;if(!k)return;
   D.config[k]=k==="arredondar"?e.target.value:(+e.target.value||0);salvar();renderConfig()});
 // Tabelas editáveis de impressoras e filamentos: cada campo grava ao sair dele.
+/* ---------- estoque de materiais ----------
+   Estoque (g) = compras + estoque inicial − perdas − o que as vendas usaram.
+   Cada item de venda/orçamento guarda "mat": gramas de cada material por UNIDADE ([{f: filamentoId, g}]),
+   tirados do produto (gramas ÷ peças por impressão) ou da peça sob medida. Item antigo sem "mat" usa o produto atual. */
+const matDeProduto=p=>p?(p.filamentos||[]).filter(f=>f.filamentoId&&+f.g>0).map(f=>({f:f.filamentoId,g:r2((+f.g)/Math.max(1,Math.round(+p.unidades||1)))})):[];
+const matDoItem=x=>x.mat||(x.produtoId?matDeProduto(D.produtos.find(p=>p.id===x.produtoId)):[]);
+function estoques(){
+  const e={};D.filamentos.forEach(f=>e[f.id]={entrou:0,perdas:0,usado:0});
+  D.estoque.forEach(m=>{const a=e[m.filamentoId];if(a)m.tipo==="perda"?a.perdas+=m.g:a.entrou+=m.g});
+  D.vendas.forEach(v=>(v.itens||[]).forEach(x=>matDoItem(x).forEach(m=>{if(e[m.f])e[m.f].usado+=m.g*(+x.qtd||0)})));
+  for(const k in e){const a=e[k];a.saldo=r2(a.entrou-a.perdas-a.usado);a.registrado=!!(a.entrou||a.perdas)}
+  return e;
+}
+const minimoG=()=>D.config.estoqueMinimoG??200;
+const fmtG=g=>(g<0?"−":"")+(Math.abs(g)>=1000?num(Math.abs(g)/1000,2)+" kg":num(Math.abs(g),0)+" g");
+const estTxt=id=>{const a=estoques()[id];return a?.registrado?` · ${fmtG(a.saldo)} em estoque`:""};
+function acabando(){const E=estoques();return D.filamentos.filter(f=>E[f.id]?.registrado&&E[f.id].saldo<minimoG()).map(f=>({f,saldo:E[f.id].saldo}))}
+let _E={};
+const estCel=f=>{const a=_E[f.id];if(!a||(!a.registrado&&!a.usado))return'<span class="muted">sem registro</span>';
+  const baixo=a.saldo<minimoG();return`<b class="${baixo?"taxa":""}">${fmtG(a.saldo)}</b>${baixo?' <span class="tag aberto">acabando</span>':""}<br><span class="muted">vendas usaram ${fmtG(a.usado)}</span>`};
+const fE=$("#fEst");
+const TIPO_EST={compra:"Compra",inicial:"Estoque que já tinha",perda:"Perda / teste"};
+fE.tipo.onchange=()=>document.querySelectorAll("#fEst .soCompra").forEach(el=>el.style.display=fE.tipo.value==="compra"?"":"none");
+fE.onsubmit=e=>{e.preventDefault();
+  const g=r2(fE.g.value);if(!(g>0))return avisar("Coloque a quantidade em gramas.");
+  if(!fE.filamentoId.value)return avisar("Cadastre o material primeiro (＋ Novo material).");
+  const m={id:novoId("e"),data:fE.data.value,filamentoId:fE.filamentoId.value,tipo:fE.tipo.value,g,valor:fE.tipo.value==="compra"?r2(fE.valor.value):0};
+  D.estoque.push(m);
+  if(m.tipo==="compra"&&m.valor>0&&fE.atualizaPreco.checked){const f=filamentoDe(m.filamentoId);if(f)f.precoKg=r2(m.valor/g*1000)}
+  salvar();fE.g.value=1000;fE.valor.value=0;renderConfig();
+  status(`${TIPO_EST[m.tipo].toLowerCase()} de ${fmtG(g)} registrada`)};
+$("#cfgMinimo").onchange=e=>{D.config.estoqueMinimoG=Math.max(0,Math.round(+e.target.value||0));salvar();renderConfig()};
+function renderEstoque(){
+  _E=estoques();
+  const sel=$("#estFil"),ant=sel.value;
+  sel.innerHTML=D.filamentos.map(f=>`<option value="${f.id}">${esc(f.nome)}</option>`).join("")||'<option value="">(cadastre um material)</option>';
+  if(D.filamentos.some(f=>f.id===ant))sel.value=ant;
+  if(!fE.data.value)fE.data.value=hoje();
+  $("#cfgMinimo").value=minimoG();
+  // resumo em cartões (no celular a tabela fica larga): saldo e barra até 1 kg
+  $("#estResumo").innerHTML=D.filamentos.map(f=>{const a=_E[f.id],reg=a&&(a.registrado||a.usado),baixo=reg&&a.saldo<minimoG();
+    return`<div class="m${baixo?" baixo":""}"><small>${esc(f.nome)}</small><b class="${baixo?"taxa":""}">${reg?fmtG(a.saldo):"–"}</b>
+      <small>${reg?(baixo?"⚠️ acabando":"em estoque"):"sem registro"}</small>${reg?`<div class="barra"><i style="width:${Math.max(0,Math.min(100,a.saldo/10)).toFixed(0)}%"></i></div>`:""}</div>`}).join("");
+  const L=D.estoque.slice().sort((a,b)=>b.data.localeCompare(a.data));
+  $("#tEst").innerHTML=L.length?`<tr><th>Data</th><th>Material</th><th>O que foi</th><th class="n">Quantidade</th><th class="n">Valor</th><th></th></tr>`+
+    L.map(m=>`<tr><td>${fmtData(m.data)}</td><td>${esc(filamentoDe(m.filamentoId)?.nome||"(apagado)")}</td><td>${TIPO_EST[m.tipo]||m.tipo}</td>
+      <td class="n ${m.tipo==="perda"?"taxa":"lucro"}">${m.tipo==="perda"?"−":"+"}${fmtG(m.g)}</td><td class="n">${m.valor?brl(m.valor):"–"}</td>
+      <td><button class="btn sm del" onclick="apagar('estoque','${m.id}')">✕</button></td></tr>`).join("")
+    :'<tr><td class="muted">Nada registrado ainda. Comece registrando o que você já tem em casa ("Estoque que já tenho").</td></tr>';
+}
+
 const COLS={
   impressoras:[["nome","Nome","text"],["potenciaW","Potência (W)","number"],["valor","Valor pago (R$)","number"],["vidaUtilH","Vida útil (h)","number"],["manutHora","Manutenção (R$/h)","number"]],
   filamentos:[["nome","Nome / cor","text"],["material","Material","text"],["precoKg","Preço por kg (R$)","number"]]};
@@ -1504,11 +1588,12 @@ window.apagarCfg=async(col,id)=>{const n=usos(col,id),x=D[col].find(y=>y.id===id
   if(!await confirmar(n?`"${x?.nome}" está em ${n} produto(s); o custo deles vai ficar sem essa parte. Apagar mesmo assim?`:`Apagar "${x?.nome}"?`,"Apagar",true))return;
   D[col]=D[col].filter(x=>x.id!==id);salvar();renderConfig()};
 $("#cfgAddImp").onclick=()=>{D.impressoras.push({id:novoId("i"),nome:"Impressora "+(D.impressoras.length+1),potenciaW:120,valor:2500,vidaUtilH:4000,manutHora:0.3});salvar();renderConfig()};
-$("#cfgAddFil").onclick=()=>{D.filamentos.push({id:novoId("f"),nome:"Novo filamento",material:"PLA",precoKg:110});salvar();renderConfig()};
+$("#cfgAddFil").onclick=()=>{D.filamentos.push({id:novoId("f"),nome:"Novo material",material:"PLA",precoKg:110});salvar();renderConfig()};
 function renderConfig(){
   document.querySelectorAll("#fCfg [data-c]").forEach(el=>el.value=D.config[el.dataset.c]);
   $("#tImp").innerHTML=tabelaCfg("impressoras",["Custo por hora",i=>brl(custoHoraImp(i))]);
-  $("#tFilCfg").innerHTML=tabelaCfg("filamentos",["R$ por grama",f=>brl((+f.precoKg||0)/1000).replace(/(\d),(\d\d)$/,"$1,$2")+" "]);
+  renderEstoque();
+  $("#tFilCfg").innerHTML=tabelaCfg("filamentos",["Em estoque",estCel]);
   $("#tTaxas").innerHTML=`<tr><th>Forma</th><th class="n">Taxa (%)</th></tr>`+Object.entries(D.taxas).map(([k,v])=>
     `<tr><td>${esc(k)}</td><td class="n"><input type="number" step="0.01" value="${r2(v*100)}" style="width:90px;text-align:right;min-height:36px" onchange="D.taxas['${k}']=this.value/100;salvar()"></td></tr>`).join("");
   $("#cfgInfo").innerHTML=`${D.produtos.length} produtos, ${D.orcamentos.length} orçamentos, ${D.vendas.length} vendas, ${D.despesas.length} despesas. Última alteração: ${D.atualizado?.replace("T"," ")||"–"}.`;
@@ -1552,6 +1637,13 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.4.0",data:"2026-11-07",titulo:"Estoque de materiais e parcelas na lista",itens:[
+    {novo:"Estoque de materiais: registre o que tem em casa e cada compra de rolo. Cada venda desconta sozinha os gramas usados, e o painel avisa quando um material está acabando.",
+     uso:"Config › Materiais e estoque › Registrar compra ou baixa. Comece com “Estoque que já tenho”. Perdas e testes: “Perda / teste / falha”. Ao registrar uma compra com valor, o preço do kg já é atualizado."},
+    {novo:"Aviso em Geral quando um material fica abaixo do mínimo (200 g, ou o valor que você escolher).",
+     uso:"O mínimo fica em Config › Materiais e estoque › “Avisar quando tiver menos de”."},
+    {novo:"A quantidade de parcelas do parcelamento agora é escolhida numa lista, de 1x a 36x, e muda na hora.",
+     uso:"Despesas › Parcelamentos › Parcelas."}]},
   {v:"1.3.1",data:"2026-11-07",titulo:"Fim do aviso “alterado em outro lugar”",itens:[
     {novo:"O aviso de que os dados foram alterados em outro lugar aparecia toda hora no computador, mesmo sem ninguém mexer em outro aparelho. Era o Google Drive mudando a data do arquivo ao sincronizar.",
      uso:"Nada a fazer: agora o painel confere o conteúdo e só avisa quando outro aparelho realmente mudou os dados."},
@@ -1597,7 +1689,7 @@ const PASSOS=[
     <li><b>Energia</b>: o preço do kWh da sua conta de luz.</li>
     <li><b>Mão de obra</b>: quanto vale uma hora do seu trabalho.</li>
     <li><b>Impressoras</b>: potência, quanto pagou e vida útil.</li>
-    <li><b>Filamentos</b>: cada cor com o preço do kg.</li></ol>`},
+    <li><b>Materiais e estoque</b>: cada filamento com o preço do kg e quanto você tem (registre o estoque e as compras).</li></ol>`},
   {ico:"🧊",titulo:"2. Cadastre seus produtos",aba:"produtos",texto:`<p>Na aba <b>Produtos</b>, para cada peça:</p><ol>
     <li>Digite o <b>nome</b> e escolha a impressora.</li>
     <li>Coloque o <b>tempo</b> e os <b>gramas</b> que o fatiador mostra.</li>

@@ -44,12 +44,13 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
 {
   "versao": 1, "atualizado": "…", "proximoId": 10,     // ids: v vendas, d despesas, p produtos, i impressoras, f filamentos
   "taxas": { "Pix": 0, "Débito": 0.0137, "Crédito 1x": 0.0315, … },
-  "config": { "energiaKwh": 0.95, "maoDeObraHora": 25, "falhaPct": 10, "margemPct": 100, "arredondar": "90" },  // arredondar: nao | 1 | 90 | 5
+  "config": { "energiaKwh": 0.95, "maoDeObraHora": 25, "falhaPct": 10, "margemPct": 100, "arredondar": "90", "estoqueMinimoG": 200 },  // arredondar: nao | 1 | 90 | 5
   "impressoras": [ { "id", "nome", "potenciaW", "valor", "vidaUtilH", "manutHora" } ],
   "filamentos":  [ { "id", "nome", "material", "precoKg" } ],
   "proximoCliente": 3,                // próximo código de cliente (#001, #002…)
   "clientes": [ { "id", "codigo", "nome", "telefone" /* só números */ } ],
   "parcelamentos": [ { "id", "descricao", "total", "parcelas", "inicio": "AAAA-MM", "pessoas": ["Eu", …], "pagos": { "AAAA-MM": [true, false, …] } } ],
+  "estoque": [ { "id", "data", "filamentoId", "tipo": "compra" | "inicial" | "perda", "g", "valor" } ],
   "orcamentos": [ { "id", "data", "cliente", "validade" /* dias */, "itens": [ …iguais aos da venda… ], "frete", "valor", "custo", "obs",
                     "status": "aberto" | "aprovado" | "recusado", "vendaId": null, "clienteId" } ],   // item pode ter "detalhe" (peça sob medida)
   "produtos": [ { "id", "nome", "categoria", "impressoraId", "horas", "minutos", "unidades", "maoMin", "extras",
@@ -57,6 +58,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
                   "filamentos": [ { "filamentoId", "g" } ], "obs" } ],
   "vendas": [ { "id", "data", "cliente", "itens": [ { "produtoId"|null, "nome", "qtd", "preco", "custo" } ],
                 "frete", "cobrado", "metodo", "custo", "taxa", "lucro", "obs", "clienteId" } ],
+                // cada item pode ter "mat": [ { "f": filamentoId, "g": gramas POR UNIDADE } ] — usado pelo estoque
   "despesas": [ { "id", "data", "categoria", "descricao", "valor" } ],
   "dizimos": { "AAAA-MM": { "itens": [ { "nome", "valor" } | { "nome", "auto": true } ] } },
 }
@@ -94,6 +96,12 @@ atualiza vendas e orçamentos. Com telefone, "📤 Enviar" do orçamento abre a 
 **Peça sob medida** (no orçamento): mesma conta de `custoProduto` (gramas e tempo do total ÷ quantidade = por peça) e `precoSugerido`.
 Vira item avulso do orçamento com `detalhe` (gramas e tempo); "Salvar também em Produtos" cria o produto com categoria "Sob medida".
 
+**Estoque de materiais** (Config › Materiais e estoque): saldo (g) = compras + estoque inicial − perdas − Σ(item.mat.g × qtd) das **vendas**.
+Calculado na hora (`estoques()`), nada é baixado à mão: editar/apagar venda devolve os gramas. Orçamento não mexe no estoque.
+`mat` vem do produto (gramas ÷ peças por impressão, `matDeProduto`) ou da peça sob medida; item antigo sem `mat` usa o produto atual.
+Compra com valor pode atualizar o preço do kg. Abaixo de `estoqueMinimoG` aparece aviso em Geral. Compra de material não é despesa.
+Perdas reais (falhas, testes) só entram se registradas como "perda" — o % de perdas de Config é só para o preço.
+
 **Parcelamentos** (aba Despesas): parcela = total ÷ parcelas; parte = parcela ÷ pessoas; ✓ por mês e pessoa em `pagos`.
 **Não** entram como despesa: o valor da impressora já entra no custo das peças (desgaste). Cadastrado: Bambu Lab A1, R$ 4.499,10,
 10x a partir de dez/2026, 3 pessoas: Eu, Luan e Caique (R$ 449,91 por mês, R$ 149,97 cada).
@@ -103,6 +111,7 @@ Vira item avulso do orçamento com `detalhe` (gramas e tempo); "Salvar também e
 
 ## Boas-vindas e novidades (desde 1.1.0)
 
+- Parcelas do parcelamento: lista de 1x a 36x (muda na hora).
 - **Primeiro acesso** em cada aparelho: janela com o passo a passo (`PASSOS`): custos em Config → Produtos → Vendas → Despesas → Geral/Resumo.
 - **Depois de cada atualização**: janela com as entradas de `NOVIDADES` mais novas que a última versão vista no aparelho.
 - Guardado só no aparelho: `p3d.passosVistos` e `p3d.versaoVista`. Rever a qualquer hora: Config › Ajuda, ou tocando na versão no rodapé.
@@ -150,3 +159,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.2.0 | 2026-11-07 | Aba Orçamentos (proposta, enviar pelo WhatsApp, aprovar → venda preenchida); excluir volta a funcionar (confirmação dentro do painel no lugar de `confirm()`); saem a venda por voz (Gemini) e o tamanho da letra; Config com Bambu Lab A1 e energia da EDP |
 | 1.3.0 | 2026-11-07 | Cadastro de clientes com código automático e telefone (WhatsApp); parcelamentos com ✓ por mês e pessoa (A1 em 10x dividida em 3); peça sob medida no orçamento pelos materiais; Enviar abre o WhatsApp do cliente |
 | 1.3.1 | 2026-11-07 | Aviso falso de “alterado em outro lugar”: o painel compara o conteúdo do arquivo, não só a data (o Google Drive do computador muda a data ao sincronizar); parcelamento com Luan e Caique |
+| 1.4.0 | 2026-11-07 | Estoque de materiais (compras, estoque inicial, perdas; vendas descontam os gramas; aviso de material acabando em Geral e resumo com barras); parcelas escolhidas numa lista de 1x a 36x |
