@@ -140,6 +140,10 @@ table.resumo tr.final td{font-size:1.286rem;font-weight:700;border-top:2px solid
 #vItens{display:grid;gap:10px}
 .item{display:grid;grid-template-columns:2.2fr 80px 1fr 1fr auto;gap:8px;align-items:end;background:#f8fafc;border-radius:12px;padding:10px}
 .item .del{min-height:44px}
+.item .filsel{grid-column:1/-1}
+.destinos{display:grid;grid-template-columns:1fr auto;gap:4px 12px;margin-top:6px}
+.destinos .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.destinos .sub{padding-left:14px}
 /* vendas do mês em cartões (tablet) */
 #vCards{display:none;gap:10px}
 .vcard,.pcard{background:#fff;border:1px solid var(--brd);border-radius:14px;padding:12px 14px;display:grid;gap:4px}
@@ -261,6 +265,7 @@ nav .ct{display:none}
     </div>
     <p class="muted orienta">Use no tablet ou celular: entra com sua conta Google e escolhe o dados.json uma vez.</p>
   </div>
+  <div class="row" style="justify-content:center;margin-top:8px"><button class="btn sm sec2" id="btnTrocar" style="display:none">Trocar de arquivo ou de conta…</button></div>
   <p class="muted" id="gateMsg"><span class="orienta">Use Chrome ou Edge. Só na primeira vez é preciso escolher o arquivo; depois o painel abre o mesmo dados.json sozinho.</span></p>
 </div>
 
@@ -357,6 +362,7 @@ nav .ct{display:none}
       <label style="display:none">Pagamento<select name="metodo" id="selMetodo"></select></label>
       <div class="chips" id="vChips" style="grid-column:1/-1"></div>
       <label style="grid-column:1/-1;flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="recebido" checked style="min-height:0;width:20px;height:20px"> Já recebi tudo do cliente <span class="muted">(desmarque se ele ainda vai pagar)</span></label>
+      <div class="calc" id="vDest" style="grid-column:1/-1"></div>
       <div id="vInfoLinha" style="grid-column:1/-1;display:flex;gap:8px;align-items:center;cursor:pointer;color:var(--acc);font-weight:600">
         <button type="button" class="info" id="vInfoBtn" aria-expanded="false">i</button><span>Como o lucro é calculado</span>
       </div>
@@ -457,15 +463,15 @@ nav .ct{display:none}
         <button type="button" class="chip" data-forma="parcelado">Parcelado</button></div>
       <label data-se="parc">Parcelas<select name="parcelas"><option value="2">2x</option><option value="3">3x</option><option value="4">4x</option><option value="5">5x</option><option value="6">6x</option><option value="7">7x</option><option value="8">8x</option><option value="9">9x</option><option value="10">10x</option></select></label>
       <label data-se="parc">1ª parcela em<input name="inicio" type="month"></label>
-      <label data-se="parc" style="grid-column:span 2">Dividir entre (separe por vírgula)<input name="pessoas" placeholder="ex.: Gui, Luan, Caique"></label>
+      <label data-se="pess" style="grid-column:span 2">Dividir entre (separe por vírgula)<input name="pessoas" placeholder="ex.: Gui, Luan, Caique"></label>
       <label data-se="pago" style="flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="pago" checked style="min-height:0;width:20px;height:20px"> Já está pago</label>
       <label data-se="repete" style="flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="repete" style="min-height:0;width:20px;height:20px"> 🔁 Repetir todo mês</label>
-      <label data-se="fil" style="grid-column:1/-1;flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="atualizaPreco" checked style="min-height:0;width:20px;height:20px"> Atualizar o preço por kg deste filamento com o valor desta compra</label>
       <div class="calc" id="dCalc" style="grid-column:1/-1" hidden></div>
       <div class="row" style="grid-column:1/-1"><button class="btn" type="submit" id="dSalvar">Salvar</button><button class="btn sec2" type="button" id="dCancelar">Limpar</button></div>
     </form>
     <p class="muted"><b>Conta do mês</b> (MEI, aluguel, internet…)? Marque <b>🔁 Repetir todo mês</b>: ela aparece sozinha nos meses seguintes, como “a pagar”. Para parar, edite a do último mês e desmarque.<br>
-      <b>Parcelado</b> vai para Parcelamentos, onde você marca ✓ cada parte paga. <b>Filamento</b> entra no Estoque (e atualiza o preço do kg); ele não conta como despesa, porque o custo do filamento já sai do lucro de cada venda.</p>
+      <b>Parcelado</b> vai para Parcelamentos, onde você marca ✓ cada parte paga. <b>Filamento</b> entra no Estoque; ele não conta como despesa, porque o custo do filamento já sai de cada venda (e volta para quem comprou).
+      Preço do kg: se ainda tem daquele filamento (mesma marca e cor), fica o preço maior; se tinha acabado (reposição), vale o preço da compra nova.</p>
   </div>
   <div class="card">
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
@@ -533,7 +539,7 @@ nav .ct{display:none}
       <label>Quantidade (g)<input name="g" type="number" min="1" step="1" value="1000" required></label>
       <label class="soCompra">Valor pago (R$)<input name="valor" type="number" min="0" step="0.01" value="0"></label>
       <label>Data<input name="data" type="date" required></label>
-      <label class="soCompra" style="flex-direction:row;align-items:center;gap:8px;grid-column:1/-1;font-weight:500"><input type="checkbox" name="atualizaPreco" checked style="min-height:0;width:20px;height:20px"> Atualizar o preço por kg deste material com o valor desta compra</label>
+      <p class="muted soCompra" style="grid-column:1/-1;margin:0">Preço do kg: se ainda tem deste material, fica o preço maior; se o estoque estava zerado (reposição), vale o preço desta compra.</p>
       <div class="row" style="grid-column:1/-1"><button class="btn" type="submit">Registrar</button></div>
     </form>
     <p class="muted">A compra de material não entra em Despesas: o custo dele já sai do lucro de cada venda.</p>
@@ -541,7 +547,7 @@ nav .ct{display:none}
   <div class="card"><h2>Materiais (filamentos)</h2>
     <div class="scroll"><table class="cfgtab" id="tFilCfg"></table></div>
     <button class="btn sm sec2" id="cfgAddFil" style="margin-top:8px">＋ Novo material</button>
-    <p class="muted">Preço do rolo convertido para 1 kg, com frete. Rolo de 500 g por R$ 60 = R$ 120 o kg. Ao mudar um preço, o custo de todos os produtos que usam esse material é recalculado (vendas já salvas não mudam).</p>
+    <p class="muted"><b>Marca</b>: cada marca e cor é uma linha, porque o preço muda (ex.: “PLA Branco” da Voolt e “PLA Branco” da 3D Fila são dois materiais). No orçamento você escolhe qual vai usar em cada peça.<br>Preço do rolo convertido para 1 kg, com frete. Rolo de 500 g por R$ 60 = R$ 120 o kg. Ao mudar um preço, o custo de todos os produtos que usam esse material é recalculado (vendas já salvas não mudam).</p>
   </div>
   <div class="card"><h2>Movimentações</h2>
     <div class="scroll" style="max-height:320px"><table id="tEst"></table></div>
@@ -557,6 +563,12 @@ nav .ct{display:none}
     </div>
     <table id="tResumo" class="resumo"></table>
     <p class="muted" id="rObs"></p>
+  </div>
+  <div class="card" style="max-width:560px">
+    <h2>💰 Para onde foi o dinheiro das vendas</h2>
+    <p class="muted" style="margin-top:0">Cada venda primeiro paga os custos; o lucro é dividido em guardar, reinvestir e pagar dívidas (% em Config).</p>
+    <table id="tDest" class="resumo"></table>
+    <p class="muted" id="rDestObs"></p>
   </div>
   <div class="card" style="max-width:560px">
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
@@ -589,6 +601,17 @@ nav .ct{display:none}
     </form>
     <p class="muted">Energia: veja na conta de luz (valor total ÷ kWh). Mão de obra: quanto vale uma hora do seu trabalho manual (coloque 0 se quiser que esse tempo conte como lucro).
       Perdas: impressões que falham, suportes e purga. Margem: quanto somar em cima do custo (100% = preço é o dobro do custo).</p>
+  </div>
+  <div class="card"><h2>💰 Divisão do dinheiro das vendas</h2>
+    <form class="f" id="fCfg2" onsubmit="return false">
+      <label>Quem compra o material e paga a luz<input data-c="comprador" type="text" placeholder="Gui"></label>
+      <label>🐷 Guardar (% do lucro)<input data-c="guardarPct" type="number" step="1" min="0"></label>
+      <label>🔁 Reinvestir (% do lucro)<input data-c="reinvestirPct" type="number" step="1" min="0"></label>
+      <label>💳 Pagar dívidas (% do lucro)<input data-c="dividasPct" type="number" step="1" min="0"></label>
+    </form>
+    <p class="muted" id="cfgDivInfo"></p>
+    <p class="muted">Cada venda primeiro paga os custos: <b>material, energia e perdas</b> voltam para quem comprou (ele gastou do bolso),
+      <b>desgaste e manutenção</b> vão para a caixa da impressora. O que sobra é o lucro, dividido nesses %. Os sócios só pagam a impressora (Despesas › Parcelamentos).</p>
   </div>
   <div class="card"><h2>🖨️ Impressoras</h2>
     <div class="scroll"><table class="cfgtab" id="tImp"></table></div>
@@ -659,7 +682,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.11.0";
+const VERSAO="1.12.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -698,13 +721,13 @@ async function loginGoogle(){
   await carregarScript("https://accounts.google.com/gsi/client");
   await new Promise((ok,err)=>{
     google.accounts.oauth2.initTokenClient({client_id:GOOGLE.clientId,scope:"https://www.googleapis.com/auth/drive.file",
-      ...(LS.get("gEmail")?{hint:LS.get("gEmail")}:{}),
+      ...(LS.get("gEmail")?{login_hint:LS.get("gEmail"),hint:LS.get("gEmail")}:{}), // conta já usada: o Google não pergunta de novo
       callback:r=>{if(r.error)return err(new Error(r.error_description||r.error));gToken={t:r.access_token,exp:Date.now()+r.expires_in*1000};LS.set("gToken",gToken);ok()},
       error_callback:e=>err(new Error(e.type==="popup_closed"?"janela do Google fechada":"login não concluído ("+e.type+")"))
     }).requestAccessToken({prompt:LS.get("gJaAutorizou")?"":"consent"});
   });
   LS.set("gJaAutorizou",true);
-  if(!LS.get("gEmail"))try{const u=await (await api("https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)")).json();if(u.user?.emailAddress)LS.set("gEmail",u.user.emailAddress)}catch{}
+  try{const u=await (await api("https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)")).json();if(u.user?.emailAddress)LS.set("gEmail",u.user.emailAddress)}catch{}
 }
 async function api(url,op={}){
   if(!tokenValido())throw new ErroLogin("sessão do Google expirada");
@@ -743,8 +766,18 @@ async function abrirDrive(escolherOutro){
   if(!tokenValido())await loginGoogle();
   let arq=LS.get("driveArquivo");
   if(!arq||escolherOutro){const d=await escolherNoDrive();arq={id:d.id,nome:d.name};LS.set("driveArquivo",arq)}
-  LS.set("modo","drive");await abrirFonte(fonteDrive(arq.id,arq.nome));
+  LS.set("modo","drive");
+  try{await abrirFonte(fonteDrive(arq.id,arq.nome))}
+  catch(e){ // só pergunta de novo se o arquivo do projeto mudou (apagado, movido ou de outra conta)
+    if(e instanceof ErroLogin||escolherOutro||!/respondeu 40[34]/.test(e.message))throw e;
+    if(await confirmar(`Não achei o arquivo "${arq.nome}" no Google Drive desta conta (ele foi apagado, mudou de lugar ou é de outra conta?). Escolher o dados.json de novo?`,"Escolher"))return abrirDrive(true);
+    throw e}
 }
+// A sessão do Google dura 1 hora. Quando falta pouco, renova no próximo toque (o Google só abre a janelinha depois de um toque);
+// com a conta já usada, ela abre e fecha sozinha, sem perguntar nada.
+let renovando=false;
+document.addEventListener("click",e=>{if(e.target.closest?.("#reconectar")||fonte?.tipo!=="drive"||renovando||(gToken&&Date.now()<gToken.exp-5*60000))return;
+  renovando=true;loginGoogle().then(()=>{$("#reconectar").style.display="none"}).catch(()=>{}).finally(()=>renovando=false)},true);
 const erroGate=e=>{if(e.name!=="AbortError")$("#gateMsg").textContent="Erro: "+e.message};
 $("#btnAbrir").onclick=async()=>{
   if(!window.showOpenFilePicker){
@@ -756,12 +789,17 @@ $("#btnAbrir").onclick=async()=>{
 };
 $("#btnDrive").onclick=()=>abrirDrive(false).catch(erroGate);
 $("#btnDriveOutro").onclick=()=>abrirDrive(true).catch(erroGate);
+// Já foi escolhido antes: o portão mostra só "Abrir"; as outras opções ficam em "Trocar de arquivo ou de conta" (1.12.0).
+$("#btnTrocar").onclick=()=>{$("#btnTrocar").style.display="none";if(window.showOpenFilePicker)$("#btnAbrir").style.display="";
+  if(driveConfigurado()){$("#boxDrive").style.display="";$("#btnDriveOutro").style.display=""}};
+const soLembrado=modo=>{$("#btnTrocar").style.display="";$("#btnAbrir").style.display="none";document.querySelectorAll("#gate .orienta").forEach(e=>e.remove());
+  if(modo==="drive")$("#btnDriveOutro").style.display="none";else $("#boxDrive").style.display="none"};
 (async()=>{
   if(!window.showOpenFilePicker)$("#btnAbrir").style.display="none";
   if(driveConfigurado())$("#boxDrive").style.display="";
   if(LS.get("driveArquivo"))$("#btnDriveOutro").style.display="";
   if(LS.get("modo")==="drive"&&driveConfigurado()&&LS.get("driveArquivo")){
-    const arq=LS.get("driveArquivo");
+    const arq=LS.get("driveArquivo");soLembrado("drive");$("#btnDrive").textContent="☁️ Abrir "+arq.nome;
     if(tokenValido()){try{await abrirFonte(fonteDrive(arq.id,arq.nome));return}catch(e){erroGate(e)}}
     $("#gateMsg").innerHTML=`Toque em qualquer lugar para abrir <b>${esc(arq.nome)}</b> do Google Drive.`;
     const abrir=e=>{if(e.target.closest("button"))return;document.removeEventListener("click",abrir);abrirDrive(false).catch(err=>{erroGate(err);document.addEventListener("click",abrir)})};
@@ -769,7 +807,7 @@ $("#btnDriveOutro").onclick=()=>abrirDrive(true).catch(erroGate);
   }
   const h=await IDB.get("handle");if(!h)return;
   try{if(await h.queryPermission({mode:"readwrite"})==="granted"){await abrirLocal(h);return}}catch{}
-  const b=$("#btnReabrir");b.style.display="";$("#btnAbrir").textContent="Escolher outro arquivo…";
+  const b=$("#btnReabrir");b.style.display="";$("#btnAbrir").textContent="Escolher outro arquivo…";soLembrado("local");
   $("#gateMsg").innerHTML='Clique em qualquer lugar para abrir o <b>dados.json</b>. Quando o navegador perguntar, escolha <b>"Permitir em todas as visitas"</b>.';
   const abrir=e=>{if(e.target.closest("button")&&e.target.id!=="btnReabrir")return;document.removeEventListener("click",abrir);
     abrirLocal(h).catch(err=>{erroGate(err);document.addEventListener("click",abrir)})};
@@ -829,7 +867,9 @@ const TAXAS_PADRAO={"Dinheiro":0,"Pix":0,"Débito":0.0137,"Crédito 1x":0.0315,"
 function normalizar(){
   D.versao??=1;D.proximoId??=1;
   D.taxas??={...TAXAS_PADRAO};
-  D.config={energiaKwh:0.95,maoDeObraHora:25,falhaPct:10,margemPct:100,arredondar:"90",estoqueMinimoG:200,metaSobra:0,...(D.config||{})};
+  D.config={energiaKwh:0.95,maoDeObraHora:25,falhaPct:10,margemPct:100,arredondar:"90",estoqueMinimoG:200,metaSobra:0,
+    comprador:"Gui",guardarPct:40,reinvestirPct:30,dividasPct:30,...(D.config||{})};
+  (D.filamentos||[]).forEach(f=>f.marca??="");
   for(const k of ["impressoras","filamentos","produtos","clientes","orcamentos","vendas","despesas","parcelamentos","estoque"])D[k]??=[];
   delete D.dizimos; // o dízimo saiu do painel na 1.5.0
   D.proximoCliente??=1;
@@ -871,6 +911,10 @@ document.addEventListener("click",e=>{if(!e.target.closest("#maisMenu,#maisBtn")
    Preço sugerido = custo por peça × (1 + margem), arredondado (Config). */
 const impressoraDe=id=>D.impressoras.find(i=>i.id===id);
 const filamentoDe=id=>D.filamentos.find(f=>f.id===id);
+// nome do filamento com a marca (1.12.0): "PLA Branco · Voolt"
+const nomeFil=f=>f?f.nome+(f.marca?" · "+f.marca:""):"(apagado)";
+// produto com outro filamento no lugar do primeiro (orçamento/venda: mesma peça em outra marca ou cor)
+const prodComFil=(p,fid)=>({...p,filamentos:(p.filamentos||[]).map((f,i)=>i===0?{...f,filamentoId:fid}:f)});
 const custoHoraImp=i=>i?((+i.potenciaW||0)/1000*D.config.energiaKwh)+((+i.valor||0)/Math.max(1,+i.vidaUtilH||1))+(+i.manutHora||0):0;
 function custoProduto(p){
   const C=D.config, imp=impressoraDe(p.impressoraId)||{};
@@ -944,7 +988,7 @@ function renderGeral(){
        :feito>=meta?`✅ Meta batida: lucro de ${brl(feito)} no mês.`
        :`Lucro das vendas até agora: <b>${brl(feito)}</b> (${pct(Math.max(0,feito)/meta)}). Falta <b>${brl(falta)}</b>${lv>0?` ≈ ${Math.ceil(falta/lv)} ${Math.ceil(falta/lv)>1?"vendas":"venda"} (lucro médio de ${brl(lv)} por venda)`:""}.`}</p>`}
   const ac=acabando();$("#gAlerta").hidden=!ac.length;
-  $("#gAlerta").innerHTML=ac.length?`⚠️ <b>Material acabando:</b> ${ac.map(x=>`${esc(x.f.nome)} (${fmtG(x.saldo)})`).join(", ")}. <a href="#" onclick="abrirEstoque();return false">Registrar compra</a>`:"";
+  $("#gAlerta").innerHTML=ac.length?`⚠️ <b>Material acabando:</b> ${ac.map(x=>`${esc(nomeFil(x.f))} (${fmtG(x.saldo)})`).join(", ")}. <a href="#" onclick="abrirEstoque();return false">Registrar compra</a>`:"";
   $("#gKpis").innerHTML=
     k("Faturamento",t.fat,p.fat)+k("Lucro das vendas",t.lucro,p.lucro)+
     k("Despesas",t.desp,p.desp,brl0,true)+k("Lucro final",t.lucro-t.desp,p.desp?p.lucro-p.desp:0)+
@@ -1018,7 +1062,7 @@ let prodFil=[];
 function rowsFil(){
   if(!D.filamentos.length){$("#pFil").innerHTML='<p class="muted">Cadastre os filamentos em Config primeiro.</p>';return}
   $("#pFil").innerHTML=prodFil.map((f,i)=>`<div class="linha">
-    <select data-i="${i}" data-k="filamentoId">${D.filamentos.map(x=>`<option value="${x.id}"${x.id===f.filamentoId?" selected":""}>${esc(x.nome)} · ${brl(x.precoKg)}/kg${estTxt(x.id)}</option>`).join("")}</select>
+    <select data-i="${i}" data-k="filamentoId">${D.filamentos.map(x=>`<option value="${x.id}"${x.id===f.filamentoId?" selected":""}>${esc(nomeFil(x))} · ${brl(x.precoKg)}/kg${estTxt(x.id)}</option>`).join("")}</select>
     <input data-i="${i}" data-k="g" type="number" step="0.1" min="0" value="${f.g||0}" style="width:100px" aria-label="gramas"><span class="muted">g</span>
     ${prodFil.length>1?`<button type="button" class="btn sm del" data-rm="${i}" title="Tirar este filamento">✕</button>`:""}</div>`).join("");
 }
@@ -1129,32 +1173,42 @@ function editorItens(box,aoMudar,catalogo=false){
       (!existe&&x.nome?`<option value="${x.produtoId?esc(x.produtoId):"avulso"}" selected>${esc(x.nome)} (fora do catálogo)</option>`:"")+
       D.produtos.map(p=>`<option value="${p.id}"${p.id===x.produtoId?" selected":""}>${esc(p.nome)} · ${brl(precoDe(p))}</option>`).join("")+
       '<option value="__novo">＋ Cadastrar produto novo…</option>'};
+  // Filamento (marca/cor) do item: a mesma peça pode sair em outra marca, com outro custo (1.12.0)
+  const filItem=x=>{const p=x.produtoId&&D.produtos.find(q=>q.id===x.produtoId);if(!p||!(p.filamentos||[]).length)return"";
+    const atual=matDoItem(x)[0]?.f||p.filamentos[0].filamentoId;
+    return`<label class="filsel">Filamento (marca e cor)<select data-k="fil">${D.filamentos.map(f=>`<option value="${f.id}"${f.id===atual?" selected":""}>${esc(nomeFil(f))} · ${brl(f.precoKg)}/kg${estTxt(f.id)}</option>`).join("")}</select></label>`};
   const linhaCat=(x,i)=>`<div class="item cat" data-i="${i}">
     <label class="nm">Produto<select data-k="prod">${opcoesProd(x)}</select></label>
     <label>Qtd<input data-k="qtd" type="number" min="1" step="1" value="${x.qtd}"></label>
     <label title="Vem da aba Produtos; mude se quiser dar desconto">Preço un. (R$)<input data-k="preco" type="number" min="0" step="0.01" value="${x.preco}"></label>
-    <button type="button" class="btn sm del" data-rm="${i}" title="Tirar item" ${itens.length<2?"disabled style='opacity:.4'":""}>✕</button></div>`;
+    <button type="button" class="btn sm del" data-rm="${i}" title="Tirar item" ${itens.length<2?"disabled style='opacity:.4'":""}>✕</button>${filItem(x)}</div>`;
   const rowsItens=()=>{box.innerHTML=itens.map((x,i)=>catalogo?linhaCat(x,i):`<div class="item" data-i="${i}">
     <label class="nm">Produto<input data-k="nome" list="dlProdutos" value="${esc(x.nome)}" placeholder="escolha do catálogo ou digite um item avulso"></label>
     <label>Qtd<input data-k="qtd" type="number" min="1" step="1" value="${x.qtd}"></label>
     <label>Preço un. (R$)<input data-k="preco" type="number" min="0" step="0.01" value="${x.preco}"></label>
     <label title="Custo de produção por unidade (vem da aba Produtos)">Custo un. (R$)<input data-k="custo" type="number" min="0" step="0.01" value="${x.custo}"></label>
-    <button type="button" class="btn sm del" data-rm="${i}" title="Tirar item" ${itens.length<2?"disabled style='opacity:.4'":""}>✕</button></div>`).join("")};
+    <button type="button" class="btn sm del" data-rm="${i}" title="Tirar item" ${itens.length<2?"disabled style='opacity:.4'":""}>✕</button>${filItem(x)}</div>`).join("")};
   box.addEventListener("input",e=>{
   const el=e.target,k=el.dataset.k;if(!k)return;
   const row=el.closest(".item"),x=itens[row.dataset.i];
   if(k==="prod"){
     if(el.value==="__novo"){rowsItens();irCadastrar("produto",+row.dataset.i);return}
     const p=D.produtos.find(y=>y.id===el.value);
-    if(p){x.produtoId=p.id;x.nome=p.nome;x.preco=precoDe(p);x.custo=r2(custoProduto(p).unit);x.mat=matDeProduto(p);delete x.detalhe;row.querySelector('[data-k="preco"]').value=x.preco}
-    else if(!el.value){Object.assign(x,itemVazio(),{qtd:x.qtd});delete x.mat;delete x.detalhe;row.querySelector('[data-k="preco"]').value=0}}
+    if(p){x.produtoId=p.id;x.nome=p.nome;x.preco=precoDe(p);x.custo=r2(custoProduto(p).unit);x.mat=matDeProduto(p);delete x.detalhe;delete x.partes;row.querySelector('[data-k="preco"]').value=x.preco}
+    else if(!el.value){Object.assign(x,itemVazio(),{qtd:x.qtd});delete x.mat;delete x.detalhe;delete x.partes;row.querySelector('[data-k="preco"]').value=0}
+    rowsItens()} // mostra (ou tira) a escolha do filamento
+  else if(k==="fil"){const p=D.produtos.find(y=>y.id===x.produtoId);if(p){const q=prodComFil(p,el.value),c=custoProduto(q);
+    x.custo=r2(c.unit);x.mat=matDeProduto(q);delete x.partes;
+    if(p.precoVenda==null){x.preco=precoSugerido(q,c);row.querySelector('[data-k="preco"]').value=x.preco} // preço fixo do produto continua; o sugerido acompanha a marca
+    const ce=row.querySelector('[data-k="custo"]');if(ce)ce.value=x.custo}}
   else if(k==="nome"){x.nome=el.value;const p=produtoPorNome(el.value);
-    if(p&&x.produtoId!==p.id){x.produtoId=p.id;x.nome=p.nome;x.preco=precoDe(p);x.custo=r2(custoProduto(p).unit);x.mat=matDeProduto(p);
+    if(p&&x.produtoId!==p.id){x.produtoId=p.id;x.nome=p.nome;x.preco=precoDe(p);x.custo=r2(custoProduto(p).unit);x.mat=matDeProduto(p);delete x.partes;
       row.querySelector('[data-k="preco"]').value=x.preco;row.querySelector('[data-k="custo"]').value=x.custo}
     else if(!p){x.produtoId=null;delete x.mat}}
   else x[k]=+el.value||0;
   aoMudar();
   });
+  box.addEventListener("change",e=>{if(e.target.dataset.k==="nome")rowsItens()}); // digitou um produto do catálogo: aparece a escolha do filamento
   box.addEventListener("click",e=>{const i=e.target.dataset?.rm;if(i==null||itens.length<2)return;itens.splice(+i,1);rowsItens();aoMudar()});
   return{get itens(){return itens},
     set(v){itens=(v||[]).map(x=>({...x}));if(!itens.length)itens=[itemVazio()];rowsItens()},
@@ -1186,6 +1240,7 @@ function calcVenda(){
   $("#vSub").innerHTML=`Itens <b>${brl(sub)}</b> · Custo <b>${brl(custo)}</b> · Lucro <b class="${lucro>=0?"lucro":"taxa"}">${brl(lucro)}</b>`;
   $("#vCalc").innerHTML=`Lucro = cobrado ${brl(cob)} − custo de produção ${brl(custo)} − taxa ${pct(tx)} ${brl(taxa)} = <b>${brl(lucro)}</b>`+
     (cob!==r2(sub+frete)?` · ${cob>sub+frete?"cobrado a mais":"desconto de"} ${brl(Math.abs(cob-sub-frete))}`:"")+` · Você recebe <b>${brl(cob-taxa)}</b>`;
+  const tem=edV.itens.some(x=>x.nome);$("#vDest").hidden=!tem;if(tem)$("#vDest").innerHTML=htmlDestinos(destinos({itens:edV.itens,custo,taxa,lucro}));
   return{taxa,lucro,custo};
 }
 fV.addEventListener("input",e=>{
@@ -1198,13 +1253,16 @@ $("#vInfoLinha").onclick=()=>{const box=$("#vInfo");box.hidden=!box.hidden;$("#v
 function limparVenda(){fV.reset();fV.id.value="";fV.data.value=hoje();fV.metodo.value="Pix";cobradoManual=false;edV.set([]);
   orcEmVenda=null;$("#vOrc").hidden=true;$("#vTitulo").textContent="Nova venda";calcVenda()}
 $("#vCancelar").onclick=()=>limparVenda();
-fV.onsubmit=e=>{e.preventDefault();
+fV.onsubmit=async e=>{e.preventDefault();
   const L=edV.validos();
   if(!L.length)return avisar("Coloque pelo menos um produto na venda.");
   edV.set(L);const {taxa,lucro,custo}=calcVenda();
+  // toda venda tem que pagar material, energia, manutenção e taxa antes de dar lucro
+  if(lucro<0&&!await confirmar(`Esta venda não paga todos os custos (material, energia, manutenção, taxa): faltam ${brl(-lucro)}.\nSalvar mesmo assim?`,"Salvar mesmo assim",true))return;
+  const ant=D.vendas.find(x=>x.id===fV.id.value);
   const v={id:fV.id.value||novoId("v"),data:fV.data.value,cliente:nomeProprio(fV.cliente.value),clienteId:garantirCliente(fV.cliente.value).id,
     itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{}),...(x.partes?{partes:x.partes}:{})})),
-    frete:r2(fV.frete.value),cobrado:r2(fV.cobrado.value),metodo:fV.metodo.value,custo,taxa,lucro,recebido:fV.recebido.checked,obs:D.vendas.find(x=>x.id===fV.id.value)?.obs||""};
+    frete:r2(fV.frete.value),cobrado:r2(fV.cobrado.value),metodo:fV.metodo.value,custo,taxa,lucro,recebido:fV.recebido.checked,repassado:!!ant?.repassado,obs:ant?.obs||""};
   const i=D.vendas.findIndex(x=>x.id===v.id); i>=0?D.vendas[i]=v:D.vendas.push(v);
   D.vendas.sort((a,b)=>a.data.localeCompare(b.data));
   $("#vMes").value=v.data.slice(0,7);
@@ -1213,6 +1271,32 @@ fV.onsubmit=e=>{e.preventDefault();
   despesasDaVenda(v);
   salvar();limparVenda();renderVendas();status("venda salva · gastos de produção lançados em Despesas");
 };
+/* Para onde vai o dinheiro de cada venda (1.12.0):
+   - quem compra o material (Config, "Gui") recebe filamento + energia + perdas + extras (+ custo de item avulso): devolve o que ele gastou;
+   - caixa da impressora: desgaste e manutenção; mão de obra; taxa da maquininha;
+   - lucro = cobrado − custo − taxa, dividido em guardar / reinvestir / pagar dívidas pelos % de Config.
+   Os sócios só pagam a impressora (Parcelamentos). v.repassado = a parte do material já foi entregue a quem comprou. */
+const comprador=()=>String(D.config.comprador||"Gui").trim()||"Gui";
+function pctsLucro(){const C=D.config,P=[+C.guardarPct||0,+C.reinvestirPct||0,+C.dividasPct||0],t=P[0]+P[1]+P[2],S=t||1;
+  const n=P.map(x=>x/S);return{n,soma:t,txt:`guardar ${num(n[0]*100,0)}%, reinvestir ${num(n[1]*100,0)}%, dívidas ${num(n[2]*100,0)}%`}}
+function destinos(v){
+  const t={};(v.itens||[]).forEach(x=>{const pt=partesItem(x);for(const k in pt)t[k]=(t[k]||0)+pt[k]*(+x.qtd||0)});
+  const maquina=r2(t.maquina||0), mao=r2(t.mao||0), custo=+v.custo||0, lucro=+v.lucro||0, L=Math.max(0,lucro), n=pctsLucro().n;
+  const guardar=r2(L*n[0]), reinvestir=r2(L*n[1]);
+  return{material:r2(custo-maquina-mao),maquina,mao,taxa:+v.taxa||0,lucro,guardar,reinvestir,dividas:r2(L-guardar-reinvestir)};
+}
+function htmlDestinos(d){
+  const n=pctsLucro().n, l=(a,b,c="")=>`<span class="${c}">${a}</span><span class="n ${c}">${b}</span>`;
+  return`<b>Para onde vai o dinheiro desta venda</b><div class="destinos">`+
+    l(`🧵 ${esc(comprador())} <span class="muted">(material e energia que ele pagou)</span>`,brl(d.material))+
+    l(`🖨️ Caixa da impressora <span class="muted">(desgaste e manutenção)</span>`,brl(d.maquina))+
+    (d.mao?l("✋ Mão de obra",brl(d.mao)):"")+(d.taxa?l("💳 Taxa da maquininha",brl(d.taxa)):"")+
+    l("<b>Lucro</b>",`<b class="${d.lucro>=0?"lucro":"taxa"}">${brl(d.lucro)}</b>`)+
+    (d.lucro>0?l(`🐷 Guardar ${num(n[0]*100,0)}%`,brl(d.guardar),"sub")+l(`🔁 Reinvestir ${num(n[1]*100,0)}%`,brl(d.reinvestir),"sub")+l(`💳 Pagar dívidas ${num(n[2]*100,0)}%`,brl(d.dividas),"sub"):"")+
+    `</div>`+(d.lucro<0?`<div class="taxa" style="margin-top:6px">⚠️ Esta venda não paga todos os custos: faltam <b>${brl(-d.lucro)}</b>.</div>`:"");
+}
+window.repassei=id=>{const v=D.vendas.find(x=>x.id===id);v.repassado=true;salvar();render();status(`material e energia repassados a ${comprador()}`)};
+const btnRepasse=v=>{const m=destinos(v).material;return!v.repassado&&m>0.004?`<button class="btn sm sec2" onclick="repassei('${v.id}')" title="Marque quando entregar a ${esc(comprador())} a parte do material e da energia">🧵 Repassei ${brl(m)} a ${esc(comprador())}</button> `:""};
 const aReceber=v=>r2(v.cobrado-(+v.sinal||0));
 const tagReceber=v=>v.recebido===false?` <span class="tag aberto">a receber ${brl(aReceber(v))}</span>`:"";
 window.recebi=id=>{D.vendas.find(x=>x.id===id).recebido=true;salvar();render();status("venda marcada como recebida")};
@@ -1224,13 +1308,13 @@ function renderVendas(){
   $("#vResumo").innerHTML=`${L.length} vendas · ${num(s.p,0)} peças · Faturamento <b>${brl(s.f)}</b> · Custo ${brl(s.c)} · Taxas ${brl(s.t)} · Lucro <b>${brl(s.l)}</b>`+(q?" · busca em todos os meses":"");
   $("#tVendas").innerHTML=`<tr><th>Data</th><th>Cliente</th><th>Itens</th><th class="n">Cobrado</th><th>Pagamento</th><th class="n">Custo</th><th class="n">Taxa</th><th class="n">Lucro</th><th></th></tr>`+
     L.slice().reverse().map(v=>`<tr><td>${fmtData(v.data)}</td><td>${esc(v.cliente)}${tagReceber(v)}</td><td style="white-space:normal;min-width:200px">${esc(descItens(v))}${v.frete?` <span class="muted">+ frete ${brl(v.frete)}</span>`:""}</td><td class="n"><b>${brl(v.cobrado)}</b></td><td>${esc(v.metodo)}</td><td class="n">${brl(v.custo)}</td><td class="n">${brl(v.taxa)}</td><td class="n lucro">${brl(v.lucro)}</td>
-    <td>${v.recebido===false?`<button class="btn sm" onclick="recebi('${v.id}')">💰 Recebi</button> `:""}<button class="btn sm sec2" onclick="editarVenda('${v.id}')">Editar</button> <button class="btn sm del" onclick="apagar('vendas','${v.id}')">✕</button></td></tr>`).join("");
+    <td>${v.recebido===false?`<button class="btn sm" onclick="recebi('${v.id}')">💰 Recebi</button> `:""}${btnRepasse(v)}<button class="btn sm sec2" onclick="editarVenda('${v.id}')">Editar</button> <button class="btn sm del" onclick="apagar('vendas','${v.id}')">✕</button></td></tr>`).join("");
   $("#vCards").innerHTML=L.slice().reverse().map(v=>`<div class="vcard">
     <div class="l1"><b>${esc(v.cliente)}${tagReceber(v)}</b><span class="muted">${fmtData(v.data)}</span></div>
     <div class="l2"><span class="big">${brl(v.cobrado)}</span><span class="tag">${esc(v.metodo)}</span></div>
     <div class="l3">${esc(descItens(v))}${v.frete?` · frete ${brl(v.frete)}`:""}</div>
     <div class="l3">Custo ${brl(v.custo)}${v.taxa?` · Taxa cartão <span class="taxa">${brl(v.taxa)}</span>`:""} · Lucro <span class="lucro">${brl(v.lucro)}</span></div>
-    <div class="acts">${v.recebido===false?`<button class="btn sm" onclick="recebi('${v.id}')">💰 Recebi</button>`:""}<button class="btn sm sec2" onclick="editarVenda('${v.id}')">Editar</button><button class="btn sm del" onclick="apagar('vendas','${v.id}')">✕</button></div></div>`).join("");
+    <div class="acts">${v.recebido===false?`<button class="btn sm" onclick="recebi('${v.id}')">💰 Recebi</button>`:""}${btnRepasse(v)}<button class="btn sm sec2" onclick="editarVenda('${v.id}')">Editar</button><button class="btn sm del" onclick="apagar('vendas','${v.id}')">✕</button></div></div>`).join("");
 }
 window.editarVenda=id=>{const v=D.vendas.find(x=>x.id===id);
   fV.id.value=v.id;fV.cliente.value=v.cliente;fV.data.value=v.data;fV.cobrado.value=v.cobrado;fV.frete.value=v.frete||0;fV.metodo.value=v.metodo||"Pix";
@@ -1370,7 +1454,7 @@ function renderProducao(){
     const h=soma(o.itens||[],tempoItem), g={};
     (o.itens||[]).forEach(x=>matDoItem(x).forEach(m=>{g[m.f]=(g[m.f]||0)+m.g*(+x.qtd||0)}));
     if(o.etapa!=="pronto")for(const f in g)precisa[f]=(precisa[f]||0)+g[f];
-    const mats=Object.entries(g).map(([f,q])=>`${fmtG(q)} ${esc(filamentoDe(f)?.nome||"?")}`).join(" + ");
+    const mats=Object.entries(g).map(([f,q])=>`${fmtG(q)} ${esc(nomeFil(filamentoDe(f)))}`).join(" + ");
     const et=o.etapa||"fila", atras=!!o.prazo&&o.prazo<hj, falta=r2(o.valor-(+o.sinal||0));
     return`<div class="pcard${atras?" atrasado":""}">
     <div class="l1"><b>${n+1}. ${esc(o.cliente)}</b><span class="tag ${ETAPA[et][1]}">${ETAPA[et][0]}</span></div>
@@ -1393,7 +1477,7 @@ function renderProducao(){
       ${n>0?`<button class="btn sm sec2" onclick="moverProd('${o.id}',-1)" title="Subir na fila">▲</button>`:""}${n<L.length-1?`<button class="btn sm sec2" onclick="moverProd('${o.id}',1)" title="Descer na fila">▼</button>`:""}
       <button class="btn sm sec2" onclick="tirarProd('${o.id}')">Tirar da produção</button></div></div>`});
   $("#prLista").innerHTML=cards.join("")||'<p class="muted">Nada na fila. Aprove um orçamento (aba Orçamentos › ✅ Aprovar) e ele aparece aqui.</p>';
-  const falta=Object.entries(precisa).filter(([f,q])=>E[f]?.registrado&&E[f].saldo<q).map(([f,q])=>`${esc(filamentoDe(f)?.nome||"?")} (precisa ${fmtG(q)}, tem ${fmtG(E[f].saldo)})`);
+  const falta=Object.entries(precisa).filter(([f,q])=>E[f]?.registrado&&E[f].saldo<q).map(([f,q])=>`${esc(nomeFil(filamentoDe(f)))} (precisa ${fmtG(q)}, tem ${fmtG(E[f].saldo)})`);
   const H=soma(L.filter(o=>o.etapa!=="pronto"),o=>soma(o.itens||[],tempoItem)), atrasados=L.filter(o=>o.prazo&&o.prazo<hj).length;
   $("#prResumo").innerHTML=L.length?`${L.length} ${L.length>1?"pedidos":"pedido"} · ⏱️ ${fmtTempo(H)} de impressão pela frente`+
     (atrasados?` · <span class="taxa">📅 ${atrasados} ${atrasados>1?"atrasados":"atrasado"}</span>`:"")+(falta.length?` · <span class="taxa">⚠️ falta material: ${falta.join(", ")}</span>`:""):"";
@@ -1433,7 +1517,8 @@ const CAT_PROD={fil:"Produção · Filamento",energia:"Produção · Energia",ma
 function partesItem(x){
   const tot=+x.custo||0;
   if(x.partes&&Math.abs(soma(Object.values(x.partes),v=>v)-tot)<0.01)return x.partes;
-  const p=x.produtoId&&D.produtos.find(q=>q.id===x.produtoId), c=p&&custoProduto(p);
+  const p0=x.produtoId&&D.produtos.find(q=>q.id===x.produtoId), f0=x.mat?.[0]?.f;
+  const p=p0&&f0&&p0.filamentos?.[0]&&p0.filamentos[0].filamentoId!==f0?prodComFil(p0,f0):p0, c=p&&custoProduto(p);
   if(!c||!(c.unit>0))return tot?{outros:tot}:{};
   const k=tot/c.unit, r={fil:c.fil/c.un*k,energia:c.energia/c.un*k,maquina:c.maquina/c.un*k,falha:c.falha/c.un*k,mao:c.mao/c.un*k,extras:c.extras*k};
   for(const t in r){r[t]=Math.round(r[t]*1e4)/1e4;if(!r[t])delete r[t]}
@@ -1472,7 +1557,7 @@ function renderParcelas(){
         <label>Parcelas<select data-pc="${ip}" data-k="parcelas">${Array.from({length:10},(_,i)=>`<option value="${i+1}"${pc.parcelas===i+1?" selected":""}>${i+1}x</option>`).join("")}</select></label>
         <label>1ª parcela<input data-pc="${ip}" data-k="inicio" type="month" value="${pc.inicio}"></label>
         <label style="flex:2;min-width:200px">Pessoas (separe por vírgula)<input data-pc="${ip}" data-k="pessoas" value="${esc(pc.pessoas.join(", "))}"></label>
-        <label style="flex:2;min-width:200px">É compra de filamento?<select data-pc="${ip}" data-k="material"><option value="">Não (impressora, ferramenta, outro)</option>${D.filamentos.map(f=>`<option value="${f.id}"${pc.material===f.id?" selected":""}>Sim: ${esc(f.nome)}</option>`).join("")}</select></label>
+        <label style="flex:2;min-width:200px">É compra de filamento?<select data-pc="${ip}" data-k="material"><option value="">Não (impressora, ferramenta, outro)</option>${D.filamentos.map(f=>`<option value="${f.id}"${pc.material===f.id?" selected":""}>Sim: ${esc(nomeFil(f))}</option>`).join("")}</select></label>
         ${pc.material?`<label>Quantidade comprada (g)<input data-pc="${ip}" data-k="materialG" type="number" step="1" min="0" value="${+pc.materialG||0}"></label>`:""}
       </div>
       <div class="calc" style="margin:10px 0">Parcela <b>${brl(parc)}</b> · cada pessoa paga <b>${brl(parte)}</b> por mês · ${pc.parcelas}x, de ${nomeMes(meses[0])} a ${nomeMes(meses.at(-1))}${pc.material?`<br>🧵 Compra de filamento: ${fmtG(+pc.materialG||0)} entram no Estoque e as parcelas não descontam da sobra (o filamento já está no custo das vendas).`:""}</div>
@@ -1502,7 +1587,7 @@ const fD=$("#fDesp");
    Filamento não é despesa: o custo dele já sai do lucro de cada venda. */
 function ajustaDesp(){
   const t=fD.tipo.value, parc=fD.forma.value==="parcelado", ed=!!fD.id.value;
-  const vis={cat:t==="conta",desc:t==="conta",fil:t==="filamento",parc,pago:!parc&&t==="conta",repete:!parc&&t==="conta"};
+  const vis={cat:t==="conta",desc:t==="conta",fil:t==="filamento",parc,pess:parc&&t==="conta",pago:!parc&&t==="conta",repete:!parc&&t==="conta"};
   fD.querySelectorAll("[data-se]").forEach(el=>el.hidden=!vis[el.dataset.se]);
   $("#dTipo").hidden=$("#dForma").hidden=ed; // editando uma despesa já lançada: só os campos dela
   fD.querySelectorAll("[data-tipo]").forEach(b=>b.classList.toggle("on",b.dataset.tipo===t));
@@ -1510,8 +1595,9 @@ function ajustaDesp(){
   if(!fD.inicio.value)fD.inicio.value=(fD.data.value||hoje()).slice(0,7);
   const v=+fD.valor.value||0, n=+fD.parcelas.value||2, ps=fD.pessoas.value.split(",").map(x=>x.trim()).filter(Boolean), g=+fD.g.value||0, f=filamentoDe(fD.filamentoId.value);
   const L=[];
-  if(parc&&v)L.push(`Parcela <b>${brl(v/n)}</b>${ps.length>1?` · cada pessoa paga <b>${brl(v/n/ps.length)}</b>`:""} · ${n}x, de ${nomeMes(fD.inicio.value)} a ${nomeMes(mesMais(fD.inicio.value,n-1))}`);
-  if(t==="filamento"&&f&&g){L.push(`🧵 +${fmtG(g)} de ${esc(f.nome)} no Estoque`+(v&&fD.atualizaPreco.checked?` · preço do kg: <b>${brl(v/g*1000)}</b> (hoje ${brl(f.precoKg)})`:""))}
+  if(parc&&v&&t==="filamento")L.push(`Parcela <b>${brl(v/n)}</b> · ${n}x, de ${nomeMes(fD.inicio.value)} a ${nomeMes(mesMais(fD.inicio.value,n-1))} · fica no nome de <b>${esc(comprador())}</b>: filamento é pago pelas vendas, não pelos sócios`);
+  else if(parc&&v)L.push(`Parcela <b>${brl(v/n)}</b>${ps.length>1?` · cada pessoa paga <b>${brl(v/n/ps.length)}</b>`:""} · ${n}x, de ${nomeMes(fD.inicio.value)} a ${nomeMes(mesMais(fD.inicio.value,n-1))}`);
+  if(t==="filamento"&&f&&g){L.push(`🧵 +${fmtG(g)} de ${esc(nomeFil(f))} no Estoque`+(v?` · preço do kg: ${regraPrecoKg(f,v,g).txt}`:""))}
   $("#dCalc").innerHTML=L.join("<br>");$("#dCalc").hidden=!L.length;
   $("#dSalvar").textContent=ed?"Salvar alterações":"Salvar";
 }
@@ -1530,10 +1616,10 @@ fD.onsubmit=e=>{e.preventDefault();
     const f=filamentoDe(fD.filamentoId.value), g=r2(fD.g.value);
     if(!f)return avisar("Cadastre o filamento primeiro (aba Estoque › Materiais).");
     if(!(g>0))return avisar("Coloque a quantidade em gramas.");
-    if(fD.atualizaPreco.checked)f.precoKg=r2(valor/g*1000);
-    if(parc)D.parcelamentos.push({id:novoId("pc"),descricao:`Filamento ${f.nome}`,total:valor,parcelas:n,inicio,pessoas,pagos:{},material:f.id,materialG:g});
+    const rg=regraPrecoKg(f,valor,g);f.precoKg=rg.preco; // regra calculada antes de a compra entrar no estoque
+    if(parc)D.parcelamentos.push({id:novoId("pc"),descricao:`Filamento ${nomeFil(f)}`,total:valor,parcelas:n,inicio,pessoas:[comprador()],pagos:{},material:f.id,materialG:g});
     else D.estoque.push({id:novoId("e"),data,filamentoId:f.id,tipo:"compra",g,valor});
-    msg=`+${fmtG(g)} de ${f.nome} no Estoque${fD.atualizaPreco.checked?` · preço do kg ${brl(f.precoKg)}`:""}${parc?` · ${n}x em Parcelamentos`:""}`;
+    msg=`+${fmtG(g)} de ${nomeFil(f)} no Estoque · ${rg.txt.replace(/<\/?b>/g,"")}${parc?` · ${n}x em Parcelamentos`:""}`;
   }else if(parc){
     const desc=fD.descricao.value.trim()||fD.categoria.value;
     D.parcelamentos.push({id:novoId("pc"),descricao:desc,categoria:fD.categoria.value,total:valor,parcelas:n,inicio,pessoas,pagos:{}});
@@ -1550,7 +1636,7 @@ window.editarDesp=id=>{const d=D.despesas.find(x=>x.id===id);limparDesp();fD.tip
   for(const k of ["id","data","categoria","descricao","valor"])fD[k].value=d[k]??"";fD.pago.checked=d.pago!==false;fD.repete.checked=!!d.repete;ajustaDesp();scrollTo({top:0,behavior:"smooth"})};
 function renderDesp(){
   renderParcelas();
-  {const sel=$("#dFil"),ant=sel.value;sel.innerHTML=D.filamentos.map(f=>`<option value="${f.id}">${esc(f.nome)} · ${brl(f.precoKg)}/kg</option>`).join("")||'<option value="">(cadastre em Estoque › Materiais)</option>';
+  {const sel=$("#dFil"),ant=sel.value;sel.innerHTML=D.filamentos.map(f=>`<option value="${f.id}">${esc(nomeFil(f))} · ${brl(f.precoKg)}/kg</option>`).join("")||'<option value="">(cadastre em Estoque › Materiais)</option>';
    if(D.filamentos.some(f=>f.id===ant))sel.value=ant;
    if(!fD.id.value&&!fD.pessoas.value)fD.pessoas.value=D.parcelamentos.at(-1)?.pessoas.join(", ")||"";ajustaDesp()}
   const mes=$("#dMes").value, L=D.despesas.filter(d=>d.data.startsWith(mes));
@@ -1562,7 +1648,7 @@ function renderDesp(){
   const prod=soma(L.filter(d=>d.vendaId),d=>d.valor);
   const fil=movsEstoque().filter(m=>m.tipo!=="perda"&&m.tipo!=="inicial"&&m.valor&&m.data.startsWith(mes));
   $("#dObs").innerHTML=[prod?`Gastos de produção das vendas: <b>${brl(prod)}</b> (já descontados no lucro de cada venda) · Outras despesas: <b>${brl(soma(L.filter(d=>!d.vendaId),d=>d.valor))}</b>`:"",
-    fil.length?`🧵 Compras de filamento no mês: <b>${brl(soma(fil,m=>m.valor))}</b> (${fil.map(m=>`${fmtG(m.g)} ${esc(filamentoDe(m.filamentoId)?.nome||"")}`).join(", ")}). Ficam no Estoque e não contam como despesa. <a href="#" onclick="abrirEstoque();return false">Ver Estoque</a>`:""].filter(Boolean).join("<br>");
+    fil.length?`🧵 Compras de filamento no mês: <b>${brl(soma(fil,m=>m.valor))}</b> (${fil.map(m=>`${fmtG(m.g)} ${esc(nomeFil(filamentoDe(m.filamentoId)))}`).join(", ")}). Ficam no Estoque e não contam como despesa. <a href="#" onclick="abrirEstoque();return false">Ver Estoque</a>`:""].filter(Boolean).join("<br>");
 }
 $("#dMes").oninput=renderDesp;
 
@@ -1661,7 +1747,7 @@ function renderResumo(){
   if(!r.desp)avisos.push("Nenhuma outra despesa lançada neste mês.");
   if(r.parc||r.parcPago)avisos.push("Parcelas: só as partes ainda não marcadas como pagas (✓ em Contas do mês) descontam da sobra. Parcelamento de filamento não entra: ele já está no custo das vendas.");
   $("#rObs").textContent=avisos.join(" ");
-  renderContas(mes);
+  renderContas(mes);renderDestinos(mes);
   const sel=$("#rAno"), A=anos();
   if(sel.options.length!==A.length){sel.innerHTML="";A.forEach(a=>sel.add(new Option(a,a)));sel.value=mes.slice(0,4);sel.onchange=renderResumo}
   const ano=sel.value, t={fat:0,taxa:0,custo:0,lucro:0,desp:0,liquido:0,parc:0,parcPago:0,sobra:0,n:0};
@@ -1672,6 +1758,32 @@ function renderResumo(){
       <td class="n"><a href="#" onclick="abrirMes('despesas','${m}');return false" title="Editar despesas">${x.desp?brl(x.desp):"–"}</a></td><td class="n">${brl(x.liquido)}</td><td class="n">${x.parc?brl(x.parc):"–"}</td><td class="n"><b class="${x.sobra<0?"taxa":"lucro"}">${brl(x.sobra)}</b></td></tr>`});
   h+=`<tr><th>Total ${ano}</th><th class="n">${brl(t.lucro)}</th><th class="n">${brl(t.desp)}</th><th class="n">${brl(t.liquido)}</th><th class="n">${brl(t.parc)}</th><th class="n">${brl(t.sobra)}</th></tr>`;
   $("#tResumoAno").innerHTML=h;
+}
+function renderDestinos(mes){
+  const V=D.vendas.filter(v=>v.data.startsWith(mes)), t={material:0,maquina:0,mao:0,taxa:0,lucro:0,guardar:0,reinvestir:0,dividas:0};
+  V.forEach(v=>{const d=destinos(v);for(const k in t)t[k]+=d[k]});
+  const n=pctsLucro().n, cp=esc(comprador());
+  const lin=(cls,l,v,extra="")=>`<tr class="${cls}"><td>${l}</td><td class="n" ${extra}>${brl(v)}</td></tr>`;
+  // quem compra o material: o que gastou (compras de filamento, à vista e parceladas) × o que as vendas devolveram
+  const comprou=soma(movsEstoque().filter(m=>m.tipo==="compra"||m.tipo==="parcelada"),m=>m.valor);
+  const todas=D.vendas.map(v=>({v,m:destinos(v).material})), devolvido=soma(todas,x=>x.m), repassado=soma(todas.filter(x=>x.v.repassado),x=>x.m);
+  const parcMes=soma(D.parcelamentos.filter(pc=>!pc.material),pc=>{let s=0;for(let i=0;i<pc.parcelas;i++)if(mesMais(pc.inicio,i)===mes)s+=pc.total/pc.parcelas;return s});
+  $("#tDest").innerHTML=
+    lin("","Faturamento do mês",soma(V,v=>v.cobrado))+
+    lin("sub",`🧵 Para ${cp} <span class="muted">(material e energia)</span>`,t.material)+
+    lin("sub","🖨️ Caixa da impressora <span class=\"muted\">(desgaste e manutenção)</span>",t.maquina)+
+    (t.mao?lin("sub","✋ Mão de obra",t.mao):"")+(t.taxa?lin("sub","💳 Taxas da maquininha",t.taxa):"")+
+    `<tr class="parcial"><td>= Lucro das vendas</td><td class="n" style="color:${t.lucro<0?"var(--bad)":"var(--ok)"}">${brl(t.lucro)}</td></tr>`+
+    lin("sub",`🐷 Guardar ${num(n[0]*100,0)}%`,t.guardar)+lin("sub",`🔁 Reinvestir ${num(n[1]*100,0)}%`,t.reinvestir)+lin("sub",`💳 Pagar dívidas ${num(n[2]*100,0)}%`,t.dividas)+
+    `<tr><td colspan="2" style="padding-top:16px;font-weight:700">${cp}, desde o começo</td></tr>`+
+    lin("",`Gastou em filamento`,comprou)+lin("",`As vendas já devolveram`,devolvido)+
+    lin("",`Já repassado a ${cp}`,repassado)+
+    `<tr class="final"><td>Falta repassar a ${cp}</td><td class="n">${brl(devolvido-repassado)}</td></tr>`;
+  const obs=[];
+  if(comprou>devolvido+0.004)obs.push(`${brl(comprou-devolvido)} do filamento comprado ainda não voltou: é o material que está no estoque (volta quando ele virar venda).`);
+  if(parcMes)obs.push(`Dívidas: as vendas do mês separaram ${brl(t.dividas)}; as parcelas da impressora/equipamentos do mês somam ${brl(parcMes)}${t.dividas>=parcMes-0.004?" ✓ cobertas":` (faltam ${brl(parcMes-t.dividas)}, que os sócios completam)`}.`);
+  if(devolvido-repassado>0.004)obs.push(`Em Vendas, toque em “🧵 Repassei” quando entregar a ${cp} a parte dele.`);
+  $("#rDestObs").textContent=obs.join(" ").replace(/<[^>]+>/g,"");
 }
 /* Contas do mês: despesas (exceto os gastos de produção, que não são contas a pagar) e a parte de cada pessoa nas parcelas.
    Despesa: "pago" (sem o campo = paga, como era antes da 1.9.0). Parcela: o mesmo ✓ de Despesas › Parcelamentos (pc.pagos). */
@@ -1740,8 +1852,9 @@ $("#vExcel").onclick=async()=>{
 
 /* ---------- config ---------- */
 if(LS.get("jaAbriu"))document.querySelectorAll(".orienta").forEach(e=>e.remove());
-$("#fCfg").addEventListener("change",e=>{const k=e.target.dataset.c;if(!k)return;
-  D.config[k]=k==="arredondar"?e.target.value:(+e.target.value||0);salvar();renderConfig()});
+$("#fCfg2").addEventListener("change",e=>$("#fCfg").dispatchEvent(new CustomEvent("change",{detail:e})));
+$("#fCfg").addEventListener("change",e=>{if(e.detail?.target)e=e.detail;const k=e.target.dataset.c;if(!k)return;
+  D.config[k]=k==="arredondar"?e.target.value:e.target.type==="text"?(e.target.value.trim()||"Gui"):(+e.target.value||0);salvar();renderConfig()});
 // Tabelas editáveis de impressoras e filamentos: cada campo grava ao sair dele.
 /* ---------- estoque de materiais ----------
    Estoque (g) = compras + estoque inicial − perdas − o que as vendas usaram.
@@ -1759,6 +1872,17 @@ function estoques(){
   return e;
 }
 const minimoG=()=>D.config.estoqueMinimoG??200;
+/* Preço do kg numa compra (1.12.0). Cada filamento é uma marca + cor.
+   - Ainda tem dele no estoque → fica o MAIOR preço (o de hoje ou o da compra).
+   - Estoque zerado (reposição, o anterior acabou) → vale o preço da compra nova.
+   Ex.: tem 400 g a R$ 120/kg e compra 1 kg por R$ 100 → fica R$ 120. Com 0 g → passa a R$ 100. Compra a R$ 130 → R$ 130. */
+function regraPrecoKg(f,valor,g){
+  const novo=r2(valor/g*1000), hoje_=+f.precoKg||0, saldo=estoques()[f.id]?.saldo||0;
+  if(saldo<=0)return{preco:novo,txt:`estoque zerado (reposição): o kg passa a <b>${brl(novo)}</b>${hoje_&&hoje_!==novo?` (era ${brl(hoje_)})`:""}`};
+  if(novo>hoje_)return{preco:novo,txt:`compra mais cara: o kg passa de ${brl(hoje_)} para <b>${brl(novo)}</b>`};
+  if(novo<hoje_)return{preco:hoje_,txt:`ainda tem ${fmtG(saldo)} no estoque: fica o preço maior, <b>${brl(hoje_)}</b>/kg (esta compra saiu ${brl(novo)}/kg)`};
+  return{preco:novo,txt:`mesmo preço, <b>${brl(novo)}</b>/kg`};
+}
 const fmtG=g=>(g<0?"−":"")+(Math.abs(g)>=1000?num(Math.abs(g)/1000,2)+" kg":num(Math.abs(g),0)+" g");
 const estTxt=id=>{const a=estoques()[id];return a?.registrado?` · ${fmtG(a.saldo)} em estoque`:""};
 function acabando(){const E=estoques();return D.filamentos.filter(f=>E[f.id]?.registrado&&E[f.id].saldo<minimoG()).map(f=>({f,saldo:E[f.id].saldo}))}
@@ -1772,26 +1896,26 @@ fE.onsubmit=e=>{e.preventDefault();
   const g=r2(fE.g.value);if(!(g>0))return avisar("Coloque a quantidade em gramas.");
   if(!fE.filamentoId.value)return avisar("Cadastre o material primeiro (＋ Novo material).");
   const m={id:novoId("e"),data:fE.data.value,filamentoId:fE.filamentoId.value,tipo:fE.tipo.value,g,valor:fE.tipo.value==="compra"?r2(fE.valor.value):0};
-  D.estoque.push(m);
-  if(m.tipo==="compra"&&m.valor>0&&fE.atualizaPreco.checked){const f=filamentoDe(m.filamentoId);if(f)f.precoKg=r2(m.valor/g*1000)}
+  const f=filamentoDe(m.filamentoId), rg=m.tipo==="compra"&&m.valor>0&&f?regraPrecoKg(f,m.valor,g):null; // antes de somar a compra ao estoque
+  D.estoque.push(m);if(rg)f.precoKg=rg.preco;
   salvar();fE.g.value=1000;fE.valor.value=0;render();
-  status(`${TIPO_EST[m.tipo].toLowerCase()} de ${fmtG(g)} registrada`)};
+  status(`${TIPO_EST[m.tipo].toLowerCase()} de ${fmtG(g)} registrada`+(rg?" · "+rg.txt.replace(/<\/?b>/g,""):""))};
 $("#cfgMinimo").onchange=e=>{D.config.estoqueMinimoG=Math.max(0,Math.round(+e.target.value||0));salvar();render()};
 function renderEstoque(){
   _E=estoques();
   $("#tFilCfg").innerHTML=tabelaCfg("filamentos",["Em estoque",estCel]);
   const sel=$("#estFil"),ant=sel.value;
-  sel.innerHTML=D.filamentos.map(f=>`<option value="${f.id}">${esc(f.nome)}</option>`).join("")||'<option value="">(cadastre um material)</option>';
+  sel.innerHTML=D.filamentos.map(f=>`<option value="${f.id}">${esc(nomeFil(f))} · ${brl(f.precoKg)}/kg</option>`).join("")||'<option value="">(cadastre um material)</option>';
   if(D.filamentos.some(f=>f.id===ant))sel.value=ant;
   if(!fE.data.value)fE.data.value=hoje();
   $("#cfgMinimo").value=minimoG();
   // resumo em cartões (no celular a tabela fica larga): saldo e barra até 1 kg
   $("#estResumo").innerHTML=D.filamentos.map(f=>{const a=_E[f.id],reg=a&&(a.registrado||a.usado),baixo=reg&&a.saldo<minimoG();
-    return`<div class="m${baixo?" baixo":""}"><small>${esc(f.nome)}</small><b class="${baixo?"taxa":""}">${reg?fmtG(a.saldo):"–"}</b>
+    return`<div class="m${baixo?" baixo":""}"><small>${esc(nomeFil(f))}</small><b class="${baixo?"taxa":""}">${reg?fmtG(a.saldo):"–"}</b>
       <small>${reg?(baixo?"⚠️ acabando":"em estoque"):"sem registro"}</small>${reg?`<div class="barra"><i style="width:${Math.max(0,Math.min(100,a.saldo/10)).toFixed(0)}%"></i></div>`:""}</div>`}).join("");
   const L=movsEstoque().sort((a,b)=>b.data.localeCompare(a.data));
   $("#tEst").innerHTML=L.length?`<tr><th>Data</th><th>Material</th><th>O que foi</th><th class="n">Quantidade</th><th class="n">Valor</th><th></th></tr>`+
-    L.map(m=>`<tr><td>${fmtData(m.data)}</td><td>${esc(filamentoDe(m.filamentoId)?.nome||"(apagado)")}</td><td>${TIPO_EST[m.tipo]||m.tipo}</td>
+    L.map(m=>`<tr><td>${fmtData(m.data)}</td><td>${esc(nomeFil(filamentoDe(m.filamentoId)))}</td><td>${TIPO_EST[m.tipo]||m.tipo}</td>
       <td class="n ${m.tipo==="perda"?"taxa":"lucro"}">${m.tipo==="perda"?"−":"+"}${fmtG(m.g)}</td><td class="n">${m.valor?brl(m.valor):"–"}</td>
       <td>${m.id?`<button class="btn sm del" onclick="apagar('estoque','${m.id}')">✕</button>`:`<span class="muted" title="Mude em Despesas › Parcelamentos">parcelamento</span>`}</td></tr>`).join("")
     :'<tr><td class="muted">Nada registrado ainda. Comece registrando o que você já tem em casa ("Estoque que já tenho").</td></tr>';
@@ -1799,7 +1923,7 @@ function renderEstoque(){
 
 const COLS={
   impressoras:[["nome","Nome","text"],["preparoMin","Aquecer e calibrar (min)","number"],["potenciaW","Potência (W)","number"],["valor","Valor pago (R$)","number"],["vidaUtilH","Vida útil (h)","number"],["manutHora","Manutenção (R$/h)","number"]],
-  filamentos:[["nome","Nome / cor","text"],["material","Material","text"],["precoKg","Preço por kg (R$)","number"]]};
+  filamentos:[["nome","Nome / cor","text"],["marca","Marca","text"],["material","Material","text"],["precoKg","Preço por kg (R$)","number"]]};
 function tabelaCfg(col,extra){
   const C=COLS[col];
   return`<tr>${C.map(c=>`<th>${c[1]}</th>`).join("")}${extra?`<th class="n">${extra[0]}</th>`:""}<th class="n">Usado em</th><th></th></tr>`+
@@ -1815,9 +1939,10 @@ window.apagarCfg=async(col,id)=>{const n=usos(col,id),x=D[col].find(y=>y.id===id
   if(!await confirmar(n?`"${x?.nome}" está em ${n} produto(s); o custo deles vai ficar sem essa parte. Apagar mesmo assim?`:`Apagar "${x?.nome}"?`,"Apagar",true))return;
   D[col]=D[col].filter(x=>x.id!==id);salvar();render()};
 $("#cfgAddImp").onclick=()=>{D.impressoras.push({id:novoId("i"),nome:"Impressora "+(D.impressoras.length+1),potenciaW:120,valor:2500,vidaUtilH:4000,manutHora:0.3,preparoMin:7});salvar();renderConfig()};
-$("#cfgAddFil").onclick=()=>{D.filamentos.push({id:novoId("f"),nome:"Novo material",material:"PLA",precoKg:110});salvar();render()};
+$("#cfgAddFil").onclick=()=>{D.filamentos.push({id:novoId("f"),nome:"Novo material",marca:"",material:"PLA",precoKg:110});salvar();render()};
 function renderConfig(){
-  document.querySelectorAll("#fCfg [data-c]").forEach(el=>el.value=D.config[el.dataset.c]);
+  document.querySelectorAll("#fCfg [data-c],#fCfg2 [data-c]").forEach(el=>el.value=D.config[el.dataset.c]);
+  {const t=pctsLucro().soma;$("#cfgDivInfo").innerHTML=t===100?"Soma: 100% ✓":`<span class="taxa">A soma dá ${num(t)}%, não 100%.</span> O painel divide na mesma proporção: ${pctsLucro().txt}.`}
   $("#tImp").innerHTML=tabelaCfg("impressoras",["Custo por hora",i=>brl(custoHoraImp(i))]);
   $("#tTaxas").innerHTML=`<tr><th>Forma</th><th class="n">Taxa (%)</th></tr>`+Object.entries(D.taxas).map(([k,v])=>
     `<tr><td>${esc(k)}</td><td class="n"><input type="number" step="0.01" value="${r2(v*100)}" style="width:90px;text-align:right;min-height:36px" onchange="D.taxas['${k}']=this.value/100;salvar()"></td></tr>`).join("");
@@ -1864,6 +1989,19 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.12.0",data:"2026-11-08",titulo:"Marca do filamento e divisão do dinheiro das vendas",itens:[
+    {novo:"Cada venda mostra para onde vai o dinheiro: material e energia voltam para o Gui (que compra), desgaste e manutenção vão para a caixa da impressora, e o lucro é dividido em 🐷 guardar 40%, 🔁 reinvestir 30% e 💳 pagar dívidas 30%.",
+     uso:"Vendas › ao montar a venda aparece o quadro “Para onde vai o dinheiro”. Se a venda não pagar os custos, o painel avisa antes de salvar. Mude os % e o nome em Config › Divisão do dinheiro."},
+    {novo:"Resumo › “Para onde foi o dinheiro das vendas”: soma do mês e quanto falta repassar ao Gui pelo material que ele comprou.",
+     uso:"Ao entregar a parte do material, toque em “🧵 Repassei” na venda."},
+    {novo:"Filamento tem marca. No orçamento e na venda, cada peça mostra qual filamento (marca e cor) vai usar, e o custo muda conforme a marca.",
+     uso:"Estoque › Materiais › coluna Marca. No orçamento, abaixo de cada produto, escolha o filamento."},
+    {novo:"Preço do kg na compra: se ainda tem daquele filamento, fica o preço maior; se tinha acabado (reposição), vale o preço da compra nova.",
+     uso:"Despesas › Lançar despesa › 🧵 Filamento: antes de salvar o painel mostra qual preço vai ficar."},
+    {novo:"Compra de filamento parcelada fica no nome de quem compra (as vendas pagam), não dividida entre os sócios.",
+     uso:"Os sócios continuam dividindo só a impressora em Parcelamentos."},
+    {novo:"Abrir o painel ficou mais rápido: o painel lembra a conta e o arquivo e mostra só “Abrir”. Ele só pergunta de novo se o arquivo sumir ou mudar.",
+     uso:"Se o Google pedir, é só um toque: a janelinha abre e fecha sozinha. Para trocar, use “Trocar de arquivo ou de conta”."}]},
   {v:"1.11.0",data:"2026-11-07",titulo:"Lançar despesa num lugar só",itens:[
     {novo:"Despesas e parcelamentos foram juntados em “Lançar despesa”. Primeiro você escolhe o que é (conta/compra ou filamento) e depois como pagou (à vista ou parcelado).",
      uso:"Despesas › Lançar despesa. Parcelado pede o número de parcelas, o mês da 1ª e entre quem dividir; a compra vai para Parcelamentos, onde você marca ✓ cada parte paga."},
@@ -1980,7 +2118,8 @@ const PASSOS=[
     <li><b>Energia</b>: o preço do kWh da sua conta de luz.</li>
     <li><b>Mão de obra</b>: quanto vale uma hora do seu trabalho.</li>
     <li><b>Impressoras</b>: potência, quanto pagou e vida útil.</li>
-    <li>Na aba <b>Estoque</b>: cada filamento com o preço do kg e quanto você tem (registre o estoque e as compras).</li></ol>`},
+    <li>Na aba <b>Estoque</b>: cada filamento (cor e <b>marca</b>) com o preço do kg e quanto você tem (registre o estoque e as compras).</li>
+    <li><b>Divisão do dinheiro</b>: quem compra o material e os % do lucro para guardar, reinvestir e pagar dívidas.</li></ol>`},
   {ico:"🧊",titulo:"2. Cadastre seus produtos",aba:"produtos",texto:`<p>Na aba <b>Produtos</b>, para cada peça:</p><ol>
     <li>Digite o <b>nome</b> e escolha a impressora.</li>
     <li>Coloque o <b>tempo</b> e os <b>gramas de 1 peça</b> que o fatiador mostra (o aquecer e calibrar o painel soma sozinho).</li>
@@ -1996,7 +2135,8 @@ const PASSOS=[
     <li>Escolha o <b>cliente</b> (cliente novo é cadastrado sozinho; o telefone fica em Clientes).</li>
     <li>Escolha o <b>produto</b> e a <b>quantidade</b>: preço e custo vêm sozinhos.</li>
     <li>Toque na <b>forma de pagamento</b> e em <b>Salvar venda</b>.</li></ol>
-    <p>Venda que veio da produção já chega preenchida. Ao salvar, os gastos (filamento, energia, desgaste…) entram sozinhos em <b>Despesas</b>.</p>`},
+    <p>Venda que veio da produção já chega preenchida. O quadro <b>Para onde vai o dinheiro</b> mostra o que volta para quem comprou o material, a caixa da impressora e o lucro dividido.
+      Ao salvar, os gastos (filamento, energia, desgaste…) entram sozinhos em <b>Despesas</b>.</p>`},
   {ico:"💸",titulo:"5. Lance as despesas",aba:"despesas",texto:`<p>Na aba <b>Despesas</b>, coloque os gastos do mês: MEI, embalagens, manutenção da impressora…</p>
     <p>É tudo num lugar só, em <b>Lançar despesa</b>: escolha se é conta/compra ou filamento, e se pagou à vista ou parcelado.
       Conta que vem todo mês? Marque <b>🔁 Repetir todo mês</b>. Filamento entra no Estoque e atualiza o preço do kg.</p>
