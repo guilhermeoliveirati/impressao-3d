@@ -645,11 +645,13 @@ nav .ct{display:none}
       <label>🐷 Guardar, empresa (%)<input data-c="guardarPct" type="number" step="1" min="0"></label>
       <label>🔁 Reinvestir, empresa (%)<input data-c="reinvestirPct" type="number" step="1" min="0"></label>
       <label>👥 Sócios (%)<input data-c="sociosPct" type="number" step="1" min="0"></label>
+      <label>🧵 Valor de 4 filamentos (R$)<input data-c="minReinvestir" type="number" step="10" min="0"></label>
     </form>
     <p class="muted" id="cfgDivInfo"></p>
     <p class="muted">Cada venda paga primeiro quem compra o material e paga a luz: 1º a <b>energia</b>, 2º <b>os filamentos que ele comprou</b>
       e as despesas que ele pagou do bolso (💰 em Despesas), do mais antigo, até devolver tudo, 3º a <b>mão de obra</b>. O que sobra é dividido nesses %: guardar e reinvestir ficam na empresa, e a parte dos sócios é dividida entre eles.
-      A impressora os sócios pagam por fora (Despesas › Parcelamentos).</p>
+      A impressora os sócios pagam por fora (Despesas › Parcelamentos).<br>
+      <b>Regra dos 4 filamentos</b>: os sócios só recebem quando o 🔁 Reinvestir tiver o valor de 4 filamentos. Até lá, a parte deles completa o Reinvestir (0 = sem a regra).</p>
   </div>
   <div class="card"><h2>🖨️ Impressoras</h2>
     <div class="scroll"><table class="cfgtab" id="tImp"></table></div>
@@ -722,7 +724,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.16.0";
+const VERSAO="1.17.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -927,7 +929,7 @@ function normalizar(){
   D.versao??=1;D.proximoId??=1;
   D.taxas??={...TAXAS_PADRAO};
   D.config={energiaKwh:0.95,maoDeObraHora:25,falhaPct:10,margemPct:100,arredondar:"90",estoqueMinimoG:200,metaSobra:0,
-    comprador:"Gui",socios:"",guardarPct:40,reinvestirPct:30,sociosPct:30,...(D.config||{})};
+    comprador:"Gui",socios:"",guardarPct:40,reinvestirPct:30,sociosPct:30,minReinvestir:400,...(D.config||{})};
   delete D.config.dividasPct; // 1.13.0: "pagar dívidas" virou a parte dos sócios
   D.reembolsos??=[]; // pagamentos ao Gui de outra fonte (não das vendas)
   D.retiradas??=[];  // saídas das caixinhas: guardar, reinvestir ou pagamento a um sócio (1.16.0)
@@ -1376,21 +1378,28 @@ function fluxo(extra){ // extra: venda ainda no formulário (prévia), no lugar 
     .map(m=>({key:m.id||"pc:"+m.pcId,data:m.data,filamentoId:m.filamentoId,g:+m.g,valor:+m.valor,parcelado:!m.id}))
     .concat(contasDoGui()).map(c=>({...c,resto:c.valor,pagos:[]})).sort((a,b)=>a.data.localeCompare(b.data));
   const V=extra?[...D.vendas.filter(v=>v.id!==extra.id),extra]:D.vendas;
-  const ev=[...(D.reembolsos||[]).map(x=>({r:1,data:x.data,x})),...V.map(x=>({r:0,data:x.data,x}))].sort((a,b)=>a.data.localeCompare(b.data)||b.r-a.r);
+  const ev=[...(D.reembolsos||[]).map(x=>({r:1,data:x.data,x})),...(D.retiradas||[]).filter(x=>x.caixa==="reinvestir").map(x=>({r:2,data:x.data,x})),
+    ...V.map(x=>({r:0,data:x.data,x}))].sort((a,b)=>a.data.localeCompare(b.data)||b.r-a.r);
+  // Regra dos 4 filamentos (1.17.0): os sócios só recebem quando o Reinvestir tem pelo menos D.config.minReinvestir;
+  // até lá, a parte deles completa o Reinvestir (só o que falta; o que passar vai para os sócios).
+  const meta=+D.config.minReinvestir||0;let saldoR=0;
   const pagar=(valor,data,origem)=>{let r=valor;const usados=[];
     for(const c of compras){if(r<=0.004)break;if(c.data>data||c.resto<=0.004)continue;
       const t=r2(Math.min(c.resto,r));c.resto=r2(c.resto-t);r=r2(r-t);c.pagos.push({...origem,v:t});usados.push({c,v:t})}
     return{pago:r2(valor-r),usados}};
   const porVenda={}, n=pctsLucro().n, S=socios(), outras={};
   for(const e of ev){
+    if(e.r===2){saldoR=r2(saldoR-(+e.x.valor||0));continue} // saída do reinvestir (compra feita com ele)
     if(e.r){const p=pagar(+e.x.valor||0,e.data,{fonte:e.x.fonte||"Outra fonte",data:e.x.data});outras[e.x.id]=p.pago;continue}
     const v=e.x, caixa=r2(Math.max(0,(+v.cobrado||0)-(+v.taxa||0))), pt=partesVenda(v);
     const energia=r2(Math.min(caixa,pt.energia||0)); // prioridade 1: energia
     const m=pagar(r2(caixa-energia),v.data,{fonte:"venda",cliente:v.cliente,data:v.data,vendaId:v.id}); // prioridade 2: filamentos do Gui
     let resto=r2(caixa-energia-m.pago);
     const mao=r2(Math.min(resto,pt.mao||0));resto=r2(resto-mao);
-    const guardar=r2(resto*n[0]), reinvestir=r2(resto*n[1]), soc=r2(resto-guardar-reinvestir);
-    porVenda[v.id]={caixa,material:m.pago,compras:m.usados.map(u=>({nome:nomeCompra(u.c),v:u.v})),energia,mao,gui:r2(m.pago+energia+mao),
+    const guardar=r2(resto*n[0]);let reinvestir=r2(resto*n[1]), soc=r2(resto-guardar-reinvestir);
+    saldoR=r2(saldoR+reinvestir);const retido=r2(Math.min(soc,Math.max(0,meta-saldoR)));
+    reinvestir=r2(reinvestir+retido);soc=r2(soc-retido);saldoR=r2(saldoR+retido);
+    porVenda[v.id]={retido,saldoR,caixa,material:m.pago,compras:m.usados.map(u=>({nome:nomeCompra(u.c),v:u.v})),energia,mao,gui:r2(m.pago+energia+mao),
       guardar,reinvestir,empresa:r2(guardar+reinvestir),socios:soc,porSocio:r2(soc/S.length),S};
   }
   const r={porVenda,compras,outras};if(!extra)_fluxo=r;return r;
@@ -1407,6 +1416,8 @@ function htmlDestinos(d,lucro){
     l(`🐷 guardar ${num(n[0]*100,0)}%`,brl(d.guardar),"sub")+l(`🔁 reinvestir ${num(n[1]*100,0)}%`,brl(d.reinvestir),"sub")+
     l(`👥 <b>Sócios</b> ${num(n[2]*100,0)}%`,`<b>${brl(d.socios)}</b>`)+
     l(`${d.S.map(esc).join(", ")}: ${brl(d.porSocio)} cada`,"","sub")+
+    (d.retido>0.004?l(`🧵 ${brl(d.retido)} da parte dos sócios foi para o Reinvestir: ele precisa ter ${brl(D.config.minReinvestir)} (4 filamentos) antes de dividir`+
+      (d.saldoR<(+D.config.minReinvestir||0)-0.004?` · ainda faltam ${brl(D.config.minReinvestir-d.saldoR)}`:" · agora completou ✓"),"","sub"):"")+
     `</div>`+(lucro<0?`<div class="taxa" style="margin-top:6px">⚠️ Esta venda não paga todos os custos: faltam <b>${brl(-lucro)}</b>.</div>`:"");
 }
 // Recibo da venda pelo WhatsApp (1.16.0): abre a conversa do cliente se ele tiver telefone
@@ -1939,7 +1950,11 @@ function renderCaixas(){
   const saiuG=saiu("guardar")+soma((D.reembolsos||[]).filter(x=>/^caixa/i.test(x.fonte||"")),x=>F.outras[x.id]||0);
   const lin=(n,e,s_)=>`<tr><td>${n}</td><td class="n">${brl(e)}</td><td class="n">${brl(s_)}</td><td class="n"><b class="${e-s_<-0.004?"taxa":"lucro"}">${brl(e-s_)}</b></td></tr>`;
   $("#tCaixas").innerHTML=`<tr><th>Caixinha</th><th class="n">Entrou</th><th class="n">Saiu</th><th class="n">Tem</th></tr>`+
-    lin("🐷 Guardar",ent.guardar,saiuG)+lin("🔁 Reinvestir",ent.reinvestir,saiu("reinvestir"));
+    lin("🐷 Guardar",ent.guardar,saiuG)+lin("🔁 Reinvestir",ent.reinvestir,saiu("reinvestir"))+
+    (+D.config.minReinvestir?(()=>{const tem=ent.reinvestir-saiu("reinvestir"),meta=+D.config.minReinvestir,ret=soma(Object.values(F.porVenda),d=>d.retido||0);
+      return`<tr><td colspan="4" style="white-space:normal">🧵 <b>Regra dos 4 filamentos</b>: os sócios só recebem com ${brl(meta)} no Reinvestir. `+
+        (tem>=meta-0.004?`<span class="tag ok">✓ completo</span>`:`<span class="tag aberto">faltam ${brl(meta-tem)}</span>`)+
+        (ret>0.004?` <span class="muted">· a parte dos sócios já completou ${brl(ret)} do Reinvestir</span>`:"")+`</td></tr>`})():"");
   const nomes=[...new Set([...S,...Object.keys(parte)])];
   const impressora=n=>soma(D.parcelamentos.filter(pc=>!doGuiPc(pc)),pc=>{const j=pc.pessoas.indexOf(n);if(j<0)return 0;
     return soma(Object.values(pc.pagos||{}),a=>a[j]?pc.total/pc.parcelas/pc.pessoas.length:0)});
@@ -2221,6 +2236,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.17.0",data:"2026-11-09",titulo:"Regra dos 4 filamentos",itens:[
+    {novo:"Os sócios só recebem a parte deles quando o 🔁 Reinvestir tiver o valor de 4 filamentos. Até lá, a parte dos sócios completa o Reinvestir (só o que falta).",
+     uso:"Config › Divisão do dinheiro › “Valor de 4 filamentos” (começa em R$ 400). A venda mostra quanto foi para o Reinvestir e quanto falta; Resumo › Caixinhas mostra se completou."}]},
   {v:"1.16.0",data:"2026-11-09",titulo:"Caixinhas, sócios, lista de compras, recibo e cópia semanal",itens:[
     {novo:"💰 Paguei o Gui: um botão marca de uma vez todas as vendas com parte dele ainda não entregue.",
      uso:"Resumo › Para onde foi o dinheiro › botão “Paguei Gui: marcar tudo”."},
