@@ -530,6 +530,7 @@ nav .ct{display:none}
       <label style="flex-direction:row;align-items:center;gap:6px">Avisar quando tiver menos de <input id="cfgMinimo" type="number" min="0" step="10" style="width:90px;min-height:36px;text-align:right"> g</label>
     </div>
     <div class="estres" id="estResumo"></div>
+    <div class="row" style="margin-top:8px"><button class="btn sm sec2" id="btnListaCompras">🛒 Lista de compras</button></div>
     <p class="muted">Estoque = compras + estoque que já tinha − perdas − o que as vendas usaram. Cada venda desconta sozinha os gramas dos produtos vendidos
       (pelos materiais cadastrados no produto ou na peça sob medida). Editar ou apagar uma venda devolve os gramas. Orçamento não mexe no estoque.</p>
   </div>
@@ -573,6 +574,23 @@ nav .ct{display:none}
     <h3>Vendas do mês</h3>
     <div class="scroll"><table id="tDestV"></table></div>
     <p class="muted" id="rDestObs"></p>
+    <button class="btn sm" id="btnRepTodos" hidden></button>
+  </div>
+  <div class="card">
+    <h2>🏦 Caixinhas da empresa e sócios</h2>
+    <p class="muted" style="margin-top:0">Desde o começo: quanto as vendas separaram, quanto já saiu e quanto tem. Registre abaixo quando usar o dinheiro (ex.: comprei um bico com o reinvestir) ou quando pagar a parte de um sócio.</p>
+    <div class="scroll"><table id="tCaixas"></table></div>
+    <h3>👥 Sócios</h3>
+    <div class="scroll"><table id="tSocios"></table></div>
+    <h3>Registrar saída de dinheiro</h3>
+    <form class="f" id="fRet" autocomplete="off">
+      <label>Data<input name="data" type="date" required></label>
+      <label>De onde saiu<select name="caixa" id="retCaixa"></select></label>
+      <label>Valor (R$)<input name="valor" type="number" step="0.01" min="0" required></label>
+      <label>Para quê<input name="obs" placeholder="ex.: bico novo, pagamento do Luan"></label>
+      <div class="row" style="grid-column:1/-1"><button class="btn" type="submit">Registrar saída</button></div>
+    </form>
+    <div class="scroll"><table id="tRet"></table></div>
   </div>
   <div class="card">
     <h2>💰 O que <span class="nmComp">Gui</span> pagou do próprio dinheiro</h2>
@@ -652,11 +670,13 @@ nav .ct{display:none}
         <p class="muted">O passo a passo explica como usar o painel do começo. As novidades mostram o que mudou em cada versão e como usar.</p></div>
       <div class="card"><h2>Arquivo e exportação</h2>
         <p class="muted" id="cfgInfo"></p>
+        <p class="muted" id="cfgBackup"></p>
         <div class="row">
           <button class="btn sec2" id="xVendas">Exportar vendas (.csv)</button>
           <button class="btn sec2" id="xProd">Exportar produtos (.csv)</button>
           <button class="btn sec2" id="xDesp">Exportar despesas (.csv)</button>
           <button class="btn sec2" id="xJson">Baixar cópia do dados.json</button>
+          <button class="btn sec2" id="btnBackup" hidden>☁️ Fazer cópia no Drive agora</button>
         </div>
         <p class="muted">O CSV abre direto no Excel.</p>
       </div>
@@ -702,7 +722,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.15.0";
+const VERSAO="1.16.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -777,6 +797,25 @@ async function escolherNoDrive(){
 let versaoConhecida=null, conteudoConhecido=null; // conteúdo do arquivo como foi lido/gravado por último (para comparar)
 async function abrirFonte(f){
   const r=await f.ler();fonte=f;conteudoConhecido=JSON.stringify(r.dados);D=r.dados;versaoConhecida=r.versao;LS.set("jaAbriu",true);iniciar();
+  if(f.tipo==="drive")setTimeout(()=>backupSemanal().catch(e=>console.warn("cópia semanal:",e)),5000);
+}
+/* Cópia de segurança semanal no Google Drive (1.16.0). Quem abre pelo Drive (celular/tablet) faz, no máximo 1 vez a cada 7 dias,
+   uma cópia "dados-copia-AAAA-MM-DD.json" na mesma pasta do dados.json (se o Google não deixar, numa pasta "Painel 3D - cópias"
+   criada pelo painel). Ficam as 8 mais novas (D.backups); a data da última fica em D.ultimoBackup. */
+async function backupSemanal(agora){
+  if(fonte?.tipo!=="drive"||!D)return false;
+  const h=hoje();if(!agora&&D.ultimoBackup&&(new Date(h)-new Date(D.ultimoBackup))/864e5<7)return false;
+  const corpo=JSON.stringify(D,null,1), envia=async parents=>{const b="p3d"+Date.now(),meta={name:`dados-copia-${h}.json`,mimeType:"application/json",...(parents?{parents}:{})};
+    return(await (await api("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id",{method:"POST",headers:{"Content-Type":"multipart/related; boundary="+b},
+      body:`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${corpo}\r\n--${b}--`})).json()).id};
+  let id;
+  try{const pai=D.config.backupPasta?[D.config.backupPasta]:(await (await api(`https://www.googleapis.com/drive/v3/files/${fonte.id}?fields=parents`)).json()).parents;id=await envia(pai)}
+  catch(e){if(e instanceof ErroLogin)throw e;
+    const pasta=await (await api("https://www.googleapis.com/drive/v3/files?fields=id",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:"Painel 3D - cópias",mimeType:"application/vnd.google-apps.folder"})})).json();
+    D.config.backupPasta=pasta.id;id=await envia([pasta.id])}
+  D.backups.push({id,data:h});
+  while(D.backups.length>8){const v=D.backups.shift();try{await api("https://www.googleapis.com/drive/v3/files/"+v.id,{method:"DELETE"})}catch{}}
+  D.ultimoBackup=h;salvar();status("cópia de segurança da semana salva no Google Drive");return true;
 }
 async function abrirLocal(h){
   if(await h.queryPermission({mode:"readwrite"})!=="granted" && await h.requestPermission({mode:"readwrite"})!=="granted") throw new Error("Permissão negada");
@@ -891,6 +930,8 @@ function normalizar(){
     comprador:"Gui",socios:"",guardarPct:40,reinvestirPct:30,sociosPct:30,...(D.config||{})};
   delete D.config.dividasPct; // 1.13.0: "pagar dívidas" virou a parte dos sócios
   D.reembolsos??=[]; // pagamentos ao Gui de outra fonte (não das vendas)
+  D.retiradas??=[];  // saídas das caixinhas: guardar, reinvestir ou pagamento a um sócio (1.16.0)
+  D.backups??=[];    // cópias semanais no Google Drive: [{id, data}] (1.16.0)
   (D.filamentos||[]).forEach(f=>f.marca??="");
   for(const k of ["impressoras","filamentos","produtos","clientes","orcamentos","vendas","despesas","parcelamentos","estoque"])D[k]??=[];
   delete D.dizimos; // o dízimo saiu do painel na 1.5.0
@@ -1174,7 +1215,7 @@ function renderProdutos(){
   const q=norm($("#pBusca").value);
   const L=D.produtos.filter(p=>!q||norm(p.nome+" "+p.categoria).includes(q));
   $("#pLista").innerHTML=L.length?L.map(p=>{const c=custoProduto(p),pr=precoDe(p),l=pr-c.unit;return`<div class="pcard">
-    <div class="l1"><b>${esc(p.nome)}</b>${p.categoria?`<span class="tag">${esc(p.categoria)}</span>`:""}</div>
+    <div class="l1"><b>${esc(p.nome)}</b>${p.categoria?`<span class="tag">${esc(p.categoria)}</span>`:""}${(p.filamentos||[]).some(f=>!filamentoDe(f.filamentoId))?'<span class="tag aberto" title="O filamento deste produto foi apagado: o custo do filamento está saindo R$ 0">⚠️ filamento apagado: toque em Editar e escolha de novo</span>':""}</div>
     <div class="l3">${fmtTempo(c.horas)} · ${num(c.gramas)} g${c.un>1?` · ${c.un} por impressão`:""} · ${esc(impressoraDe(p.impressoraId)?.nome||"sem impressora")}</div>
     <div class="nums"><div><small>Custo</small><b>${brl(c.unit)}</b></div><div><small>Preço${p.precoVenda==null?" sug.":""}</small><b>${brl(pr)}</b></div><div><small>Lucro</small><b class="${l>=0?"lucro":"taxa"}">${brl(l)}</b></div></div>
     <div class="l3">Margem ${pct(pr?l/pr:0)} do preço · ${vend[p.id]?`${num(vend[p.id],0)} vendidos`:"nenhum vendido"}${p.obs?` · ${esc(p.obs)}`:""}</div>
@@ -1201,7 +1242,11 @@ function editorItens(box,aoMudar,catalogo=false){
     return`<label class="filsel">Filamento (marca e cor)<select data-k="fil">${D.filamentos.map(f=>`<option value="${f.id}"${f.id===atual?" selected":""}>${esc(nomeFil(f))} · ${brl(precoKgDe(f.id))}/kg${estTxt(f.id)}</option>`).join("")}</select>
       <small class="muted fifo">${fifoItem(x)}</small></label>`};
   // "usa 200 g a R$ 120,00/kg + 100 g a R$ 100,00/kg" (rolo antigo primeiro)
-  const fifoItem=x=>{const m=matDoItem(x)[0];return m?fifoTxt(m.f,m.g*Math.max(1,+x.qtd||1)):""};
+  const fifoItem=x=>{const m=matDoItem(x)[0];return(m?fifoTxt(m.f,m.g*Math.max(1,+x.qtd||1)):"")+avisoPreco(x)};
+  // preço abaixo do sugerido para o custo com este filamento (1.16.0)
+  const avisoPreco=x=>{const p=x.produtoId&&D.produtos.find(y=>y.id===x.produtoId);if(!p||!(+x.custo>0))return"";
+    const sug=r2(arredondar(x.custo*(1+margemDe(p)/100)));
+    return +x.preco<sug-0.009?` · ⚠️ com este filamento o preço sugerido é ${brl(sug)} (lucro hoje ${brl(x.preco-x.custo)} por peça)`:""};
   // produto do item com o filamento escolhido nele
   const prodDoItem=x=>{const p=D.produtos.find(y=>y.id===x.produtoId);if(!p)return null;const f0=x.mat?.[0]?.f;
     return f0&&p.filamentos?.[0]&&p.filamentos[0].filamentoId!==f0?prodComFil(p,f0):p};
@@ -1237,6 +1282,7 @@ function editorItens(box,aoMudar,catalogo=false){
       row.querySelector('[data-k="preco"]').value=x.preco;row.querySelector('[data-k="custo"]').value=x.custo}
     else if(!p){x.produtoId=null;delete x.mat}}
   else x[k]=+el.value||0;
+  {const fi=box.querySelector(`.item[data-i="${row.dataset.i}"] .fifo`);if(fi)fi.textContent=fifoItem(x)} // rolos e aviso de preço
   aoMudar();
   });
   box.addEventListener("change",e=>{if(e.target.dataset.k==="nome")rowsItens()}); // digitou um produto do catálogo: aparece a escolha do filamento
@@ -1363,6 +1409,13 @@ function htmlDestinos(d,lucro){
     l(`${d.S.map(esc).join(", ")}: ${brl(d.porSocio)} cada`,"","sub")+
     `</div>`+(lucro<0?`<div class="taxa" style="margin-top:6px">⚠️ Esta venda não paga todos os custos: faltam <b>${brl(-lucro)}</b>.</div>`:"");
 }
+// Recibo da venda pelo WhatsApp (1.16.0): abre a conversa do cliente se ele tiver telefone
+window.recibo=id=>{const v=D.vendas.find(x=>x.id===id);if(!v)return;
+  const c=(v.clienteId&&D.clientes.find(x=>x.id===v.clienteId))||clientePorNome(v.cliente);
+  const txt=[`🧾 *Recibo de compra*`,`Cliente: ${v.cliente}`,`Data: ${fmtData(v.data)}`,"",
+    ...(v.itens||[]).map(x=>`${num(x.qtd,0)}× ${x.nome}: ${brl(x.qtd*x.preco)}`),...(+v.frete?[`Frete: ${brl(v.frete)}`]:[]),"",
+    `*Total: ${brl(v.cobrado)}*`,`Pagamento: ${v.metodo}`,v.recebido===false?`Falta pagar: ${brl(aReceber(v))}`:"✅ Pago","Obrigado pela preferência!"].join("\n");
+  window.open((c?.telefone?linkZap(c.telefone):"https://wa.me/")+"?text="+encodeURIComponent(txt),"_blank")};
 window.repassei=id=>{const v=D.vendas.find(x=>x.id===id);v.repassado=true;salvar();render();status(`parte de ${comprador()} marcada como entregue`)};
 const btnRepasse=v=>{const m=fluxo().porVenda[v.id]?.gui||0;return!v.repassado&&m>0.004?`<button class="btn sm sec2" onclick="repassei('${v.id}')" title="Marque quando entregar a ${esc(comprador())} a parte dele nesta venda">🧵 Repassei ${brl(m)} a ${esc(comprador())}</button> `:""};
 const aReceber=v=>r2(v.cobrado-(+v.sinal||0));
@@ -1376,20 +1429,20 @@ function renderVendas(){
   $("#vResumo").innerHTML=`${L.length} vendas · ${num(s.p,0)} peças · Faturamento <b>${brl(s.f)}</b> · Custo ${brl(s.c)} · Taxas ${brl(s.t)} · Lucro <b>${brl(s.l)}</b>`+(q?" · busca em todos os meses":"");
   $("#tVendas").innerHTML=`<tr><th>Data</th><th>Cliente</th><th>Itens</th><th class="n">Cobrado</th><th>Pagamento</th><th class="n">Custo</th><th class="n">Taxa</th><th class="n">Lucro</th><th></th></tr>`+
     L.slice().reverse().map(v=>`<tr><td>${fmtData(v.data)}</td><td>${esc(v.cliente)}${tagReceber(v)}</td><td style="white-space:normal;min-width:200px">${esc(descItens(v))}${v.frete?` <span class="muted">+ frete ${brl(v.frete)}</span>`:""}</td><td class="n"><b>${brl(v.cobrado)}</b></td><td>${esc(v.metodo)}</td><td class="n">${brl(v.custo)}</td><td class="n">${brl(v.taxa)}</td><td class="n lucro">${brl(v.lucro)}</td>
-    <td>${v.recebido===false?`<button class="btn sm" onclick="recebi('${v.id}')">💰 Recebi</button> `:""}${btnRepasse(v)}<button class="btn sm sec2" onclick="editarVenda('${v.id}')">Editar</button> <button class="btn sm del" onclick="apagar('vendas','${v.id}')">✕</button></td></tr>`).join("");
+    <td>${v.recebido===false?`<button class="btn sm" onclick="recebi('${v.id}')">💰 Recebi</button> `:""}${btnRepasse(v)}<button class="btn sm sec2" onclick="recibo('${v.id}')">🧾 Recibo</button> <button class="btn sm sec2" onclick="editarVenda('${v.id}')">Editar</button> <button class="btn sm del" onclick="apagar('vendas','${v.id}')">✕</button></td></tr>`).join("");
   $("#vCards").innerHTML=L.slice().reverse().map(v=>`<div class="vcard">
     <div class="l1"><b>${esc(v.cliente)}${tagReceber(v)}</b><span class="muted">${fmtData(v.data)}</span></div>
     <div class="l2"><span class="big">${brl(v.cobrado)}</span><span class="tag">${esc(v.metodo)}</span></div>
     <div class="l3">${esc(descItens(v))}${v.frete?` · frete ${brl(v.frete)}`:""}</div>
     <div class="l3">Custo ${brl(v.custo)}${v.taxa?` · Taxa cartão <span class="taxa">${brl(v.taxa)}</span>`:""} · Lucro <span class="lucro">${brl(v.lucro)}</span></div>
-    <div class="acts">${v.recebido===false?`<button class="btn sm" onclick="recebi('${v.id}')">💰 Recebi</button>`:""}${btnRepasse(v)}<button class="btn sm sec2" onclick="editarVenda('${v.id}')">Editar</button><button class="btn sm del" onclick="apagar('vendas','${v.id}')">✕</button></div></div>`).join("");
+    <div class="acts">${v.recebido===false?`<button class="btn sm" onclick="recebi('${v.id}')">💰 Recebi</button>`:""}${btnRepasse(v)}<button class="btn sm sec2" onclick="recibo('${v.id}')">🧾 Recibo</button> <button class="btn sm sec2" onclick="editarVenda('${v.id}')">Editar</button><button class="btn sm del" onclick="apagar('vendas','${v.id}')">✕</button></div></div>`).join("");
 }
 window.editarVenda=id=>{const v=D.vendas.find(x=>x.id===id);
   fV.id.value=v.id;fV.cliente.value=v.cliente;fV.data.value=v.data;fV.cobrado.value=v.cobrado;fV.frete.value=v.frete||0;fV.metodo.value=v.metodo||"Pix";
   edV.set(v.itens);orcEmVenda=null;$("#vOrc").hidden=true;fV.recebido.checked=v.recebido!==false;
   cobradoManual=true;$("#vTitulo").textContent="Editando venda de "+v.cliente;calcVenda();scrollTo({top:0,behavior:"smooth"})};
 window.apagar=async(col,id)=>{
-  let msg={estoque:"Apagar esta movimentação do estoque?",vendas:"Apagar esta venda?",despesas:"Apagar esta despesa?",orcamentos:"Apagar este orçamento?",clientes:"Apagar este cliente do cadastro? As vendas e orçamentos continuam com o nome dele.",parcelamentos:"Apagar este parcelamento e todas as marcações de pago?",reembolsos:"Apagar este pagamento ao Gui? As compras voltam a mostrar esse valor como falta."}[col]||"Apagar?";
+  let msg={estoque:"Apagar esta movimentação do estoque?",vendas:"Apagar esta venda?",despesas:"Apagar esta despesa?",orcamentos:"Apagar este orçamento?",clientes:"Apagar este cliente do cadastro? As vendas e orçamentos continuam com o nome dele.",parcelamentos:"Apagar este parcelamento e todas as marcações de pago?",retiradas:"Apagar esta saída de dinheiro?",reembolsos:"Apagar este pagamento ao Gui? As compras voltam a mostrar esse valor como falta."}[col]||"Apagar?";
   if(col==="produtos"){const n=D.vendas.filter(v=>(v.itens||[]).some(x=>x.produtoId===id)).length;
     msg=n?`Este produto aparece em ${n} venda(s). As vendas continuam com o nome e o custo gravados. Apagar o produto do catálogo?`:"Apagar este produto?"}
   // despesa que se repete: apagar a mais recente da série para a repetição (senão ela voltaria no próximo acesso)
@@ -1855,6 +1908,8 @@ function renderDestinos(mes){
       <td>${d.gui>0.004?(v.repassado?'<span class="tag ok">entregue</span>':`<button class="btn sm sec2" onclick="repassei('${v.id}')">🧵 Repassei</button>`):""}</td></tr>`}).join("")
     :'<tr><td class="muted">Nenhuma venda neste mês.</td></tr>';
   const falta=soma(D.vendas.filter(v=>!v.repassado),v=>F.porVenda[v.id]?.gui||0);
+  {const b=$("#btnRepTodos");b.hidden=!(falta>0.004);b.textContent=`💰 Paguei ${comprador()}: marcar tudo (${brl(falta)})`}
+  renderCaixas();
   $("#rDestObs").textContent=falta>0.004?`Falta entregar a ${comprador()} ${brl(falta)} das vendas (todas as datas). Toque em “🧵 Repassei” quando entregar.`:"";
   // compras de filamento: valor, quanto voltou e de onde
   const C=F.compras.slice().reverse();
@@ -1871,6 +1926,37 @@ function renderDestinos(mes){
       <td><button class="btn sm del" onclick="apagar('reembolsos','${x.id}')">✕</button></td></tr>`).join(""):"";
   if(!$("#fReemb").data.value)$("#fReemb").data.value=hoje();
 }
+// marca de uma vez todas as vendas com parte do Gui ainda não entregue (1.16.0)
+$("#btnRepTodos").onclick=async()=>{const F=fluxo(),L=D.vendas.filter(v=>!v.repassado&&(F.porVenda[v.id]?.gui||0)>0.004),t=soma(L,v=>F.porVenda[v.id].gui);
+  if(!L.length||!await confirmar(`Marcar que ${comprador()} recebeu ${brl(t)} de ${L.length} venda(s)?`,"Marcar tudo"))return;
+  L.forEach(v=>v.repassado=true);salvar();render();status(`${L.length} venda(s) marcadas: ${comprador()} recebeu ${brl(t)}`)};
+/* Caixinhas (1.16.0): o que as vendas separaram (fluxo) − saídas (D.retiradas; pagamento ao Gui com "Caixa da empresa" sai do guardar).
+   Sócios: parte das vendas − o que já recebeu (retirada "socio:Nome"); e quanto cada um pagou da impressora (✓ nos parcelamentos). */
+function renderCaixas(){
+  const F=fluxo(), S=socios(), parte={}, ent={guardar:0,reinvestir:0};
+  Object.values(F.porVenda).forEach(d=>{ent.guardar+=d.guardar;ent.reinvestir+=d.reinvestir;d.S.forEach(n=>parte[n]=(parte[n]||0)+d.socios/d.S.length)});
+  const R=D.retiradas||[], saiu=k=>soma(R.filter(x=>x.caixa===k),x=>x.valor);
+  const saiuG=saiu("guardar")+soma((D.reembolsos||[]).filter(x=>/^caixa/i.test(x.fonte||"")),x=>F.outras[x.id]||0);
+  const lin=(n,e,s_)=>`<tr><td>${n}</td><td class="n">${brl(e)}</td><td class="n">${brl(s_)}</td><td class="n"><b class="${e-s_<-0.004?"taxa":"lucro"}">${brl(e-s_)}</b></td></tr>`;
+  $("#tCaixas").innerHTML=`<tr><th>Caixinha</th><th class="n">Entrou</th><th class="n">Saiu</th><th class="n">Tem</th></tr>`+
+    lin("🐷 Guardar",ent.guardar,saiuG)+lin("🔁 Reinvestir",ent.reinvestir,saiu("reinvestir"));
+  const nomes=[...new Set([...S,...Object.keys(parte)])];
+  const impressora=n=>soma(D.parcelamentos.filter(pc=>!doGuiPc(pc)),pc=>{const j=pc.pessoas.indexOf(n);if(j<0)return 0;
+    return soma(Object.values(pc.pagos||{}),a=>a[j]?pc.total/pc.parcelas/pc.pessoas.length:0)});
+  $("#tSocios").innerHTML=`<tr><th>Sócio</th><th class="n">Parte das vendas</th><th class="n">Já recebeu</th><th class="n">A receber</th><th class="n">Pagou da impressora</th></tr>`+
+    nomes.map(n=>{const p_=parte[n]||0,r=saiu("socio:"+n);return`<tr><td>${esc(n)}</td><td class="n">${brl(p_)}</td><td class="n">${brl(r)}</td><td class="n"><b>${brl(p_-r)}</b></td><td class="n">${brl(impressora(n))}</td></tr>`}).join("");
+  const sel=$("#retCaixa"),ant=sel.value;
+  sel.innerHTML=`<option value="guardar">🐷 Guardar</option><option value="reinvestir">🔁 Reinvestir</option>`+nomes.map(n=>`<option value="socio:${esc(n)}">👥 Pagamento a ${esc(n)}</option>`).join("");
+  if(ant)sel.value=ant;
+  const nomeCx=k=>k==="guardar"?"🐷 Guardar":k==="reinvestir"?"🔁 Reinvestir":"👥 "+esc(k.slice(6));
+  $("#tRet").innerHTML=R.length?`<tr><th>Data</th><th>De onde</th><th>Para quê</th><th class="n">Valor</th><th></th></tr>`+
+    R.slice().sort((a,b)=>b.data.localeCompare(a.data)).map(x=>`<tr><td>${fmtData(x.data)}</td><td>${nomeCx(x.caixa)}</td><td style="white-space:normal">${esc(x.obs||"")}</td><td class="n">${brl(x.valor)}</td>
+      <td><button class="btn sm del" onclick="apagar('retiradas','${x.id}')">✕</button></td></tr>`).join(""):"";
+  if(!$("#fRet").data.value)$("#fRet").data.value=hoje();
+}
+$("#fRet").onsubmit=e=>{e.preventDefault();const f=e.target,valor=r2(f.valor.value);if(!(valor>0))return avisar("Coloque o valor.");
+  D.retiradas.push({id:novoId("x"),data:f.data.value||hoje(),caixa:f.caixa.value,valor,obs:f.obs.value.trim()});
+  salvar();f.valor.value="";f.obs.value="";render();status(`saída de ${brl(valor)} registrada`)};
 $("#fReemb").onsubmit=e=>{e.preventDefault();const f=e.target,valor=r2(f.valor.value);if(!(valor>0))return avisar("Coloque o valor.");
   D.reembolsos.push({id:novoId("r"),data:f.data.value||hoje(),valor,fonte:f.fonte.value,obs:f.obs.value.trim()});
   salvar();f.reset();render();status(`pagamento de ${brl(valor)} a ${comprador()} registrado (${f.fonte.value})`)};
@@ -1931,7 +2017,13 @@ function montarExcel(mes){
   XLSX.utils.book_append_sheet(wb,planilha([["Produto","Qtd","Vendido","Custo","Lucro (antes da taxa)"],...Object.entries(it).map(([n,a])=>[n,a.q,a.f,a.c,a.f-a.c])],[30,7,13,13,18],[2,3,4]),"Produtos");
   const td=soma(De,d=>d.valor);
   XLSX.utils.book_append_sheet(wb,planilha([["Data","Categoria","Descrição","Valor"],...De.map(d=>[fmtData(d.data),d.categoria,d.descricao,d.valor]),[],["TOTAL","","",td]],[11,26,30,13],[3]),"Despesas");
-  XLSX.utils.book_append_sheet(wb,planilha([["Descrição","Valor","10%"],...dz.map(x=>[x.nome,x.valor,r2(x.valor*0.1)]),[],["Total dos valores",tz,""],["Total do dízimo (10%)","",r2(tz*0.1)]],[24,14,14],[1,2]),"Dízimo");
+  // Divisão do dinheiro (1.16.0): para onde foi cada venda (o dízimo saiu na 1.5.0; a planilha dele quebrava o botão)
+  const F=fluxo(), dv=V.map(v=>({v,d:F.porVenda[v.id]})).filter(x=>x.d), td_=k=>soma(dv,x=>x.d[k]), cp=comprador(), Sx=socios();
+  XLSX.utils.book_append_sheet(wb,planilha([[`Para onde foi o dinheiro: ${nomeMes} ${ano}`],
+    ["Data","Cliente","Recebido",`${cp}: energia`,`${cp}: o que pagou do bolso`,`${cp}: mão de obra`,`Total ${cp}`,"Guardar","Reinvestir","Sócios"],
+    ...dv.map(({v,d})=>[fmtData(v.data),v.cliente,d.caixa,d.energia,d.material,d.mao,d.gui,d.guardar,d.reinvestir,d.socios]),
+    [],["TOTAL","",td_("caixa"),td_("energia"),td_("material"),td_("mao"),td_("gui"),td_("guardar"),td_("reinvestir"),td_("socios")],
+    [],["Parte de cada sócio no mês"],...Sx.map(n=>[n,"",r2(td_("socios")/Sx.length)])],[11,18,12,14,18,14,12,12,12,12],[2,3,4,5,6,7,8,9]),"Divisão");
   XLSX.utils.book_append_sheet(wb,planilha([[`Resumo ${nomeMes} ${ano}`,""],["Faturamento",s.f],["Custo de produção",s.c],["Taxas de cartão",s.t],["Lucro das vendas",s.l],
     ["Despesas",td],["Lucro final",s.l-td],["Qtd. vendas",V.length],["Peças vendidas",s.p],[],["Gerado pelo Painel Impressão 3D em "+new Date().toLocaleString("pt-BR"),""]],
     [30,16],[]),"Resumo");
@@ -2023,6 +2115,17 @@ fE.onsubmit=e=>{e.preventDefault();
   D.estoque.push(m);
   salvar();fE.g.value=1000;fE.valor.value=0;render();
   status(`${TIPO_EST[m.tipo].toLowerCase()} de ${fmtG(g)} registrada`+(rg?" · "+rg.txt.replace(/<\/?b>/g,""):""))};
+// Lista de compras (1.16.0): filamentos abaixo do mínimo, com a última compra (marca, quantidade, preço)
+$("#btnListaCompras").onclick=()=>{
+  const E=estoques(), L=D.filamentos.filter(f=>{const a=E[f.id];return a&&(a.registrado||a.usado)&&a.saldo<minimoG()});
+  const ult=f=>movsEstoque().filter(m=>m.filamentoId===f.id&&(m.tipo==="compra"||m.tipo==="parcelada")&&+m.valor>0).sort((a,b)=>b.data.localeCompare(a.data))[0];
+  const txt=L.length?"🛒 *Lista de compras: filamentos*\n"+L.map(f=>{const u=ult(f);return`• ${nomeFil(f)}${f.material?` (${f.material})`:""}: tem ${fmtG(E[f.id].saldo)}`+
+    (u?` · última compra ${fmtG(u.g)} por ${brl(u.valor)} (${brl(u.valor/u.g*1000)}/kg) em ${fmtData(u.data)}`:"")}).join("\n"):"";
+  abrirModal(`<h2>🛒 Lista de compras</h2>`+(L.length?`<p class="muted">Filamentos com menos de ${fmtG(minimoG())}.</p>
+    <pre style="white-space:pre-wrap;font-family:inherit;background:var(--bg,#f8fafc);padding:10px;border-radius:10px">${esc(txt)}</pre>
+    <div class="row"><button class="btn" id="lcCopiar">Copiar</button><a class="btn sec2" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(txt)}">📲 Enviar no WhatsApp</a></div>`
+    :`<p>Nenhum filamento abaixo de ${fmtG(minimoG())}. 👍</p>`));
+  $("#lcCopiar")?.addEventListener("click",()=>navigator.clipboard?.writeText(txt).then(()=>status("lista copiada"),()=>status("não foi possível copiar",true)))};
 $("#cfgMinimo").onchange=e=>{D.config.estoqueMinimoG=Math.max(0,Math.round(+e.target.value||0));salvar();render()};
 function renderEstoque(){
   _E=estoques();
@@ -2070,6 +2173,9 @@ function renderConfig(){
   $("#tImp").innerHTML=tabelaCfg("impressoras",["Custo por hora",i=>brl(custoHoraImp(i))]);
   $("#tTaxas").innerHTML=`<tr><th>Forma</th><th class="n">Taxa (%)</th></tr>`+Object.entries(D.taxas).map(([k,v])=>
     `<tr><td>${esc(k)}</td><td class="n"><input type="number" step="0.01" value="${r2(v*100)}" style="width:90px;text-align:right;min-height:36px" onchange="D.taxas['${k}']=this.value/100;salvar()"></td></tr>`).join("");
+  $("#cfgBackup").innerHTML=`Cópia automática no Google Drive (1 por semana, ficam as 8 últimas): ${D.ultimoBackup?`última em <b>${fmtData(D.ultimoBackup)}</b>`:"<b>ainda não feita</b>"}.`+
+    (fonte?.tipo==="drive"?"":" Ela é feita por quem abre o painel pelo Google Drive (celular ou tablet).");
+  $("#btnBackup").hidden=fonte?.tipo!=="drive";
   $("#cfgInfo").innerHTML=`${D.produtos.length} produtos, ${D.orcamentos.length} orçamentos, ${D.vendas.length} vendas, ${D.despesas.length} despesas. Última alteração: ${D.atualizado?.replace("T"," ")||"–"}.`;
 }
 function baixar(nome,conteudo,tipo){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([conteudo],{type:tipo}));a.download=nome;a.click()}
@@ -2078,6 +2184,7 @@ $("#xVendas").onclick=()=>baixar("vendas.csv",csv(D.vendas.map(v=>({...v,itens:d
 $("#xProd").onclick=()=>baixar("produtos.csv",csv(D.produtos.map(p=>{const c=custoProduto(p);return{nome:p.nome,categoria:p.categoria,gramas:r2(c.gramas),horas:r2(c.horas),porImpressao:c.un,custo:r2(c.unit),sugerido:precoSugerido(p,c),preco:precoDe(p)}}),
   ["nome","categoria","gramas","horas","porImpressao","custo","sugerido","preco"]),"text/csv");
 $("#xDesp").onclick=()=>baixar("despesas.csv",csv(D.despesas,["data","categoria","descricao","valor"]),"text/csv");
+$("#btnBackup").onclick=()=>backupSemanal(true).then(ok=>{if(ok)renderConfig()}).catch(e=>avisar("Não foi possível fazer a cópia no Drive: "+e.message));
 $("#xJson").onclick=()=>baixar("dados-"+hoje()+".json",JSON.stringify(D,null,1),"application/json");
 
 /* ---------- início ---------- */
@@ -2114,6 +2221,23 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.16.0",data:"2026-11-09",titulo:"Caixinhas, sócios, lista de compras, recibo e cópia semanal",itens:[
+    {novo:"💰 Paguei o Gui: um botão marca de uma vez todas as vendas com parte dele ainda não entregue.",
+     uso:"Resumo › Para onde foi o dinheiro › botão “Paguei Gui: marcar tudo”."},
+    {novo:"🏦 Caixinhas: quanto tem no Guardar e no Reinvestir, e a tabela dos sócios (parte das vendas, já recebeu, a receber e quanto pagou da impressora).",
+     uso:"Resumo › Caixinhas › “Registrar saída de dinheiro” quando usar o dinheiro ou pagar um sócio."},
+    {novo:"No orçamento e na venda, se o filamento escolhido deixar o preço abaixo do sugerido, aparece um aviso com o preço certo.",
+     uso:"Abaixo do filamento de cada item: ⚠️ preço sugerido."},
+    {novo:"🛒 Lista de compras com os filamentos acabando, a última marca, quantidade e preço pagos.",
+     uso:"Estoque › 🛒 Lista de compras › Copiar ou Enviar no WhatsApp."},
+    {novo:"O Excel do mês voltou a funcionar (estava quebrado) e ganhou a aba “Divisão”: para onde foi o dinheiro de cada venda e a parte de cada sócio.",
+     uso:"Vendas › Exportar Excel. Bom para mandar aos sócios no fechamento do mês."},
+    {novo:"🧾 Recibo da venda pelo WhatsApp, com os itens, o total e a forma de pagamento.",
+     uso:"Vendas › 🧾 Recibo (abre a conversa do cliente se ele tiver telefone)."},
+    {novo:"☁️ Cópia de segurança automática: 1 vez por semana o painel guarda uma cópia do dados.json no Google Drive (ficam as 8 últimas).",
+     uso:"É feita por quem abre pelo Google Drive (celular). Config › Exportar mostra a data da última e tem “Fazer cópia no Drive agora”."},
+    {novo:"Produtos avisam quando o filamento deles foi apagado (o custo do filamento estava saindo R$ 0).",
+     uso:"Produtos › ⚠️ filamento apagado › Editar › escolha o filamento de novo e salve."}]},
   {v:"1.15.0",data:"2026-11-09",titulo:"O que o Gui pagou, sem caixinha",itens:[
     {novo:"Despesa paga pelo Gui pede o que foi comprado (ex.: tomada inteligente), e isso aparece em Resumo › “O que Gui pagou do próprio dinheiro”.",
      uso:"Despesas › Lançar despesa › marque 💰 › escreva em “O que comprou”."},
@@ -2293,7 +2417,7 @@ const PASSOS=[
   {ico:"📈",titulo:"6. Acompanhe o resultado",aba:"geral",texto:`<ul>
     <li><b>Geral</b>: faturamento, lucro e produtos mais vendidos.</li>
     <li><b>Geral</b>: meta do mês, quem ainda deve e gráfico de meses no positivo e no negativo.</li>
-    <li><b>Resumo</b>: lucro líquido, parcelas e a sobra do mês, e as <b>contas do mês</b> com ✓ de pago.</li>
+    <li><b>Resumo</b>: lucro líquido, parcelas e a sobra do mês, as <b>contas do mês</b>, para onde foi o dinheiro e as <b>caixinhas</b> (guardar, reinvestir e sócios).</li>
     <li><b>Vendas › Exportar</b>: planilha Excel do mês.</li></ul>`},
   {ico:"✅",titulo:"Pronto!",texto:`<p>Você já pode começar. Os exemplos que vieram em Produtos podem ser editados ou apagados.</p>
     <p>Para ver este passo a passo de novo: <b>Config › Ajuda</b>.</p>`}
