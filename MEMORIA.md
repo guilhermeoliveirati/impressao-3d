@@ -68,7 +68,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
   "proximoCliente": 3,                // próximo código de cliente (#001, #002…)
   "clientes": [ { "id", "codigo", "nome", "telefone" /* só números */ } ],
   "parcelamentos": [ { "id", "descricao", "total", "parcelas", "inicio": "AAAA-MM", "pessoas": ["Eu", …], "pagos": { "AAAA-MM": [true, false, …] },
-                     "material": filamentoId | null, "materialG" /* compra de filamento parcelada: entra no estoque */, "data" /* dia da compra (1.13.0) */ } ],
+                     "material": filamentoId | null, "materialG" /* compra de filamento parcelada: entra no estoque */, "data" /* dia da compra (1.13.0) */, "doGui" /* 💰 pago do bolso do Gui (1.14.0) */ } ],
   "estoque": [ { "id", "data", "filamentoId", "tipo": "compra" | "inicial" | "perda", "g", "valor", "kg" /* só inicial: preço do kg do dia */ } ],
   "orcamentos": [ { "id", "data", "cliente", "validade" /* dias */, "itens": [ …iguais aos da venda… ], "frete", "valor", "custo", "obs",
                     "status": "aberto" | "producao" | "aprovado" /* vendido */ | "recusado", "vendaId": null, "clienteId",
@@ -83,7 +83,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
                 "recebido": false /* cliente ainda deve; sem o campo = recebido */, "sinal", "repassado" /* parte do material já entregue ao comprador */ } ],
                 // cada item pode ter "mat": [ { "f": filamentoId, "g": gramas POR UNIDADE } ] — usado pelo estoque
                 // e "partes": custo de 1 unidade por tipo { fil, energia, maquina, falha, mao, extras | outros } — usado nas despesas de produção
-  "despesas": [ { "id", "data", "categoria", "descricao", "valor", "pago" /* false = a pagar; sem o campo = paga */, "repete" /* 🔁 todo mês */, "serie" /* id da primeira da série */, "vendaId" /* só nos gastos de produção, lançados pela venda */ } ],
+  "despesas": [ { "id", "data", "categoria", "descricao", "valor", "pago" /* false = a pagar; sem o campo = paga */, "repete" /* 🔁 todo mês */, "serie" /* id da primeira da série */, "doGui" /* 💰 o Gui pagou do bolso: vendas devolvem (1.14.0) */, "vendaId" /* só nos gastos de produção, lançados pela venda */ } ],
 }
 ```
 
@@ -153,7 +153,10 @@ Filamento sempre pode atualizar o `precoKg` (valor ÷ gramas × 1000). Saiu o bo
 1º energia da venda ao comprador (Config, "Gui"); 2º as compras de filamento dele ainda não devolvidas, do mais antigo (à vista e parceladas,
 só as de data ≤ venda; pode ser mais que o custo da própria venda); 3º mão de obra da venda ao Gui (ordem pedida pelo dono na 1.13.1); o resto: guardar + reinvestir (empresa) e sócios
 (`sociosPct`, dividido entre `socios()`). `D.reembolsos` (outra fonte) abate as compras na data dele. Cada compra guarda de onde veio cada pagamento.
-O desgaste da impressora entra no resto. Venda com lucro negativo pede confirmação. "🧵 Repassei" marca `repassado` (parte do Gui entregue).
+O desgaste da impressora entra no resto.
+**Despesas pagas do bolso do Gui** (1.14.0, `contasDoGui()`): despesa com `doGui` (só se `pago`) e parcelamento com `doGui` (valor total, no dia `data`)
+entram na mesma fila da prioridade 2 que os filamentos (do mais antigo). Marca-se em Lançar despesa (💰) ou no cartão do parcelamento;
+parcelado do Gui fica só no nome dele; a repetição mensal leva o `doGui`. Continuam contando como despesa no Resumo (a devolução é só o caminho do dinheiro). Venda com lucro negativo pede confirmação. "🧵 Repassei" marca `repassado` (parte do Gui entregue).
 Resumo: "Para onde foi o dinheiro" (mês, por venda) e "Filamentos que o Gui comprou" (já voltou, falta, de onde veio) + registro de outra fonte.
 Os sócios só pagam a impressora; filamento parcelado fica só no nome do comprador.
 **Filamento por rolo (lotes)** (1.13.0, `lotes()`, `custoFil`, `custoItemProd`): cada compra/estoque inicial é um lote com preço do kg; perdas e vendas
@@ -211,7 +214,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-09, versão 1.13.1)
+## Estado atual (2026-11-09, versão 1.14.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -232,6 +235,8 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.13.0: Editar de Produtos corrigido; Gui recebe primeiro (filamentos que comprou, energia, mão de obra), resto 40 guardar / 30 reinvestir / 30 sócios; filamento por rolo (mais antigo primeiro); quadro de onde veio cada pagamento ao Gui.
 - 1.13.1: ordem do dinheiro da venda ao Gui: 1º energia, 2º filamentos comprados, 3º mão de obra.
 - 2026-11-08: apagadas do `dados.json` 4 compras de filamentos apagados (e47, e48, pc49, pc50); cópia em `backup/`.
+- 1.14.0: despesas pagas do bolso do Gui (💰) entram na devolução da prioridade 2.
+- Para o dono: marcar 💰 nas despesas/parcelamentos que o Gui já pagou do bolso (ex.: "Tomada Inteligente", só no nome do Gui).
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -262,3 +267,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.12.0 | 2026-11-08 | Marca no filamento e escolha do filamento por item no orçamento/venda; preço do kg: maior enquanto tem estoque, o da compra na reposição; cada venda mostra para onde vai o dinheiro (material e energia ao comprador, caixa da impressora, lucro em guardar/reinvestir/dívidas pelos % de Config) e avisa venda que não paga os custos; Repassei; Resumo › Para onde foi o dinheiro; filamento parcelado só no nome do comprador; portão com um botão só, login com a conta lembrada e renovação no toque |
 | 1.13.0 | 2026-11-08 | Correção: Editar de Produtos abria o orçamento (função com o mesmo nome da Produção, agora `editarPedido`); dinheiro da venda paga primeiro o Gui (filamentos comprados não devolvidos, do mais antigo, energia, mão de obra) e o resto vai para guardar/reinvestir (empresa) e sócios; pagamentos ao Gui de outra fonte (`reembolsos`); Resumo mostra para onde foi o dinheiro e de onde veio cada pagamento; filamento por rolo (lotes, o mais antigo primeiro) no custo do orçamento e da venda, preço do kg automático |
 | 1.13.1 | 2026-11-09 | Dinheiro da venda ao Gui na ordem: 1º energia, 2º filamentos que ele comprou, 3º mão de obra |
+| 1.14.0 | 2026-11-09 | Despesa ou parcelamento marcado “💰 Gui pagou do próprio dinheiro” (`doGui`) entra no que as vendas devolvem ao Gui, na prioridade 2 junto com os filamentos; Resumo › “O que o Gui pagou do próprio dinheiro” lista filamentos e contas, quanto voltou e de onde |
