@@ -60,14 +60,16 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
   "versao": 1, "atualizado": "…", "proximoId": 10,     // ids: v vendas, d despesas, p produtos, i impressoras, f filamentos, o orçamentos, c clientes, e estoque, pc parcelamentos
   "taxas": { "Pix": 0, "Débito": 0.0137, "Crédito 1x": 0.0315, … },
   "config": { "energiaKwh": 0.95, "maoDeObraHora": 25, "falhaPct": 10, "margemPct": 100, "arredondar": "90", "estoqueMinimoG": 200, "metaSobra": 0,
-              "comprador": "Gui" /* compra o material e paga a luz */, "guardarPct": 40, "reinvestirPct": 30, "dividasPct": 30 },  // arredondar: nao | 1 | 90 | 5
+              "comprador": "Gui" /* compra o material e paga a luz */, "socios": "Gui, Luan, Caique" /* vazio = pessoas do parcelamento da impressora */,
+              "guardarPct": 40, "reinvestirPct": 30, "sociosPct": 30 },   // dividasPct saiu na 1.13.0
+  "reembolsos": [ { "id", "data", "valor", "fonte", "obs" } ],   // pagamento ao Gui de outra fonte (abate as compras de filamento)  // arredondar: nao | 1 | 90 | 5
   "impressoras": [ { "id", "nome", "preparoMin" /* aquecer e calibrar, 1x por impressão */, "potenciaW", "valor", "vidaUtilH", "manutHora" } ],
   "filamentos":  [ { "id", "nome" /* cor */, "marca", "material", "precoKg" } ],   // cada marca + cor é um filamento
   "proximoCliente": 3,                // próximo código de cliente (#001, #002…)
   "clientes": [ { "id", "codigo", "nome", "telefone" /* só números */ } ],
   "parcelamentos": [ { "id", "descricao", "total", "parcelas", "inicio": "AAAA-MM", "pessoas": ["Eu", …], "pagos": { "AAAA-MM": [true, false, …] },
-                     "material": filamentoId | null, "materialG" /* compra de filamento parcelada: entra no estoque */ } ],
-  "estoque": [ { "id", "data", "filamentoId", "tipo": "compra" | "inicial" | "perda", "g", "valor" } ],
+                     "material": filamentoId | null, "materialG" /* compra de filamento parcelada: entra no estoque */, "data" /* dia da compra (1.13.0) */ } ],
+  "estoque": [ { "id", "data", "filamentoId", "tipo": "compra" | "inicial" | "perda", "g", "valor", "kg" /* só inicial: preço do kg do dia */ } ],
   "orcamentos": [ { "id", "data", "cliente", "validade" /* dias */, "itens": [ …iguais aos da venda… ], "frete", "valor", "custo", "obs",
                     "status": "aberto" | "producao" | "aprovado" /* vendido */ | "recusado", "vendaId": null, "clienteId",
                     "etapa": "fila" | "imprimindo" | "pronto" /* só em producao */, "aprovadoEm": "AAAA-MM-DD",
@@ -147,15 +149,20 @@ Atenção: o desgaste da impressora também está no custo das peças, então en
 **Lançar despesa** (1.11.0, formulário único): pergunta o que é (conta/compra ou 🧵 filamento) e como pagou (à vista ou parcelado, 2x–10x, 1ª parcela e pessoas).
 Conta à vista → `despesas`; conta parcelada → `parcelamentos`; filamento à vista → `estoque` (compra); filamento parcelado → `parcelamentos` com `material`/`materialG`.
 Filamento sempre pode atualizar o `precoKg` (valor ÷ gramas × 1000). Saiu o botão "＋ Novo parcelamento": o cartão do parcelamento continua editável.
-**Para onde vai o dinheiro de cada venda** (1.12.0, `destinos(v)`): o comprador (Config, "Gui") recebe material + energia + perdas + extras
-(= custo − desgaste − mão de obra); desgaste e manutenção vão para a caixa da impressora; lucro (cobrado − custo − taxa) é dividido em guardar/reinvestir/dívidas
-pelos % de Config (se não somam 100, usa a proporção). Venda com lucro negativo pede confirmação. "🧵 Repassei" marca `repassado`.
-Resumo › "Para onde foi o dinheiro": soma do mês, e desde o começo: gasto em filamento (compras + parceladas) × devolvido pelas vendas × repassado.
+**Para onde vai o dinheiro das vendas** (1.13.0, `fluxo()`): em ordem de data, cada venda entrega o que recebeu (cobrado − taxa):
+1º ao comprador (Config, "Gui") as compras de filamento dele ainda não devolvidas, do mais antigo (à vista e parceladas, só as de data ≤ venda;
+pode ser mais que o custo da própria venda); 2º energia e 3º mão de obra da venda ao Gui; o resto: guardar + reinvestir (empresa) e sócios
+(`sociosPct`, dividido entre `socios()`). `D.reembolsos` (outra fonte) abate as compras na data dele. Cada compra guarda de onde veio cada pagamento.
+O desgaste da impressora entra no resto. Venda com lucro negativo pede confirmação. "🧵 Repassei" marca `repassado` (parte do Gui entregue).
+Resumo: "Para onde foi o dinheiro" (mês, por venda) e "Filamentos que o Gui comprou" (já voltou, falta, de onde veio) + registro de outra fonte.
 Os sócios só pagam a impressora; filamento parcelado fica só no nome do comprador.
+**Filamento por rolo (lotes)** (1.13.0, `lotes()`, `custoFil`, `custoItemProd`): cada compra/estoque inicial é um lote com preço do kg; perdas e vendas
+gastam o mais antigo primeiro. Orçamento/venda calculam o filamento do item pelos lotes (com a qtd) e mostram "usa 200 g a R$ 120/kg + 100 g a R$ 100/kg".
+`precoKgDe(id)` = lote em uso; `render()` copia para `precoKg` (`sincPrecos`). Cache limpo em `render()` e `salvar()` (`limparCache`). Substitui a regra "fica o maior" da 1.12.0.
+**Editar de Produtos** usa `editarProd`; o da fila de Produção é `editarPedido` (antes tinham o mesmo nome e o de Produtos abria o orçamento).
 **Marca** (1.12.0): `nomeFil(f)` = "cor · marca". No orçamento/venda, cada item com produto escolhe o filamento (`prodComFil` troca o 1º filamento do produto):
 custo e `mat` mudam; o preço muda só se o produto usa o preço sugerido. `partesItem` usa o filamento do item.
-**Preço do kg na compra** (1.12.0, `regraPrecoKg`, regra do dono): ainda tem daquele filamento → fica o maior preço; estoque zerado (reposição) → preço da compra.
-Vale em Lançar despesa e na compra da aba Estoque (saiu a caixinha "atualizar preço").
+**Preço do kg na compra**: desde 1.13.0 é pelos lotes (acima); `regraPrecoKg` só monta o texto da prévia.
 **Abrir o painel** (1.12.0): com arquivo lembrado, o portão mostra só "Abrir" (outras opções em "Trocar de arquivo ou de conta"); login usa `login_hint`
 com o e-mail salvo; a sessão do Google (1 h) renova no próximo toque quando falta pouco; arquivo do Drive sumido (404/403) pergunta se quer escolher de novo.
 O Google exige um toque para abrir a janela de login (não dá para entrar sem nenhum toque sem servidor próprio).
@@ -204,7 +211,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-08, versão 1.12.0)
+## Estado atual (2026-11-08, versão 1.13.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -222,6 +229,9 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.11.0: Lançar despesa num lugar só (conta/filamento, à vista/parcelado); filamento atualiza estoque e preço do kg; parcelas até 10x.
 - 1.12.0: marca do filamento; regra do preço do kg; divisão do dinheiro de cada venda (Gui / caixa da impressora / guardar 40, reinvestir 30, dívidas 30); abrir sem escolher conta e arquivo.
 - Para o dono: preencher a marca dos filamentos em Estoque › Materiais (uma linha por marca + cor).
+- 1.13.0: Editar de Produtos corrigido; Gui recebe primeiro (filamentos que comprou, energia, mão de obra), resto 40 guardar / 30 reinvestir / 30 sócios; filamento por rolo (mais antigo primeiro); quadro de onde veio cada pagamento ao Gui.
+- Dados reais (2026-11-08): há compras de filamentos apagados (f42 e f43: 2 compras à vista de R$ 100 em 08/11 e 2 parcelamentos de R$ 100 a partir de dez/2026)
+  que contam como gasto do Gui. O dono precisa dizer se são compras de verdade (refazer o filamento) ou lançamentos para apagar.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -250,3 +260,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.10.0 | 2026-11-07 | Sobra desconta só parcelas a pagar; Produção editável (etapa, prazo, sinal, ordem, editar pedido, avisar cliente no WhatsApp); prazo de entrega no orçamento; vendas a receber; despesas que se repetem todo mês (sai o copiar fixas); filamento parcelado entra no estoque e fora da sobra; meta do mês em Geral (`metaSobra` em Config); menu ☰ Mais no celular; salvar orçamento mantém campos da produção |
 | 1.11.0 | 2026-11-07 | Lançar despesa unificado: conta/compra ou filamento, à vista ou parcelado (vai para despesas, parcelamentos ou estoque); filamento atualiza o estoque e o preço do kg; sai o botão Novo parcelamento; compras de filamento do mês aparecem abaixo das despesas; parcelas limitadas a 10x em todos os campos |
 | 1.12.0 | 2026-11-08 | Marca no filamento e escolha do filamento por item no orçamento/venda; preço do kg: maior enquanto tem estoque, o da compra na reposição; cada venda mostra para onde vai o dinheiro (material e energia ao comprador, caixa da impressora, lucro em guardar/reinvestir/dívidas pelos % de Config) e avisa venda que não paga os custos; Repassei; Resumo › Para onde foi o dinheiro; filamento parcelado só no nome do comprador; portão com um botão só, login com a conta lembrada e renovação no toque |
+| 1.13.0 | 2026-11-08 | Correção: Editar de Produtos abria o orçamento (função com o mesmo nome da Produção, agora `editarPedido`); dinheiro da venda paga primeiro o Gui (filamentos comprados não devolvidos, do mais antigo, energia, mão de obra) e o resto vai para guardar/reinvestir (empresa) e sócios; pagamentos ao Gui de outra fonte (`reembolsos`); Resumo mostra para onde foi o dinheiro e de onde veio cada pagamento; filamento por rolo (lotes, o mais antigo primeiro) no custo do orçamento e da venda, preço do kg automático |
