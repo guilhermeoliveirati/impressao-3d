@@ -566,7 +566,7 @@ nav .ct{display:none}
   </div>
   <div class="card" style="max-width:560px">
     <h2>💰 Para onde foi o dinheiro das vendas</h2>
-    <p class="muted" style="margin-top:0">Cada venda paga primeiro o <span class="nmComp">Gui</span> (filamentos que ele comprou, energia e mão de obra).
+    <p class="muted" style="margin-top:0">Cada venda paga primeiro o <span class="nmComp">Gui</span>: 1º energia, 2º filamentos que ele comprou, 3º mão de obra.
       O que sobra vai para a empresa (guardar e reinvestir) e para os sócios. Os % ficam em Config.</p>
     <table id="tDest" class="resumo"></table>
     <h3>Vendas do mês</h3>
@@ -628,8 +628,8 @@ nav .ct{display:none}
       <label>👥 Sócios (%)<input data-c="sociosPct" type="number" step="1" min="0"></label>
     </form>
     <p class="muted" id="cfgDivInfo"></p>
-    <p class="muted">Cada venda paga primeiro quem compra o material: <b>os filamentos que ele comprou</b> (do mais antigo, até devolver tudo, à vista ou parcelado),
-      depois a <b>energia</b> e a <b>mão de obra</b>. O que sobra é dividido nesses %: guardar e reinvestir ficam na empresa, e a parte dos sócios é dividida entre eles.
+    <p class="muted">Cada venda paga primeiro quem compra o material e paga a luz: 1º a <b>energia</b>, 2º <b>os filamentos que ele comprou</b>
+      (do mais antigo, até devolver tudo, à vista ou parcelado), 3º a <b>mão de obra</b>. O que sobra é dividido nesses %: guardar e reinvestir ficam na empresa, e a parte dos sócios é dividida entre eles.
       A impressora os sócios pagam por fora (Despesas › Parcelamentos).</p>
   </div>
   <div class="card"><h2>🖨️ Impressoras</h2>
@@ -701,7 +701,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.13.0";
+const VERSAO="1.13.1";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1303,11 +1303,12 @@ fV.onsubmit=async e=>{e.preventDefault();
   despesasDaVenda(v);
   salvar();limparVenda();renderVendas();status("venda salva · gastos de produção lançados em Despesas");
 };
-/* Para onde vai o dinheiro das vendas (1.13.0). Em ordem de data, cada venda entrega o que recebeu (cobrado − taxa):
-   1. 🧵 ao Gui (quem compra, Config) os filamentos que ele comprou e ainda não voltaram, do mais antigo
+/* Para onde vai o dinheiro das vendas (1.13.0; ordem da 1.13.1). Em ordem de data, cada venda entrega o que recebeu (cobrado − taxa):
+   1. ⚡ ao Gui (quem compra e paga a luz, Config) a energia desta venda;
+   2. 🧵 ao Gui os filamentos que ele comprou e ainda não voltaram, do mais antigo
       (só compras até a data da venda, à vista ou parceladas), mesmo que sejam mais que o custo desta venda;
-   2. ao Gui a energia e a mão de obra desta venda;
-   3. o que sobra: 🏢 empresa (🐷 guardar e 🔁 reinvestir) e 👥 sócios (dividido entre eles), pelos % de Config.
+   3. ao Gui a mão de obra desta venda;
+   4. o que sobra: 🏢 empresa (🐷 guardar e 🔁 reinvestir) e 👥 sócios (dividido entre eles), pelos % de Config.
    Pagamento ao Gui de outra fonte (D.reembolsos: data, valor, fonte, obs) também abate as compras, na data dele.
    Cada compra guarda de onde veio cada pagamento (venda X ou outra fonte). v.repassado = a parte do Gui nesta venda já foi entregue. */
 const comprador=()=>String(D.config.comprador||"Gui").trim()||"Gui";
@@ -1331,9 +1332,9 @@ function fluxo(extra){ // extra: venda ainda no formulário (prévia), no lugar 
   for(const e of ev){
     if(e.r){const p=pagar(+e.x.valor||0,e.data,{fonte:e.x.fonte||"Outra fonte",data:e.x.data});outras[e.x.id]=p.pago;continue}
     const v=e.x, caixa=r2(Math.max(0,(+v.cobrado||0)-(+v.taxa||0))), pt=partesVenda(v);
-    const m=pagar(caixa,v.data,{fonte:"venda",cliente:v.cliente,data:v.data,vendaId:v.id});
-    let resto=r2(caixa-m.pago);
-    const energia=r2(Math.min(resto,pt.energia||0));resto=r2(resto-energia);
+    const energia=r2(Math.min(caixa,pt.energia||0)); // prioridade 1: energia
+    const m=pagar(r2(caixa-energia),v.data,{fonte:"venda",cliente:v.cliente,data:v.data,vendaId:v.id}); // prioridade 2: filamentos do Gui
+    let resto=r2(caixa-energia-m.pago);
     const mao=r2(Math.min(resto,pt.mao||0));resto=r2(resto-mao);
     const guardar=r2(resto*n[0]), reinvestir=r2(resto*n[1]), soc=r2(resto-guardar-reinvestir);
     porVenda[v.id]={caixa,material:m.pago,compras:m.usados.map(u=>({nome:nomeCompra(u.c),v:u.v})),energia,mao,gui:r2(m.pago+energia+mao),
@@ -1345,9 +1346,10 @@ function htmlDestinos(d,lucro){
   const n=pctsLucro().n, cp=esc(comprador()), l=(a,b,c="")=>`<span class="${c}">${a}</span><span class="n ${c}">${b}</span>`;
   return`<b>Para onde vai o dinheiro desta venda</b> <span class="muted">(recebe ${brl(d.caixa)})</span><div class="destinos">`+
     l(`🧵 <b>${cp}</b>`,`<b>${brl(d.gui)}</b>`)+
-    (d.material?l(`filamentos que ${cp} comprou <span class="muted">(${d.compras.map(c=>esc(c.nome)).join(", ")})</span>`,brl(d.material),"sub"):
-      l(`filamentos <span class="muted">(nada a devolver: o que ${cp} comprou já voltou)</span>`,brl(0),"sub"))+
-    l("energia",brl(d.energia),"sub")+(d.mao?l("mão de obra",brl(d.mao),"sub"):"")+
+    l("1º energia",brl(d.energia),"sub")+
+    (d.material?l(`2º filamentos que ${cp} comprou <span class="muted">(${d.compras.map(c=>esc(c.nome)).join(", ")})</span>`,brl(d.material),"sub"):
+      l(`2º filamentos <span class="muted">(${d.caixa-d.energia<=0.004?"não sobrou dinheiro depois da energia":`nada a devolver: o que ${cp} comprou já voltou`})</span>`,brl(0),"sub"))+
+    (d.mao?l("3º mão de obra",brl(d.mao),"sub"):"")+
     l("🏢 <b>Empresa</b>",`<b>${brl(d.empresa)}</b>`)+
     l(`🐷 guardar ${num(n[0]*100,0)}%`,brl(d.guardar),"sub")+l(`🔁 reinvestir ${num(n[1]*100,0)}%`,brl(d.reinvestir),"sub")+
     l(`👥 <b>Sócios</b> ${num(n[2]*100,0)}%`,`<b>${brl(d.socios)}</b>`)+
@@ -1826,7 +1828,7 @@ function renderDestinos(mes){
   const lin=(cls,l,v)=>`<tr class="${cls}"><td>${l}</td><td class="n">${brl(v)}</td></tr>`;
   const tit=(l,v)=>`<tr><td style="padding-top:14px;font-weight:700">${l}</td><td class="n" style="padding-top:14px;font-weight:700">${brl(v)}</td></tr>`;
   $("#tDest").innerHTML=lin("","Recebido das vendas <span class=\"muted\">(sem a taxa da maquininha)</span>",t.caixa)+
-    tit(`🧵 ${cp}`,t.gui)+lin("sub","Filamentos que ele comprou",t.material)+lin("sub","Energia",t.energia)+lin("sub","Mão de obra",t.mao)+
+    tit(`🧵 ${cp}`,t.gui)+lin("sub","1º Energia",t.energia)+lin("sub","2º Filamentos que ele comprou",t.material)+lin("sub","Mão de obra",t.mao)+
     tit("🏢 Empresa",t.empresa)+lin("sub",`🐷 Guardar ${num(n[0]*100,0)}%`,t.guardar)+lin("sub",`🔁 Reinvestir ${num(n[1]*100,0)}%`,t.reinvestir)+
     tit(`👥 Sócios ${num(n[2]*100,0)}%`,t.socios)+S.map(x=>lin("sub",esc(x),t.socios/S.length)).join("");
   $("#tDestV").innerHTML=V.length?`<tr><th>Data</th><th>Cliente</th><th class="n">Recebe</th><th class="n">${cp}</th><th class="n">Empresa</th><th class="n">Sócios</th><th></th></tr>`+
@@ -2086,6 +2088,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.13.1",data:"2026-11-09",titulo:"Energia primeiro",itens:[
+    {novo:"O dinheiro de cada venda paga ao Gui, nesta ordem: 1º a energia, 2º os filamentos que ele comprou, 3º a mão de obra. O que sobra vai para a empresa e os sócios.",
+     uso:"Vendas › quadro “Para onde vai o dinheiro desta venda”, e Resumo › Para onde foi o dinheiro."}]},
   {v:"1.13.0",data:"2026-11-08",titulo:"Gui recebe primeiro, filamento por rolo e correção do Editar",itens:[
     {novo:"Correção: em Produtos, o botão Editar abria o Orçamento. Agora abre o produto.",
      uso:"Produtos › Editar."},

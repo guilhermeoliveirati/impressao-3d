@@ -150,8 +150,8 @@ Atenção: o desgaste da impressora também está no custo das peças, então en
 Conta à vista → `despesas`; conta parcelada → `parcelamentos`; filamento à vista → `estoque` (compra); filamento parcelado → `parcelamentos` com `material`/`materialG`.
 Filamento sempre pode atualizar o `precoKg` (valor ÷ gramas × 1000). Saiu o botão "＋ Novo parcelamento": o cartão do parcelamento continua editável.
 **Para onde vai o dinheiro das vendas** (1.13.0, `fluxo()`): em ordem de data, cada venda entrega o que recebeu (cobrado − taxa):
-1º ao comprador (Config, "Gui") as compras de filamento dele ainda não devolvidas, do mais antigo (à vista e parceladas, só as de data ≤ venda;
-pode ser mais que o custo da própria venda); 2º energia e 3º mão de obra da venda ao Gui; o resto: guardar + reinvestir (empresa) e sócios
+1º energia da venda ao comprador (Config, "Gui"); 2º as compras de filamento dele ainda não devolvidas, do mais antigo (à vista e parceladas,
+só as de data ≤ venda; pode ser mais que o custo da própria venda); 3º mão de obra da venda ao Gui (ordem pedida pelo dono na 1.13.1); o resto: guardar + reinvestir (empresa) e sócios
 (`sociosPct`, dividido entre `socios()`). `D.reembolsos` (outra fonte) abate as compras na data dele. Cada compra guarda de onde veio cada pagamento.
 O desgaste da impressora entra no resto. Venda com lucro negativo pede confirmação. "🧵 Repassei" marca `repassado` (parte do Gui entregue).
 Resumo: "Para onde foi o dinheiro" (mês, por venda) e "Filamentos que o Gui comprou" (já voltou, falta, de onde veio) + registro de outra fonte.
@@ -211,7 +211,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-08, versão 1.13.0)
+## Estado atual (2026-11-09, versão 1.13.1)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -230,8 +230,8 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.12.0: marca do filamento; regra do preço do kg; divisão do dinheiro de cada venda (Gui / caixa da impressora / guardar 40, reinvestir 30, dívidas 30); abrir sem escolher conta e arquivo.
 - Para o dono: preencher a marca dos filamentos em Estoque › Materiais (uma linha por marca + cor).
 - 1.13.0: Editar de Produtos corrigido; Gui recebe primeiro (filamentos que comprou, energia, mão de obra), resto 40 guardar / 30 reinvestir / 30 sócios; filamento por rolo (mais antigo primeiro); quadro de onde veio cada pagamento ao Gui.
-- Dados reais (2026-11-08): há compras de filamentos apagados (f42 e f43: 2 compras à vista de R$ 100 em 08/11 e 2 parcelamentos de R$ 100 a partir de dez/2026)
-  que contam como gasto do Gui. O dono precisa dizer se são compras de verdade (refazer o filamento) ou lançamentos para apagar.
+- 1.13.1: ordem do dinheiro da venda ao Gui: 1º energia, 2º filamentos comprados, 3º mão de obra.
+- 2026-11-08: apagadas do `dados.json` 4 compras de filamentos apagados (e47, e48, pc49, pc50); cópia em `backup/`.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -261,3 +261,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.11.0 | 2026-11-07 | Lançar despesa unificado: conta/compra ou filamento, à vista ou parcelado (vai para despesas, parcelamentos ou estoque); filamento atualiza o estoque e o preço do kg; sai o botão Novo parcelamento; compras de filamento do mês aparecem abaixo das despesas; parcelas limitadas a 10x em todos os campos |
 | 1.12.0 | 2026-11-08 | Marca no filamento e escolha do filamento por item no orçamento/venda; preço do kg: maior enquanto tem estoque, o da compra na reposição; cada venda mostra para onde vai o dinheiro (material e energia ao comprador, caixa da impressora, lucro em guardar/reinvestir/dívidas pelos % de Config) e avisa venda que não paga os custos; Repassei; Resumo › Para onde foi o dinheiro; filamento parcelado só no nome do comprador; portão com um botão só, login com a conta lembrada e renovação no toque |
 | 1.13.0 | 2026-11-08 | Correção: Editar de Produtos abria o orçamento (função com o mesmo nome da Produção, agora `editarPedido`); dinheiro da venda paga primeiro o Gui (filamentos comprados não devolvidos, do mais antigo, energia, mão de obra) e o resto vai para guardar/reinvestir (empresa) e sócios; pagamentos ao Gui de outra fonte (`reembolsos`); Resumo mostra para onde foi o dinheiro e de onde veio cada pagamento; filamento por rolo (lotes, o mais antigo primeiro) no custo do orçamento e da venda, preço do kg automático |
+| 1.13.1 | 2026-11-09 | Dinheiro da venda ao Gui na ordem: 1º energia, 2º filamentos que ele comprou, 3º mão de obra |
