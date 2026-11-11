@@ -230,7 +230,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-12, versão 1.18.1)
+## Estado atual (2026-11-12, versão 1.19.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -259,6 +259,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.17.0: regra dos 4 filamentos (sócios só recebem com o Reinvestir ≥ valor de 4 filamentos, R$ 400 em Config).
 - 1.18.0: foto, tamanho, espessura e detalhes no produto; enviar produto ao cliente; detalhes no orçamento enviado.
 - 1.18.1: a lista de filamento do produto mostra “⚠️ escolha o filamento” quando o dele foi apagado (antes parecia escolhido); salvar sem escolher avisa.
+- 1.19.0: Resumo do mês detalha o custo de produção por item (com para onde vai cada um) e lista cada outra despesa (`detCustos`, `detDespesas`).
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -295,3 +296,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.17.0 | 2026-11-09 | Regra dos 4 filamentos: a parte dos sócios completa o Reinvestir até ele ter o valor de 4 filamentos (`minReinvestir`, Config, começa em R$ 400); venda e Caixinhas mostram quanto foi retido e quanto falta |
 | 1.18.0 | 2026-11-11 | Produto com foto (reduzida para 600 px, guardada no dados.json), tamanho, espessura e detalhes para o cliente; catálogo mostra a foto (toque amplia); 📤 Enviar no produto (foto + detalhes + preço); orçamento enviado leva os detalhes de cada item |
 | 1.18.1 | 2026-11-12 | Correção: produto com filamento apagado mostrava o primeiro filamento da lista como escolhido (o produto continuava sem filamento); agora aparece “⚠️ escolha o filamento” e salvar sem escolher avisa |
+| 1.19.0 | 2026-11-12 | Resumo do mês: custo de produção separado por item (filamento, energia, desgaste, perdas, mão de obra, extras) com o destino do dinheiro de cada um; outras despesas listadas uma a uma (o que é, data, paga / a pagar / 💰 do Gui) |

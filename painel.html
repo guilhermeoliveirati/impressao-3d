@@ -98,6 +98,10 @@ input:focus,select:focus{outline:2px solid var(--acc2);border-color:var(--acc)}
 #rodape{text-align:center;color:var(--mut);font-size:0.857rem;padding:18px 16px 24px}
 table.resumo td{font-size:1.071rem;padding:9px 8px}
 table.resumo tr.sub td{color:var(--bad)}
+table.resumo tr.det td{font-size:.8rem;color:var(--mut);padding-top:2px;padding-bottom:2px;white-space:normal}
+table.resumo tr.det td:first-child{padding-left:22px}
+table.resumo tr.det td.n{white-space:nowrap}
+table.resumo tr.det .para{display:block;font-size:.74rem}
 table.resumo tr.parcial td{background:#f8fafc;font-weight:600}
 table.resumo td{white-space:normal}table.resumo td.n{white-space:nowrap}
 table.resumo tr.sec td{padding-top:16px;font-size:.8rem;color:var(--mut);text-transform:uppercase;font-weight:700;letter-spacing:.03em;border-bottom:1px solid var(--brd)}
@@ -738,7 +742,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.18.1";
+const VERSAO="1.19.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1911,6 +1915,25 @@ function resumoMes(M,mes){
   const x=M[mes]||{fat:0,taxa:0,custo:0,lucro:0,desp:0,parc:0,parcPago:0,n:0};
   return{fat:x.fat,taxa:x.taxa,custo:x.custo,lucro:x.lucro,desp:x.desp,liquido:x.lucro-x.desp,parc:x.parc,parcPago:x.parcPago,sobra:x.lucro-x.desp-x.parc,n:x.n};
 }
+/* Detalhe do Resumo (1.19.0): custo de produção por item, com para onde vai o dinheiro de cada um, e cada outra despesa do mês. */
+function detCustos(mes){
+  const t={};D.vendas.filter(v=>v.data.startsWith(mes)).forEach(v=>{const pt=partesVenda(v);for(const k in pt)t[k]=(t[k]||0)+pt[k]});
+  const cp=esc(comprador()), PARA={
+    fil:["🧵 Filamento",`volta para ${cp}: paga os filamentos que ele comprou (prioridade 2)`],
+    energia:["⚡ Energia",`${cp}, que paga a luz (prioridade 1)`],
+    mao:["✋ Mão de obra",`${cp} (prioridade 3)`],
+    maquina:["🖨️ Desgaste e manutenção","fica no que sobra: empresa (guardar e reinvestir) e sócios"],
+    falha:["⚠️ Perdas e falhas","filamento e energia gastos em falhas: fica no que sobra (o filamento já entra nas compras do "+cp+")"],
+    extras:["📦 Extras (embalagem, argola…)",`fica no que sobra; se ${cp} pagou do bolso, lance com 💰 em Despesas`],
+    outros:["Outros custos (itens avulsos)","fica no que sobra"]};
+  const L=Object.keys(PARA).filter(k=>(t[k]||0)>0.004);
+  return L.map(k=>`<tr class="det"><td>${PARA[k][0]}<span class="para">→ ${PARA[k][1]}</span></td><td class="n">${brl(t[k])}</td></tr>`).join("");
+}
+function detDespesas(mes){
+  const L=D.despesas.filter(d=>!d.vendaId&&d.data.startsWith(mes)).sort((a,b)=>a.data.localeCompare(b.data)), cp=esc(comprador());
+  return L.map(d=>`<tr class="det"><td>${esc(d.descricao||d.categoria)}${d.descricao?` <span class="muted">(${esc(d.categoria)})</span>`:""} · ${fmtData(d.data)}`+
+    `<span class="para">→ ${d.doGui?`💰 ${cp} pagou do bolso: as vendas devolvem (prioridade 2)`:d.pago===false?"a pagar":"paga"}</span></td><td class="n">${brl(d.valor)}</td></tr>`).join("");
+}
 function renderResumo(){
   const M=agregar(), mes=$("#rMes").value, r=resumoMes(M,mes);
   // linhas com "−" mostram o valor sem sinal (o sinal já está no texto)
@@ -1919,8 +1942,8 @@ function renderResumo(){
   $("#tResumo").innerHTML=
     lin("","Faturamento",r.fat)+
     lin("sub","− Taxas de cartão",r.taxa)+
-    lin("sub","− Custos de produção (filamento, energia, desgaste…)",r.custo)+
-    lin("sub","− Outras despesas",r.desp)+
+    lin("sub","− Custos de produção (filamento, energia, desgaste…)",r.custo)+detCustos(mes)+
+    lin("sub","− Outras despesas",r.desp)+detDespesas(mes)+
     `<tr class="parcial"><td>= Lucro líquido</td><td class="n" ${cor(r.liquido)}>${brl(r.liquido)}</td></tr>`+
     lin("sub","− Parcelas a pagar",r.parc)+
     (r.parcPago?`<tr><td class="muted">Parcelas já pagas ✓ (não descontam)</td><td class="n muted">${brl(r.parcPago)}</td></tr>`:"")+
@@ -2275,6 +2298,11 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.19.0",data:"2026-11-12",titulo:"Resumo detalhado",itens:[
+    {novo:"No Resumo do mês, o custo de produção aparece separado por item (filamento, energia, desgaste, perdas, mão de obra, extras), com para onde vai o dinheiro de cada um.",
+     uso:"Resumo › abaixo de “Custos de produção”."},
+    {novo:"Outras despesas mostra cada despesa do mês: o que é, a data, se está paga, a pagar ou se o Gui pagou do bolso.",
+     uso:"Resumo › abaixo de “Outras despesas”."}]},
   {v:"1.18.1",data:"2026-11-12",titulo:"Correção: filamento do produto",itens:[
     {novo:"Produto com filamento apagado mostrava um filamento como se estivesse escolhido, mas continuava sem filamento (custo do filamento R$ 0). Agora a lista mostra “⚠️ escolha o filamento”.",
      uso:"Produtos › Editar › escolha o filamento na lista › Salvar produto. O aviso vermelho some."}]},
