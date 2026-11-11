@@ -739,7 +739,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.20.0";
+const VERSAO="1.20.1";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1764,7 +1764,8 @@ const fD=$("#fDesp");
 /* Categoria (1.20.0): lista (datalist) com Filamento, as categorias padrão e as que você já usou; digitar um nome novo cria a categoria
    (ela aparece na lista das próximas vezes). Categoria "Filamento" abre os campos do filamento (estoque); as outras são conta ou compra. */
 const ehFilCat=c=>/^\s*(🧵\s*)?filamentos?\s*$/i.test(c||"");
-const catsDesp=()=>["Filamento",...new Set([...CATS,...D.despesas.filter(d=>!d.vendaId).map(d=>d.categoria),...D.parcelamentos.filter(pc=>!pc.material).map(pc=>pc.categoria)].filter(c=>c&&!ehFilCat(c)))];
+// 1.20.1: a lista mostra só as categorias que você já usou (e Filamento), não as padrão
+const catsDesp=()=>["Filamento",...new Set([...D.despesas.filter(d=>!d.vendaId).map(d=>d.categoria),...D.parcelamentos.filter(pc=>!pc.material).map(pc=>pc.categoria)].filter(c=>c&&!ehFilCat(c)))];
 function ajustaDesp(){
   if(!fD.id.value)fD.tipo.value=ehFilCat(fD.categoria.value)?"filamento":"conta";
   const t=fD.tipo.value, parc=fD.forma.value==="parcelado", ed=!!fD.id.value;
@@ -2301,6 +2302,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.20.1",data:"2026-11-12",titulo:"Lista de categorias mais curta",itens:[
+    {novo:"A lista de categorias da despesa mostra só as que você já usa (e Filamento). Categoria nova continua sendo só digitar.",
+     uso:"Despesas › Categoria."}]},
   {v:"1.20.0",data:"2026-11-12",titulo:"Despesa sem os botões Conta e Filamento",itens:[
     {novo:"Lançar despesa ficou mais simples: saíram os botões “Conta ou compra” e “Filamento”. Escolha a categoria na lista ou digite uma nova; ela entra na lista das próximas vezes.",
      uso:"Despesas › Categoria › toque e escolha, ou escreva o nome. Para compra de filamento, escolha a categoria “Filamento”: aparecem o filamento e os gramas."}]},
