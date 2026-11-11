@@ -467,11 +467,8 @@ nav .ct{display:none}
     <h2>💸 Lançar despesa</h2>
     <form class="f" id="fDesp" autocomplete="off">
       <input type="hidden" name="id"><input type="hidden" name="tipo" value="conta"><input type="hidden" name="forma" value="avista">
-      <div class="chips" id="dTipo" style="grid-column:1/-1"><span class="rot">O que você comprou ou pagou?</span>
-        <button type="button" class="chip" data-tipo="conta">📄 Conta ou compra (MEI, aluguel, embalagem, impressora…)</button>
-        <button type="button" class="chip" data-tipo="filamento">🧵 Filamento</button></div>
       <label>Data<input name="data" type="date" required></label>
-      <label data-se="cat">Categoria<select name="categoria" id="selCat"></select></label>
+      <label>Categoria<input name="categoria" list="dlCatDesp" placeholder="escolha ou digite uma nova" autocomplete="off"></label><datalist id="dlCatDesp"></datalist>
       <label data-se="fil">Filamento<select name="filamentoId" id="dFil"></select></label>
       <label data-se="desc"><span id="dDescRot">Descrição</span><input name="descricao" placeholder="ex.: DAS de novembro"></label>
       <label>Valor total (R$)<input name="valor" type="number" step="0.01" min="0" required></label>
@@ -742,7 +739,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.19.0";
+const VERSAO="1.20.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1764,16 +1761,20 @@ const fD=$("#fDesp");
    tipo "filamento" + à vista   → D.estoque (compra) e atualiza o preço do kg
    tipo "filamento" + parcelado → D.parcelamentos com material/materialG (entra no estoque) e atualiza o preço do kg
    Filamento não é despesa: o custo dele já sai do lucro de cada venda. */
+/* Categoria (1.20.0): lista (datalist) com Filamento, as categorias padrão e as que você já usou; digitar um nome novo cria a categoria
+   (ela aparece na lista das próximas vezes). Categoria "Filamento" abre os campos do filamento (estoque); as outras são conta ou compra. */
+const ehFilCat=c=>/^\s*(🧵\s*)?filamentos?\s*$/i.test(c||"");
+const catsDesp=()=>["Filamento",...new Set([...CATS,...D.despesas.filter(d=>!d.vendaId).map(d=>d.categoria),...D.parcelamentos.filter(pc=>!pc.material).map(pc=>pc.categoria)].filter(c=>c&&!ehFilCat(c)))];
 function ajustaDesp(){
+  if(!fD.id.value)fD.tipo.value=ehFilCat(fD.categoria.value)?"filamento":"conta";
   const t=fD.tipo.value, parc=fD.forma.value==="parcelado", ed=!!fD.id.value;
   const gui=t==="conta"&&fD.doGui.checked;
-  const vis={cat:t==="conta",desc:t==="conta",fil:t==="filamento",parc,pess:parc&&t==="conta"&&!gui,pago:!parc&&t==="conta"&&!gui,repete:!parc&&t==="conta",gui:t==="conta"};
+  const vis={desc:t==="conta",fil:t==="filamento",parc,pess:parc&&t==="conta"&&!gui,pago:!parc&&t==="conta"&&!gui,repete:!parc&&t==="conta",gui:t==="conta"};
   fD.querySelectorAll(".nmComp").forEach(e=>e.textContent=comprador());
   // pago do bolso do Gui: diz o que foi comprado (aparece em Resumo › O que Gui pagou); não precisa de "Já está pago": as vendas pagam
   $("#dDescRot").textContent=gui?"O que comprou (material, peça…)":"Descrição";fD.descricao.placeholder=gui?"ex.: tomada inteligente, saquinhos":"ex.: DAS de novembro";
   fD.querySelectorAll("[data-se]").forEach(el=>el.hidden=!vis[el.dataset.se]);
-  $("#dTipo").hidden=$("#dForma").hidden=ed; // editando uma despesa já lançada: só os campos dela
-  fD.querySelectorAll("[data-tipo]").forEach(b=>b.classList.toggle("on",b.dataset.tipo===t));
+  $("#dForma").hidden=ed; // editando uma despesa já lançada: só os campos dela
   fD.querySelectorAll("[data-forma]").forEach(b=>b.classList.toggle("on",b.dataset.forma===fD.forma.value));
   if(!fD.inicio.value)fD.inicio.value=(fD.data.value||hoje()).slice(0,7);
   const v=+fD.valor.value||0, n=+fD.parcelas.value||2, ps=fD.pessoas.value.split(",").map(x=>x.trim()).filter(Boolean), g=+fD.g.value||0, f=filamentoDe(fD.filamentoId.value);
@@ -1792,6 +1793,7 @@ fD.addEventListener("click",e=>{const b=e.target.closest("[data-tipo],[data-form
   if(b.dataset.tipo)fD.tipo.value=b.dataset.tipo;else fD.forma.value=b.dataset.forma;ajustaDesp()});
 fD.addEventListener("input",ajustaDesp);fD.addEventListener("change",ajustaDesp);
 fD.onsubmit=e=>{e.preventDefault();
+  fD.categoria.value=fD.categoria.value.trim()||"Outros";ajustaDesp(); // sem categoria: Outros; nome novo vira categoria da lista
   const t=fD.tipo.value, parc=fD.forma.value==="parcelado", valor=r2(fD.valor.value), data=fD.data.value;
   if(!(valor>0))return avisar("Coloque o valor.");
   const n=Math.min(10,+fD.parcelas.value||2), inicio=fD.inicio.value||data.slice(0,7);
@@ -1822,6 +1824,7 @@ $("#dCancelar").onclick=limparDesp;
 window.editarDesp=id=>{const d=D.despesas.find(x=>x.id===id);limparDesp();fD.tipo.value="conta";fD.forma.value="avista";
   for(const k of ["id","data","categoria","descricao","valor"])fD[k].value=d[k]??"";fD.pago.checked=d.pago!==false;fD.repete.checked=!!d.repete;fD.doGui.checked=!!d.doGui;ajustaDesp();scrollTo({top:0,behavior:"smooth"})};
 function renderDesp(){
+  $("#dlCatDesp").innerHTML=catsDesp().map(c=>`<option value="${esc(c)}">`).join("");
   renderParcelas();
   {const sel=$("#dFil"),ant=sel.value;sel.innerHTML=D.filamentos.map(f=>`<option value="${f.id}">${esc(nomeFil(f))} · ${brl(f.precoKg)}/kg</option>`).join("")||'<option value="">(cadastre em Estoque › Materiais)</option>';
    if(D.filamentos.some(f=>f.id===ant))sel.value=ant;
@@ -2270,7 +2273,7 @@ function iniciar(){
   $("#gate").style.display="none";$("#app").style.display="";
   if(!fonte)status("aberto sem permissão de gravar",true);else status(fonte.tipo==="drive"?"☁ Drive":"📁 arquivo local");
   $("#selMetodo").innerHTML=Object.keys(D.taxas).map(k=>`<option>${esc(k)}</option>`).join("");
-  $("#selCat").innerHTML=CATS.map(k=>`<option>${k}</option>`).join("");
+
   const mesAtual=hoje().slice(0,7);
   $("#vMes").value=mesAtual;$("#dMes").value=mesAtual;$("#rMes").value=mesAtual;
   fD.data.value=hoje();
@@ -2298,6 +2301,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.20.0",data:"2026-11-12",titulo:"Despesa sem os botões Conta e Filamento",itens:[
+    {novo:"Lançar despesa ficou mais simples: saíram os botões “Conta ou compra” e “Filamento”. Escolha a categoria na lista ou digite uma nova; ela entra na lista das próximas vezes.",
+     uso:"Despesas › Categoria › toque e escolha, ou escreva o nome. Para compra de filamento, escolha a categoria “Filamento”: aparecem o filamento e os gramas."}]},
   {v:"1.19.0",data:"2026-11-12",titulo:"Resumo detalhado",itens:[
     {novo:"No Resumo do mês, o custo de produção aparece separado por item (filamento, energia, desgaste, perdas, mão de obra, extras), com para onde vai o dinheiro de cada um.",
      uso:"Resumo › abaixo de “Custos de produção”."},
@@ -2504,7 +2510,7 @@ const PASSOS=[
     <p>Venda que veio da produção já chega preenchida. O quadro <b>Para onde vai o dinheiro</b> mostra o que vai para o Gui (filamentos que ele comprou, energia e mão de obra), para a empresa e para os sócios.
       Ao salvar, os gastos (filamento, energia, desgaste…) entram sozinhos em <b>Despesas</b>.</p>`},
   {ico:"💸",titulo:"5. Lance as despesas",aba:"despesas",texto:`<p>Na aba <b>Despesas</b>, coloque os gastos do mês: MEI, embalagens, manutenção da impressora…</p>
-    <p>É tudo num lugar só, em <b>Lançar despesa</b>: escolha se é conta/compra ou filamento, e se pagou à vista ou parcelado.
+    <p>É tudo num lugar só, em <b>Lançar despesa</b>: escolha a categoria (ou digite uma nova) e se pagou à vista ou parcelado. Categoria <b>Filamento</b> abre a escolha do filamento.
       Conta que vem todo mês? Marque <b>🔁 Repetir todo mês</b>. Filamento entra no Estoque e atualiza o preço do kg.</p>
     <p>Os gastos de produção de cada venda aparecem aqui sozinhos, marcados “da venda”. A compra do rolo de filamento <b>não</b> entra aqui (ela vai em Estoque).</p>`},
   {ico:"📈",titulo:"6. Acompanhe o resultado",aba:"geral",texto:`<ul>
