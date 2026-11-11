@@ -622,6 +622,7 @@ nav .ct{display:none}
     <h2>🏦 Caixinhas da empresa e sócios</h2>
     <p class="muted" style="margin-top:0">Desde o começo: quanto as vendas separaram, quanto já saiu e quanto tem. Registre abaixo quando usar o dinheiro (ex.: bico novo com a 🔧 Manutenção, rolo novo com o Reinvestir) ou quando pagar a parte de um sócio.</p>
     <div class="scroll"><table id="tCaixas"></table></div>
+    <div class="infobox" id="cxObs" hidden style="margin-top:8px"></div>
     <h3>👥 Sócios</h3>
     <div class="scroll"><table id="tSocios"></table></div>
     <h3>Registrar saída de dinheiro</h3>
@@ -753,7 +754,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.21.0";
+const VERSAO="1.21.1";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -2051,6 +2052,12 @@ function renderCaixas(){
       return`<tr><td colspan="4" style="white-space:normal">🧵 <b>Regra dos 4 filamentos</b>: os sócios só recebem com ${brl(meta)} no Reinvestir. `+
         (tem>=meta-0.004?`<span class="tag ok">✓ completo</span>`:`<span class="tag aberto">faltam ${brl(meta-tem)}</span>`)+
         (ret>0.004?` <span class="muted">· a parte dos sócios já completou ${brl(ret)} do Reinvestir</span>`:"")+`</td></tr>`})():"");
+  // por que as caixinhas não mudam: o dinheiro das vendas ainda está devolvendo o que o Gui pagou do bolso (1.21.1)
+  {const falta=soma(F.compras,c=>c.resto), cp=esc(comprador()), V=Object.values(F.porVenda), paraGui=soma(V,d=>d.gui), cx=soma(V,d=>(d.manut||0)+d.guardar+d.reinvestir+d.socios);
+   const o=$("#cxObs");o.hidden=!(V.length&&falta>0.004);
+   if(!o.hidden)o.innerHTML=`ℹ️ <b>Por que as caixinhas estão ${cx>0.004?"baixas":"zeradas"}?</b> O dinheiro das vendas vai primeiro para ${cp}: 1º energia, 2º o que ele pagou do bolso, 3º mão de obra.
+     Até agora as vendas mandaram <b>${brl(paraGui)}</b> para ele, e ainda faltam <b>${brl(falta)}</b> do que ele pagou do bolso.
+     As caixinhas (🔧 Manutenção, 🐷 Guardar, 🔁 Reinvestir e sócios) só recebem o que sobra depois disso.`}
   const nomes=[...new Set([...S,...Object.keys(parte)])];
   const impressora=n=>soma(D.parcelamentos.filter(pc=>!doGuiPc(pc)),pc=>{const j=pc.pessoas.indexOf(n);if(j<0)return 0;
     return soma(Object.values(pc.pagos||{}),a=>a[j]?pc.total/pc.parcelas/pc.pessoas.length:0)});
@@ -2332,6 +2339,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.21.1",data:"2026-11-12",titulo:"Caixinhas explicam quando estão zeradas",itens:[
+    {novo:"Enquanto o dinheiro das vendas ainda está devolvendo o que o Gui pagou do bolso, as caixinhas não recebem nada. Agora o quadro explica isso e mostra quanto ainda falta devolver.",
+     uso:"Resumo › Caixinhas › aviso ℹ️ abaixo da tabela."}]},
   {v:"1.21.0",data:"2026-11-12",titulo:"Resumo mais claro e caixinha de manutenção",itens:[
     {novo:"“O que o Gui pagou do próprio dinheiro” subiu para logo depois do Resumo do mês e virou cartões: quanto pagou, quanto já voltou, quanto falta, e cada compra com a barra de quanto já voltou e de onde veio o dinheiro.",
      uso:"Resumo › segundo quadro. Quando entregar o dinheiro ao Gui, toque em “Já entreguei tudo”."},
