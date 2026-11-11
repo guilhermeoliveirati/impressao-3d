@@ -141,6 +141,10 @@ table.resumo tr.final td{font-size:1.286rem;font-weight:700;border-top:2px solid
 .item{display:grid;grid-template-columns:2.2fr 80px 1fr 1fr auto;gap:8px;align-items:end;background:#f8fafc;border-radius:12px;padding:10px}
 .item .del{min-height:44px}
 .item .filsel{grid-column:1/-1}
+.pcard img.foto{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;cursor:zoom-in;background:#f1f5f9}
+.fotoBox{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.fotoBox img{width:120px;height:90px;object-fit:cover;border-radius:10px;border:1px solid var(--brd)}
+.pcard .det{font-size:.82rem}
 .destinos{display:grid;grid-template-columns:1fr auto;gap:4px 12px;margin-top:6px}
 .destinos .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .destinos .sub{padding-left:14px}
@@ -421,7 +425,17 @@ nav .ct{display:none}
         <label>Perda / falhas (%)<input name="falhaPct" type="number" step="1" min="0" placeholder="padrão"></label>
         <label>Margem de lucro (%)<input name="margemPct" type="number" step="1" min="0" placeholder="padrão"></label>
         <label>Preço de venda (R$)<input name="precoVenda" type="number" step="0.01" min="0" placeholder="sugerido"></label>
-        <label style="grid-column:1/-1">Observação<input name="obs" placeholder="ex.: STL do Printables, infill 15%, bico 0.4"></label>
+        <div style="grid-column:1/-1">
+          <h3 style="margin-top:4px">📷 Foto e detalhes do produto</h3>
+          <div class="fotoBox"><img id="pFotoPrev" alt="foto do produto" hidden>
+            <label class="btn sm sec2" style="cursor:pointer">📷 Escolher foto<input type="file" id="pFotoArq" accept="image/*" hidden></label>
+            <button type="button" class="btn sm del" id="pFotoTirar" hidden>✕ Tirar foto</button></div>
+          <p class="muted" style="margin:6px 0 0">A foto é reduzida (até 600 px) e fica guardada no dados.json, igual no computador e no celular.</p>
+        </div>
+        <label>Tamanho<input name="tamanho" placeholder="ex.: 8 × 5 × 0,5 cm"></label>
+        <label>Espessura<input name="espessura" placeholder="ex.: 3 mm"></label>
+        <label style="grid-column:span 2">Detalhes para o cliente<input name="detalhes" placeholder="ex.: acabamento fosco, argola de metal, 12 g"></label>
+        <label style="grid-column:1/-1">Observação (só para você)<input name="obs" placeholder="ex.: STL do Printables, infill 15%, bico 0.4"></label>
         <div class="row" style="grid-column:1/-1;margin-top:6px">
           <button class="btn" type="submit">Salvar produto</button>
           <button class="btn sec2" type="button" id="pCancelar">Limpar</button>
@@ -724,7 +738,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.17.0";
+const VERSAO="1.18.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1146,7 +1160,8 @@ function lerProduto(){
     ...lerTempo(fP.tempo.value,fP.tempoUn.value),porPeca:true,unidades:Math.max(1,Math.round(+fP.unidades.value||1)),maoMin:+fP.maoMin.value||0,
     extras:r2(fP.extras.value),falhaPct:vazioNull(fP.falhaPct.value),margemPct:vazioNull(fP.margemPct.value),
     precoVenda:fP.precoVenda.value===""?null:r2(fP.precoVenda.value),
-    filamentos:prodFil.filter(f=>f.filamentoId&&f.g>0).map(f=>({filamentoId:f.filamentoId,g:r2(f.g)})),obs:fP.obs.value.trim()};
+    filamentos:prodFil.filter(f=>f.filamentoId&&f.g>0).map(f=>({filamentoId:f.filamentoId,g:r2(f.g)})),obs:fP.obs.value.trim(),
+    tamanho:fP.tamanho.value.trim(),espessura:fP.espessura.value.trim(),detalhes:fP.detalhes.value.trim(),...(prodFoto?{foto:prodFoto}:{})};
 }
 // Preço necessário em cada forma de pagamento para receber o mesmo valor do Pix.
 function precosPorPagamento(base){
@@ -1179,8 +1194,27 @@ function calcProduto(){
 }
 fP.addEventListener("input",calcProduto);
 fP.addEventListener("change",calcProduto);
+/* Foto do produto (1.18.0): reduzida no aparelho para até 600 px (JPEG) e guardada como texto (data URL) no próprio produto. */
+let prodFoto=null;
+const mostrarFoto=()=>{const im=$("#pFotoPrev");im.hidden=!prodFoto;if(prodFoto)im.src=prodFoto;$("#pFotoTirar").hidden=!prodFoto};
+function reduzirFoto(arq,max=600){return new Promise((ok,err)=>{const u=URL.createObjectURL(arq),im=new Image();
+  im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+    const g=c.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,c.width,c.height);g.drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL("image/jpeg",0.75))};
+  im.onerror=()=>{URL.revokeObjectURL(u);err(new Error("não consegui abrir a imagem"))};im.src=u})}
+$("#pFotoArq").onchange=async e=>{const a=e.target.files[0];e.target.value="";if(!a)return;
+  try{prodFoto=await reduzirFoto(a);mostrarFoto();status(`foto pronta (${num(prodFoto.length*0.75/1024,0)} KB): toque em Salvar produto`)}catch(er){avisar(er.message)}};
+$("#pFotoTirar").onclick=()=>{prodFoto=null;mostrarFoto()};
+window.verFoto=id=>{const p=D.produtos.find(x=>x.id===id);if(p?.foto)abrirModal(`<h2>${esc(p.nome)}</h2><img src="${p.foto}" alt="" style="width:100%;border-radius:12px">${detalhesProd(p)?`<p>${esc(detalhesProd(p))}</p>`:""}`)};
+// "📏 8 × 5 cm · espessura 3 mm · acabamento fosco"
+const detalhesProd=p=>[p.tamanho&&"📏 "+p.tamanho,p.espessura&&"espessura "+p.espessura,p.detalhes].filter(Boolean).join(" · ");
+// Enviar o produto ao cliente: no celular manda a foto junto (compartilhar); senão abre o WhatsApp só com o texto
+window.enviarProd=async id=>{const p=D.produtos.find(x=>x.id===id);if(!p)return;
+  const txt=`*${p.nome}*\n${[p.tamanho&&"Tamanho: "+p.tamanho,p.espessura&&"Espessura: "+p.espessura,p.detalhes].filter(Boolean).join("\n")}${detalhesProd(p)?"\n":""}Preço: ${brl(precoDe(p))}`;
+  if(p.foto&&navigator.canShare){try{const b=await (await fetch(p.foto)).blob(),f=new File([b],(p.nome.replace(/[^\w]+/g,"-")||"produto")+".jpg",{type:"image/jpeg"});
+    if(navigator.canShare({files:[f]})){await navigator.share({files:[f],text:txt});return}}catch(e){if(e.name==="AbortError")return}}
+  window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank")};
 function limparProduto(){
-  fP.reset();fP.id.value="";
+  fP.reset();fP.id.value="";prodFoto=null;mostrarFoto();
   $("#pImp").innerHTML=D.impressoras.map(i=>`<option value="${i.id}">${esc(i.nome)}</option>`).join("")||'<option value="">(cadastre em Config)</option>';
   prodFil=[{filamentoId:D.filamentos[0]?.id||"",g:0}];
   $("#pTitulo").textContent="🧮 Novo produto";rowsFil();calcProduto();
@@ -1196,7 +1230,7 @@ fP.onsubmit=async e=>{e.preventDefault();
 };
 function carregarProduto(p,copia){
   limparProduto();
-  for(const k of ["id","nome","categoria","impressoraId","horas","minutos","unidades","maoMin","extras","falhaPct","margemPct","precoVenda","obs"])
+  for(const k of ["id","nome","categoria","impressoraId","horas","minutos","unidades","maoMin","extras","falhaPct","margemPct","precoVenda","obs","tamanho","espessura","detalhes"])
     if(fP[k])fP[k].value=p[k]??"";
   // produto antigo (tempo e gramas da impressão inteira): converte para 1 peça, tirando o aquecer e calibrar
   let q=p;if(!p.porPeca){const un=Math.max(1,Math.round(+p.unidades||1)),prep=+impressoraDe(p.impressoraId)?.preparoMin||0,tot=(+p.horas||0)*60+(+p.minutos||0);
@@ -1205,6 +1239,7 @@ function carregarProduto(p,copia){
   [fP.tempo.value,fP.tempoUn.value]=mostrarTempo(q);
   if(copia){fP.id.value="";fP.nome.value=p.nome+" (cópia)"}
   prodFil=q.filamentos?.length?q.filamentos.map(f=>({...f})):[{filamentoId:D.filamentos[0]?.id||"",g:0}];
+  prodFoto=p.foto||null;mostrarFoto();
   $("#pTitulo").textContent=copia?"🧮 Novo produto (cópia)":"✏️ Editando "+p.nome;
   rowsFil();calcProduto();scrollTo({top:0,behavior:"smooth"});
 }
@@ -1217,11 +1252,13 @@ function renderProdutos(){
   const q=norm($("#pBusca").value);
   const L=D.produtos.filter(p=>!q||norm(p.nome+" "+p.categoria).includes(q));
   $("#pLista").innerHTML=L.length?L.map(p=>{const c=custoProduto(p),pr=precoDe(p),l=pr-c.unit;return`<div class="pcard">
+    ${p.foto?`<img class="foto" src="${p.foto}" alt="${esc(p.nome)}" onclick="verFoto('${p.id}')" loading="lazy">`:""}
     <div class="l1"><b>${esc(p.nome)}</b>${p.categoria?`<span class="tag">${esc(p.categoria)}</span>`:""}${(p.filamentos||[]).some(f=>!filamentoDe(f.filamentoId))?'<span class="tag aberto" title="O filamento deste produto foi apagado: o custo do filamento está saindo R$ 0">⚠️ filamento apagado: toque em Editar e escolha de novo</span>':""}</div>
     <div class="l3">${fmtTempo(c.horas)} · ${num(c.gramas)} g${c.un>1?` · ${c.un} por impressão`:""} · ${esc(impressoraDe(p.impressoraId)?.nome||"sem impressora")}</div>
     <div class="nums"><div><small>Custo</small><b>${brl(c.unit)}</b></div><div><small>Preço${p.precoVenda==null?" sug.":""}</small><b>${brl(pr)}</b></div><div><small>Lucro</small><b class="${l>=0?"lucro":"taxa"}">${brl(l)}</b></div></div>
+    ${detalhesProd(p)?`<div class="det">${esc(detalhesProd(p))}</div>`:""}
     <div class="l3">Margem ${pct(pr?l/pr:0)} do preço · ${vend[p.id]?`${num(vend[p.id],0)} vendidos`:"nenhum vendido"}${p.obs?` · ${esc(p.obs)}`:""}</div>
-    <div class="acts"><button class="btn sm sec2" onclick="editarProd('${p.id}')">Editar</button><button class="btn sm sec2" onclick="duplicarProd('${p.id}')">Duplicar</button><button class="btn sm del" onclick="apagar('produtos','${p.id}')">✕</button></div></div>`}).join("")
+    <div class="acts"><button class="btn sm sec2" onclick="enviarProd('${p.id}')" title="Mandar foto, detalhes e preço ao cliente">📤 Enviar</button><button class="btn sm sec2" onclick="editarProd('${p.id}')">Editar</button><button class="btn sm sec2" onclick="duplicarProd('${p.id}')">Duplicar</button><button class="btn sm del" onclick="apagar('produtos','${p.id}')">✕</button></div></div>`}).join("")
     :`<p class="muted">${D.produtos.length?"Nenhum produto com esse nome.":"Nenhum produto cadastrado ainda. Preencha a calculadora acima e clique em Salvar produto."}</p>`;
 }
 $("#pBusca").oninput=renderProdutos;
@@ -1564,7 +1601,7 @@ window.verVendaOrc=id=>{const o=D.orcamentos.find(x=>x.id===id),v=D.vendas.find(
   document.querySelector("#nav [data-s=vendas]").click();$("#vMes").value=v.data.slice(0,7);renderVendas();editarVenda(v.id)};
 // Texto do orçamento para mandar ao cliente (WhatsApp): abre o compartilhar do celular ou copia.
 window.enviarOrc=async id=>{const o=D.orcamentos.find(x=>x.id===id);
-  const txt=`*Orçamento*\nCliente: ${o.cliente}\nData: ${fmtData(o.data)}\n\n`+o.itens.map(x=>`${num(x.qtd,0)}× ${x.nome}: ${brl(x.preco*x.qtd)}`).join("\n")+
+  const txt=`*Orçamento*\nCliente: ${o.cliente}\nData: ${fmtData(o.data)}\n\n`+o.itens.map(x=>{const p=D.produtos.find(y=>y.id===x.produtoId),d=p&&detalhesProd(p).replace("📏 ","");return`${num(x.qtd,0)}× ${x.nome}: ${brl(x.preco*x.qtd)}`+(d?`\n   ${d}`:"")}).join("\n")+
     (o.frete?`\nFrete: ${brl(o.frete)}`:"")+`\n\n*Total: ${brl(o.valor)}*\nVálido até ${fmtData(venceEm(o))}.`+(o.obs?`\n\n${o.obs}`:"");
   const cli=D.clientes.find(c=>c.id===o.clienteId)||clientePorNome(o.cliente);
   if(cli?.telefone){window.open(linkZap(cli.telefone)+"?text="+encodeURIComponent(txt),"_blank");return}
@@ -2236,6 +2273,11 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.18.0",data:"2026-11-11",titulo:"Foto e detalhes do produto",itens:[
+    {novo:"Cada produto pode ter foto, tamanho, espessura e detalhes para o cliente. A foto aparece no catálogo; toque nela para ver grande.",
+     uso:"Produtos › 📷 Escolher foto (no celular pode tirar na hora) › preencha Tamanho, Espessura e Detalhes › Salvar produto."},
+    {novo:"📤 Enviar no produto: manda a foto, os detalhes e o preço ao cliente (no celular, pelo compartilhar). O orçamento enviado também leva tamanho e espessura de cada item.",
+     uso:"Produtos › 📤 Enviar. Orçamentos › 📤 Enviar."}]},
   {v:"1.17.0",data:"2026-11-09",titulo:"Regra dos 4 filamentos",itens:[
     {novo:"Os sócios só recebem a parte deles quando o 🔁 Reinvestir tiver o valor de 4 filamentos. Até lá, a parte dos sócios completa o Reinvestir (só o que falta).",
      uso:"Config › Divisão do dinheiro › “Valor de 4 filamentos” (começa em R$ 400). A venda mostra quanto foi para o Reinvestir e quanto falta; Resumo › Caixinhas mostra se completou."}]},

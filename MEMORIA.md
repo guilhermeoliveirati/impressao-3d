@@ -79,7 +79,8 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
   "produtos": [ { "id", "nome", "categoria", "impressoraId", "horas", "minutos", "unidades", "maoMin", "extras",
                   "falhaPct": null, "margemPct": null, "precoVenda": null,   // null = usa o padrão de Config / o preço sugerido
                   "porPeca": true,   // desde 1.7.0: horas/minutos e filamentos.g são de 1 peça (sem: da impressão inteira)
-                  "filamentos": [ { "filamentoId", "g" } ], "obs" } ],
+                  "filamentos": [ { "filamentoId", "g" } ], "obs",
+                  "foto" /* data URL JPEG até 600 px (1.18.0) */, "tamanho", "espessura", "detalhes" /* para o cliente */ } ],
   "vendas": [ { "id", "data", "cliente", "itens": [ { "produtoId"|null, "nome", "qtd", "preco", "custo" } ],
                 "frete", "cobrado", "metodo", "custo", "taxa", "lucro", "obs", "clienteId",
                 "recebido": false /* cliente ainda deve; sem o campo = recebido */, "sinal", "repassado" /* parte do material já entregue ao comprador */ } ],
@@ -174,6 +175,9 @@ e entrou a aba "Divisão". Vendas › 🧾 Recibo pelo WhatsApp. `backupSemanal(
 (ou "Painel 3D - cópias"), guarda as 8 últimas; Config mostra a data e "Fazer cópia no Drive agora". Produto com filamento apagado mostra aviso (custo do filamento saía R$ 0).
 **Regra dos 4 filamentos** (1.17.0, no `fluxo`): os sócios só recebem quando o saldo do Reinvestir (vendas − retiradas "reinvestir", em ordem de data)
 chega a `config.minReinvestir` (valor fixo digitado pelo dono; 0 = sem regra). Até lá, a parte dos sócios completa o Reinvestir, só o que falta (`retido` por venda).
+**Foto e detalhes do produto** (1.18.0): `reduzirFoto` reduz no aparelho para até 600 px (JPEG 0,75, ~5–40 KB) e guarda em `produto.foto`
+(no dados.json: muitas fotos deixam o arquivo maior e a gravação no Drive mais lenta). Catálogo mostra a foto (toque = `verFoto`) e `detalhesProd`;
+"📤 Enviar" no produto manda foto + texto pelo compartilhar do celular (sem suporte: WhatsApp só com texto); o orçamento enviado leva os detalhes de cada item.
 **Editar de Produtos** usa `editarProd`; o da fila de Produção é `editarPedido` (antes tinham o mesmo nome e o de Produtos abria o orçamento).
 **Marca** (1.12.0): `nomeFil(f)` = "cor · marca". No orçamento/venda, cada item com produto escolhe o filamento (`prodComFil` troca o 1º filamento do produto):
 custo e `mat` mudam; o preço muda só se o produto usa o preço sugerido. `partesItem` usa o filamento do item.
@@ -226,7 +230,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-09, versão 1.17.0)
+## Estado atual (2026-11-11, versão 1.18.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -253,6 +257,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.16.0: repasse em lote, caixinhas e sócios, aviso de preço por filamento, lista de compras, Excel com divisão (e consertado), recibo, cópia semanal no Drive.
 - Para o dono: Manutag e Porta retrato apontam para filamentos apagados (f2, f51): editar e escolher o filamento de novo. A cópia semanal no Drive ainda não foi testada com a conta real.
 - 1.17.0: regra dos 4 filamentos (sócios só recebem com o Reinvestir ≥ valor de 4 filamentos, R$ 400 em Config).
+- 1.18.0: foto, tamanho, espessura e detalhes no produto; enviar produto ao cliente; detalhes no orçamento enviado.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -287,3 +292,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.15.0 | 2026-11-09 | Despesa paga pelo Gui pede “o que comprou” e aparece com esse nome no quadro do Gui; sem caixinha de pago nas despesas e parcelamentos do Gui (filamento ou 💰), que não descontam da sobra; Contas do mês sem as contas do Gui e com a energia gasta nas vendas do mês; descrição do filamento parcelado sem “Filamento Filamento” |
 | 1.16.0 | 2026-11-09 | Paguei o Gui em lote; caixinhas (guardar, reinvestir) e sócios com saídas (`retiradas`); aviso de preço abaixo do sugerido pelo filamento do item; lista de compras de filamento; Excel do mês consertado (aba Dízimo quebrava) com aba Divisão; recibo da venda pelo WhatsApp; cópia semanal do dados.json no Drive (`backupSemanal`); aviso de produto com filamento apagado |
 | 1.17.0 | 2026-11-09 | Regra dos 4 filamentos: a parte dos sócios completa o Reinvestir até ele ter o valor de 4 filamentos (`minReinvestir`, Config, começa em R$ 400); venda e Caixinhas mostram quanto foi retido e quanto falta |
+| 1.18.0 | 2026-11-11 | Produto com foto (reduzida para 600 px, guardada no dados.json), tamanho, espessura e detalhes para o cliente; catálogo mostra a foto (toque amplia); 📤 Enviar no produto (foto + detalhes + preço); orçamento enviado leva os detalhes de cada item |
