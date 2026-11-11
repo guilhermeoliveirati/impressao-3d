@@ -98,6 +98,17 @@ input:focus,select:focus{outline:2px solid var(--acc2);border-color:var(--acc)}
 #rodape{text-align:center;color:var(--mut);font-size:0.857rem;padding:18px 16px 24px}
 table.resumo td{font-size:1.071rem;padding:9px 8px}
 table.resumo tr.sub td{color:var(--bad)}
+.kpis3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 12px}
+.kpis3>div{background:#f8fafc;border-radius:12px;padding:10px 6px;text-align:center}
+.kpis3 small{display:block;color:var(--mut);font-size:.68rem;text-transform:uppercase;font-weight:700;letter-spacing:.02em}
+.kpis3 b{font-size:1.05rem}
+.gitem{border:1px solid var(--brd);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.gitem .t{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.gitem .sub2{font-size:.8rem;color:var(--mut)}
+.gbar{height:6px;background:#eef2f7;border-radius:4px;margin:7px 0 5px;overflow:hidden}
+.gbar i{display:block;height:100%;background:var(--ok)}
+.gitem .orig{font-size:.78rem;color:var(--mut);margin-top:3px}
+.gentregar{background:#f5f3ff;border-radius:12px;padding:10px 12px;margin:4px 0 12px}
 table.resumo tr.det td{font-size:.8rem;color:var(--mut);padding-top:2px;padding-bottom:2px;white-space:normal}
 table.resumo tr.det td:first-child{padding-left:22px}
 table.resumo tr.det td.n{white-space:nowrap}
@@ -582,18 +593,34 @@ nav .ct{display:none}
     <p class="muted" id="rObs"></p>
   </div>
   <div class="card" style="max-width:560px">
+    <h2>💰 O que <span class="nmComp">Gui</span> pagou do próprio dinheiro</h2>
+    <p class="muted" style="margin-top:0">Tudo que ele pagou do bolso: filamentos e despesas marcadas com 💰. As vendas devolvem, do mais antigo para o mais novo, depois da energia.</p>
+    <div class="kpis3" id="guiKpis"></div>
+    <div class="gentregar" id="guiEntregar"></div>
+    <div id="guiLista"></div>
+    <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:600">Pagou ao <span class="nmComp">Gui</span> com dinheiro de outra fonte?</summary>
+      <form class="f" id="fReemb" autocomplete="off" style="margin-top:8px">
+        <label>Data<input name="data" type="date" required></label>
+        <label>Valor (R$)<input name="valor" type="number" step="0.01" min="0" required></label>
+        <label>De onde veio<select name="fonte"><option>Caixa da empresa (guardado)</option><option>Sócios</option><option>Outra fonte</option></select></label>
+        <label>Observação<input name="obs" placeholder="opcional"></label>
+        <div class="row" style="grid-column:1/-1"><button class="btn" type="submit">Registrar pagamento</button></div>
+      </form>
+      <div class="scroll"><table id="tReemb"></table></div>
+    </details>
+  </div>
+  <div class="card" style="max-width:560px">
     <h2>💰 Para onde foi o dinheiro das vendas</h2>
-    <p class="muted" style="margin-top:0">Cada venda paga primeiro o <span class="nmComp">Gui</span>: 1º energia, 2º o que ele pagou do bolso (filamentos e contas), 3º mão de obra.
-      O que sobra vai para a empresa (guardar e reinvestir) e para os sócios. Os % ficam em Config.</p>
+    <p class="muted" style="margin-top:0">Cada venda paga nesta ordem: 1º energia, 2º o que o <span class="nmComp">Gui</span> pagou do bolso, 3º mão de obra (tudo para o Gui),
+      4º desgaste e manutenção (caixinha 🔧 Manutenção). O que sobra vai para a empresa (guardar e reinvestir) e para os sócios. Os % ficam em Config.</p>
     <table id="tDest" class="resumo"></table>
     <h3>Vendas do mês</h3>
     <div class="scroll"><table id="tDestV"></table></div>
     <p class="muted" id="rDestObs"></p>
-    <button class="btn sm" id="btnRepTodos" hidden></button>
   </div>
   <div class="card">
     <h2>🏦 Caixinhas da empresa e sócios</h2>
-    <p class="muted" style="margin-top:0">Desde o começo: quanto as vendas separaram, quanto já saiu e quanto tem. Registre abaixo quando usar o dinheiro (ex.: comprei um bico com o reinvestir) ou quando pagar a parte de um sócio.</p>
+    <p class="muted" style="margin-top:0">Desde o começo: quanto as vendas separaram, quanto já saiu e quanto tem. Registre abaixo quando usar o dinheiro (ex.: bico novo com a 🔧 Manutenção, rolo novo com o Reinvestir) ou quando pagar a parte de um sócio.</p>
     <div class="scroll"><table id="tCaixas"></table></div>
     <h3>👥 Sócios</h3>
     <div class="scroll"><table id="tSocios"></table></div>
@@ -606,20 +633,6 @@ nav .ct{display:none}
       <div class="row" style="grid-column:1/-1"><button class="btn" type="submit">Registrar saída</button></div>
     </form>
     <div class="scroll"><table id="tRet"></table></div>
-  </div>
-  <div class="card">
-    <h2>💰 O que <span class="nmComp">Gui</span> pagou do próprio dinheiro</h2>
-    <p class="muted" style="margin-top:0">Filamentos que ele comprou e despesas marcadas com 💰 em Despesas. Desde o começo: quanto já voltou para ele e de onde veio o dinheiro (venda ou outra fonte).</p>
-    <div class="scroll"><table id="tCompras"></table></div>
-    <h3>Pagou ao <span class="nmComp">Gui</span> com dinheiro de outra fonte?</h3>
-    <form class="f" id="fReemb" autocomplete="off">
-      <label>Data<input name="data" type="date" required></label>
-      <label>Valor (R$)<input name="valor" type="number" step="0.01" min="0" required></label>
-      <label>De onde veio<select name="fonte"><option>Caixa da empresa (guardado)</option><option>Sócios</option><option>Outra fonte</option></select></label>
-      <label>Observação<input name="obs" placeholder="opcional"></label>
-      <div class="row" style="grid-column:1/-1"><button class="btn" type="submit">Registrar pagamento</button></div>
-    </form>
-    <div class="scroll"><table id="tReemb"></table></div>
   </div>
   <div class="card" style="max-width:560px">
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
@@ -665,6 +678,7 @@ nav .ct{display:none}
     <p class="muted" id="cfgDivInfo"></p>
     <p class="muted">Cada venda paga primeiro quem compra o material e paga a luz: 1º a <b>energia</b>, 2º <b>os filamentos que ele comprou</b>
       e as despesas que ele pagou do bolso (💰 em Despesas), do mais antigo, até devolver tudo, 3º a <b>mão de obra</b>. O que sobra é dividido nesses %: guardar e reinvestir ficam na empresa, e a parte dos sócios é dividida entre eles.
+      O <b>desgaste e manutenção</b> de cada peça vai para a caixinha 🔧 Manutenção da impressora, separada do reinvestir.
       A impressora os sócios pagam por fora (Despesas › Parcelamentos).<br>
       <b>Regra dos 4 filamentos</b>: os sócios só recebem quando o 🔁 Reinvestir tiver o valor de 4 filamentos. Até lá, a parte deles completa o Reinvestir (0 = sem a regra).</p>
   </div>
@@ -739,7 +753,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.20.1";
+const VERSAO="1.21.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1436,11 +1450,12 @@ function fluxo(extra){ // extra: venda ainda no formulário (prévia), no lugar 
     const m=pagar(r2(caixa-energia),v.data,{fonte:"venda",cliente:v.cliente,data:v.data,vendaId:v.id}); // prioridade 2: filamentos do Gui
     let resto=r2(caixa-energia-m.pago);
     const mao=r2(Math.min(resto,pt.mao||0));resto=r2(resto-mao);
+    const manut=r2(Math.min(resto,pt.maquina||0));resto=r2(resto-manut); // 4º desgaste e manutenção: caixinha própria, separada do reinvestir (1.21.0)
     const guardar=r2(resto*n[0]);let reinvestir=r2(resto*n[1]), soc=r2(resto-guardar-reinvestir);
     saldoR=r2(saldoR+reinvestir);const retido=r2(Math.min(soc,Math.max(0,meta-saldoR)));
     reinvestir=r2(reinvestir+retido);soc=r2(soc-retido);saldoR=r2(saldoR+retido);
     porVenda[v.id]={retido,saldoR,caixa,material:m.pago,compras:m.usados.map(u=>({nome:nomeCompra(u.c),v:u.v})),energia,mao,gui:r2(m.pago+energia+mao),
-      guardar,reinvestir,empresa:r2(guardar+reinvestir),socios:soc,porSocio:r2(soc/S.length),S};
+      manut,guardar,reinvestir,empresa:r2(guardar+reinvestir),socios:soc,porSocio:r2(soc/S.length),S};
   }
   const r={porVenda,compras,outras};if(!extra)_fluxo=r;return r;
 }
@@ -1452,6 +1467,7 @@ function htmlDestinos(d,lucro){
     (d.material?l(`2º o que ${cp} pagou do bolso <span class="muted">(${d.compras.map(c=>esc(c.nome)).join(", ")})</span>`,brl(d.material),"sub"):
       l(`2º o que ${cp} pagou do bolso <span class="muted">(${d.caixa-d.energia<=0.004?"não sobrou dinheiro depois da energia":"nada a devolver: tudo já voltou para ele"})</span>`,brl(0),"sub"))+
     (d.mao?l("3º mão de obra",brl(d.mao),"sub"):"")+
+    l(`🔧 <b>Manutenção da impressora</b> <span class="muted">(4º desgaste e manutenção)</span>`,`<b>${brl(d.manut)}</b>`)+
     l("🏢 <b>Empresa</b>",`<b>${brl(d.empresa)}</b>`)+
     l(`🐷 guardar ${num(n[0]*100,0)}%`,brl(d.guardar),"sub")+l(`🔁 reinvestir ${num(n[1]*100,0)}%`,brl(d.reinvestir),"sub")+
     l(`👥 <b>Sócios</b> ${num(n[2]*100,0)}%`,`<b>${brl(d.socios)}</b>`)+
@@ -1926,7 +1942,7 @@ function detCustos(mes){
     fil:["🧵 Filamento",`volta para ${cp}: paga os filamentos que ele comprou (prioridade 2)`],
     energia:["⚡ Energia",`${cp}, que paga a luz (prioridade 1)`],
     mao:["✋ Mão de obra",`${cp} (prioridade 3)`],
-    maquina:["🖨️ Desgaste e manutenção","fica no que sobra: empresa (guardar e reinvestir) e sócios"],
+    maquina:["🖨️ Desgaste e manutenção","vai para a caixinha 🔧 Manutenção da impressora (separada do reinvestir)"],
     falha:["⚠️ Perdas e falhas","filamento e energia gastos em falhas: fica no que sobra (o filamento já entra nas compras do "+cp+")"],
     extras:["📦 Extras (embalagem, argola…)",`fica no que sobra; se ${cp} pagou do bolso, lance com 💰 em Despesas`],
     outros:["Outros custos (itens avulsos)","fica no que sobra"]};
@@ -1972,30 +1988,22 @@ function renderResumo(){
 function renderDestinos(mes){
   const F=fluxo(), V=D.vendas.filter(v=>v.data.startsWith(mes)), cp=esc(comprador()), S=socios(), n=pctsLucro().n;
   document.querySelectorAll(".nmComp").forEach(e=>e.textContent=comprador());
-  const t={caixa:0,material:0,energia:0,mao:0,gui:0,empresa:0,guardar:0,reinvestir:0,socios:0};
+  const t={caixa:0,material:0,energia:0,mao:0,gui:0,manut:0,empresa:0,guardar:0,reinvestir:0,socios:0};
   V.forEach(v=>{const d=F.porVenda[v.id];if(d)for(const k in t)t[k]+=d[k]});
   const lin=(cls,l,v)=>`<tr class="${cls}"><td>${l}</td><td class="n">${brl(v)}</td></tr>`;
   const tit=(l,v)=>`<tr><td style="padding-top:14px;font-weight:700">${l}</td><td class="n" style="padding-top:14px;font-weight:700">${brl(v)}</td></tr>`;
   $("#tDest").innerHTML=lin("","Recebido das vendas <span class=\"muted\">(sem a taxa da maquininha)</span>",t.caixa)+
-    tit(`🧵 ${cp}`,t.gui)+lin("sub","1º Energia",t.energia)+lin("sub","2º O que ele pagou do bolso (filamentos e contas)",t.material)+lin("sub","Mão de obra",t.mao)+
+    tit(`🧵 ${cp}`,t.gui)+lin("sub","1º Energia",t.energia)+lin("sub","2º O que ele pagou do bolso (filamentos e contas)",t.material)+lin("sub","3º Mão de obra",t.mao)+
+    tit("🔧 Manutenção da impressora",t.manut)+lin("sub","4º Desgaste e manutenção das peças vendidas",t.manut)+
     tit("🏢 Empresa",t.empresa)+lin("sub",`🐷 Guardar ${num(n[0]*100,0)}%`,t.guardar)+lin("sub",`🔁 Reinvestir ${num(n[1]*100,0)}%`,t.reinvestir)+
     tit(`👥 Sócios ${num(n[2]*100,0)}%`,t.socios)+S.map(x=>lin("sub",esc(x),t.socios/S.length)).join("");
-  $("#tDestV").innerHTML=V.length?`<tr><th>Data</th><th>Cliente</th><th class="n">Recebe</th><th class="n">${cp}</th><th class="n">Empresa</th><th class="n">Sócios</th><th></th></tr>`+
-    V.map(v=>{const d=F.porVenda[v.id];return`<tr><td>${fmtData(v.data)}</td><td>${esc(v.cliente)}</td><td class="n">${brl(d.caixa)}</td><td class="n">${brl(d.gui)}</td><td class="n">${brl(d.empresa)}</td><td class="n">${brl(d.socios)}</td>
+  $("#tDestV").innerHTML=V.length?`<tr><th>Data</th><th>Cliente</th><th class="n">Recebe</th><th class="n">${cp}</th><th class="n">Manutenção</th><th class="n">Empresa</th><th class="n">Sócios</th><th></th></tr>`+
+    V.map(v=>{const d=F.porVenda[v.id];return`<tr><td>${fmtData(v.data)}</td><td>${esc(v.cliente)}</td><td class="n">${brl(d.caixa)}</td><td class="n">${brl(d.gui)}</td><td class="n">${brl(d.manut)}</td><td class="n">${brl(d.empresa)}</td><td class="n">${brl(d.socios)}</td>
       <td>${d.gui>0.004?(v.repassado?'<span class="tag ok">entregue</span>':`<button class="btn sm sec2" onclick="repassei('${v.id}')">🧵 Repassei</button>`):""}</td></tr>`}).join("")
     :'<tr><td class="muted">Nenhuma venda neste mês.</td></tr>';
   const falta=soma(D.vendas.filter(v=>!v.repassado),v=>F.porVenda[v.id]?.gui||0);
-  {const b=$("#btnRepTodos");b.hidden=!(falta>0.004);b.textContent=`💰 Paguei ${comprador()}: marcar tudo (${brl(falta)})`}
-  renderCaixas();
+  renderCaixas();renderGui();
   $("#rDestObs").textContent=falta>0.004?`Falta entregar a ${comprador()} ${brl(falta)} das vendas (todas as datas). Toque em “🧵 Repassei” quando entregar.`:"";
-  // compras de filamento: valor, quanto voltou e de onde
-  const C=F.compras.slice().reverse();
-  $("#tCompras").innerHTML=C.length?`<tr><th>Compra</th><th class="n">Valor</th><th class="n">Já voltou</th><th class="n">Falta</th><th>De onde veio</th></tr>`+
-    C.map(c=>`<tr><td>${esc(nomeCompra(c))}<br><span class="muted">${c.conta?"conta":"🧵 "+fmtG(c.g)}${c.parcelado?" · parcelado":""}</span></td><td class="n">${brl(c.valor)}</td>
-      <td class="n lucro">${brl(c.valor-c.resto)}</td><td class="n">${c.resto>0.004?`<b class="taxa">${brl(c.resto)}</b>`:'<span class="tag ok">✓ quitado</span>'}</td>
-      <td style="white-space:normal;min-width:180px">${c.pagos.map(x=>`${x.fonte==="venda"?`venda de ${esc(x.cliente)}`:esc(x.fonte)} (${fmtData(x.data)}): ${brl(x.v)}`).join("<br>")||'<span class="muted">nada ainda</span>'}</td></tr>`).join("")+
-    `<tr><th>Total</th><th class="n">${brl(soma(C,c=>c.valor))}</th><th class="n">${brl(soma(C,c=>c.valor-c.resto))}</th><th class="n">${brl(soma(C,c=>c.resto))}</th><th></th></tr>`
-    :'<tr><td class="muted">Nada registrado ainda: compras de filamento e despesas marcadas com 💰 aparecem aqui.</td></tr>';
   const R=(D.reembolsos||[]).slice().sort((a,b)=>b.data.localeCompare(a.data));
   $("#tReemb").innerHTML=R.length?`<tr><th>Data</th><th>De onde veio</th><th class="n">Valor</th><th class="n">Abateu</th><th></th></tr>`+
     R.map(x=>`<tr><td>${fmtData(x.data)}</td><td style="white-space:normal">${esc(x.fonte)}${x.obs?` <span class="muted">· ${esc(x.obs)}</span>`:""}</td><td class="n">${brl(x.valor)}</td>
@@ -2003,20 +2011,42 @@ function renderDestinos(mes){
       <td><button class="btn sm del" onclick="apagar('reembolsos','${x.id}')">✕</button></td></tr>`).join(""):"";
   if(!$("#fReemb").data.value)$("#fReemb").data.value=hoje();
 }
+/* Quadro "O que o Gui pagou do próprio dinheiro" (1.21.0): em cartões, que cabem no celular.
+   Totais (pagou, já voltou, falta voltar), quanto as vendas já separaram para ele e falta entregar, e cada compra/conta com de onde veio o dinheiro. */
+function renderGui(){
+  const F=fluxo(), C=F.compras, cp=esc(comprador());
+  const tot=soma(C,c=>c.valor), volt=soma(C,c=>c.valor-c.resto), falta=soma(C,c=>c.resto);
+  const k=(t,v,cls="")=>`<div><small>${t}</small><b class="${cls}">${brl(v)}</b></div>`;
+  $("#guiKpis").innerHTML=k("Pagou do bolso",tot)+k("Já voltou",volt,"lucro")+k("Falta voltar",falta,falta>0.004?"taxa":"lucro");
+  // dinheiro das vendas que é do Gui (energia + bolso + mão de obra) e ainda não foi entregue a ele
+  const V=D.vendas.map(v=>({v,g:F.porVenda[v.id]?.gui||0})).filter(x=>x.g>0.004), sep=soma(V,x=>x.g), ent=soma(V.filter(x=>x.v.repassado),x=>x.g);
+  $("#guiEntregar").innerHTML=V.length?`As vendas já separaram <b>${brl(sep)}</b> para ${cp} (energia, o que ele pagou do bolso e mão de obra). Entregue: <b>${brl(ent)}</b>.`+
+    (sep-ent>0.004?`<div class="row" style="margin-top:8px;align-items:center"><b class="taxa">Falta entregar ${brl(sep-ent)}</b><button class="btn sm" id="btnRepTodos">💰 Já entreguei tudo</button></div>`:` <span class="tag ok">✓ tudo entregue</span>`)
+    :`Nenhuma venda ainda: quando houver, aqui aparece quanto das vendas é de ${cp} e se já foi entregue.`;
+  const b=$("#btnRepTodos");if(b)b.onclick=repassarTodos;
+  const L=C.slice().sort((a,b)=>(b.resto>0.004)-(a.resto>0.004)||b.data.localeCompare(a.data));
+  $("#guiLista").innerHTML=L.length?L.map(c=>{const p_=c.valor?Math.min(100,(c.valor-c.resto)/c.valor*100):100;
+    return`<div class="gitem"><div class="t"><b>${esc(c.nome||nomeFil(filamentoDe(c.filamentoId)))}</b><b>${brl(c.valor)}</b></div>
+      <div class="sub2">${fmtData(c.data)} · ${c.conta?"📄 conta":"🧵 filamento "+fmtG(c.g)}${c.parcelado?" · parcelado":""}</div>
+      <div class="gbar"><i style="width:${p_.toFixed(0)}%"></i></div>
+      <div>${c.resto>0.004?`<b class="taxa">Falta voltar ${brl(c.resto)}</b>${c.valor-c.resto>0.004?` <span class="muted">· já voltou ${brl(c.valor-c.resto)}</span>`:""}`:'<span class="tag ok">✓ voltou tudo</span>'}</div>
+      ${c.pagos.length?`<div class="orig">De onde veio: ${c.pagos.map(x=>`${x.fonte==="venda"?`venda de ${esc(x.cliente)}`:esc(x.fonte)} (${fmtData(x.data)}) ${brl(x.v)}`).join(" · ")}</div>`:""}</div>`}).join("")
+    :'<p class="muted">Nada registrado ainda. Compras de filamento e despesas marcadas com 💰 em Despesas aparecem aqui.</p>';
+}
 // marca de uma vez todas as vendas com parte do Gui ainda não entregue (1.16.0)
-$("#btnRepTodos").onclick=async()=>{const F=fluxo(),L=D.vendas.filter(v=>!v.repassado&&(F.porVenda[v.id]?.gui||0)>0.004),t=soma(L,v=>F.porVenda[v.id].gui);
+const repassarTodos=async()=>{const F=fluxo(),L=D.vendas.filter(v=>!v.repassado&&(F.porVenda[v.id]?.gui||0)>0.004),t=soma(L,v=>F.porVenda[v.id].gui);
   if(!L.length||!await confirmar(`Marcar que ${comprador()} recebeu ${brl(t)} de ${L.length} venda(s)?`,"Marcar tudo"))return;
   L.forEach(v=>v.repassado=true);salvar();render();status(`${L.length} venda(s) marcadas: ${comprador()} recebeu ${brl(t)}`)};
 /* Caixinhas (1.16.0): o que as vendas separaram (fluxo) − saídas (D.retiradas; pagamento ao Gui com "Caixa da empresa" sai do guardar).
    Sócios: parte das vendas − o que já recebeu (retirada "socio:Nome"); e quanto cada um pagou da impressora (✓ nos parcelamentos). */
 function renderCaixas(){
-  const F=fluxo(), S=socios(), parte={}, ent={guardar:0,reinvestir:0};
-  Object.values(F.porVenda).forEach(d=>{ent.guardar+=d.guardar;ent.reinvestir+=d.reinvestir;d.S.forEach(n=>parte[n]=(parte[n]||0)+d.socios/d.S.length)});
+  const F=fluxo(), S=socios(), parte={}, ent={guardar:0,reinvestir:0,manut:0};
+  Object.values(F.porVenda).forEach(d=>{ent.guardar+=d.guardar;ent.reinvestir+=d.reinvestir;ent.manut+=d.manut||0;d.S.forEach(n=>parte[n]=(parte[n]||0)+d.socios/d.S.length)});
   const R=D.retiradas||[], saiu=k=>soma(R.filter(x=>x.caixa===k),x=>x.valor);
   const saiuG=saiu("guardar")+soma((D.reembolsos||[]).filter(x=>/^caixa/i.test(x.fonte||"")),x=>F.outras[x.id]||0);
   const lin=(n,e,s_)=>`<tr><td>${n}</td><td class="n">${brl(e)}</td><td class="n">${brl(s_)}</td><td class="n"><b class="${e-s_<-0.004?"taxa":"lucro"}">${brl(e-s_)}</b></td></tr>`;
   $("#tCaixas").innerHTML=`<tr><th>Caixinha</th><th class="n">Entrou</th><th class="n">Saiu</th><th class="n">Tem</th></tr>`+
-    lin("🐷 Guardar",ent.guardar,saiuG)+lin("🔁 Reinvestir",ent.reinvestir,saiu("reinvestir"))+
+    lin("🔧 Manutenção da impressora",ent.manut,saiu("manutencao"))+lin("🐷 Guardar",ent.guardar,saiuG)+lin("🔁 Reinvestir",ent.reinvestir,saiu("reinvestir"))+
     (+D.config.minReinvestir?(()=>{const tem=ent.reinvestir-saiu("reinvestir"),meta=+D.config.minReinvestir,ret=soma(Object.values(F.porVenda),d=>d.retido||0);
       return`<tr><td colspan="4" style="white-space:normal">🧵 <b>Regra dos 4 filamentos</b>: os sócios só recebem com ${brl(meta)} no Reinvestir. `+
         (tem>=meta-0.004?`<span class="tag ok">✓ completo</span>`:`<span class="tag aberto">faltam ${brl(meta-tem)}</span>`)+
@@ -2027,9 +2057,9 @@ function renderCaixas(){
   $("#tSocios").innerHTML=`<tr><th>Sócio</th><th class="n">Parte das vendas</th><th class="n">Já recebeu</th><th class="n">A receber</th><th class="n">Pagou da impressora</th></tr>`+
     nomes.map(n=>{const p_=parte[n]||0,r=saiu("socio:"+n);return`<tr><td>${esc(n)}</td><td class="n">${brl(p_)}</td><td class="n">${brl(r)}</td><td class="n"><b>${brl(p_-r)}</b></td><td class="n">${brl(impressora(n))}</td></tr>`}).join("");
   const sel=$("#retCaixa"),ant=sel.value;
-  sel.innerHTML=`<option value="guardar">🐷 Guardar</option><option value="reinvestir">🔁 Reinvestir</option>`+nomes.map(n=>`<option value="socio:${esc(n)}">👥 Pagamento a ${esc(n)}</option>`).join("");
+  sel.innerHTML=`<option value="manutencao">🔧 Manutenção da impressora</option><option value="guardar">🐷 Guardar</option><option value="reinvestir">🔁 Reinvestir</option>`+nomes.map(n=>`<option value="socio:${esc(n)}">👥 Pagamento a ${esc(n)}</option>`).join("");
   if(ant)sel.value=ant;
-  const nomeCx=k=>k==="guardar"?"🐷 Guardar":k==="reinvestir"?"🔁 Reinvestir":"👥 "+esc(k.slice(6));
+  const nomeCx=k=>k==="manutencao"?"🔧 Manutenção":k==="guardar"?"🐷 Guardar":k==="reinvestir"?"🔁 Reinvestir":"👥 "+esc(k.slice(6));
   $("#tRet").innerHTML=R.length?`<tr><th>Data</th><th>De onde</th><th>Para quê</th><th class="n">Valor</th><th></th></tr>`+
     R.slice().sort((a,b)=>b.data.localeCompare(a.data)).map(x=>`<tr><td>${fmtData(x.data)}</td><td>${nomeCx(x.caixa)}</td><td style="white-space:normal">${esc(x.obs||"")}</td><td class="n">${brl(x.valor)}</td>
       <td><button class="btn sm del" onclick="apagar('retiradas','${x.id}')">✕</button></td></tr>`).join(""):"";
@@ -2101,10 +2131,10 @@ function montarExcel(mes){
   // Divisão do dinheiro (1.16.0): para onde foi cada venda (o dízimo saiu na 1.5.0; a planilha dele quebrava o botão)
   const F=fluxo(), dv=V.map(v=>({v,d:F.porVenda[v.id]})).filter(x=>x.d), td_=k=>soma(dv,x=>x.d[k]), cp=comprador(), Sx=socios();
   XLSX.utils.book_append_sheet(wb,planilha([[`Para onde foi o dinheiro: ${nomeMes} ${ano}`],
-    ["Data","Cliente","Recebido",`${cp}: energia`,`${cp}: o que pagou do bolso`,`${cp}: mão de obra`,`Total ${cp}`,"Guardar","Reinvestir","Sócios"],
-    ...dv.map(({v,d})=>[fmtData(v.data),v.cliente,d.caixa,d.energia,d.material,d.mao,d.gui,d.guardar,d.reinvestir,d.socios]),
-    [],["TOTAL","",td_("caixa"),td_("energia"),td_("material"),td_("mao"),td_("gui"),td_("guardar"),td_("reinvestir"),td_("socios")],
-    [],["Parte de cada sócio no mês"],...Sx.map(n=>[n,"",r2(td_("socios")/Sx.length)])],[11,18,12,14,18,14,12,12,12,12],[2,3,4,5,6,7,8,9]),"Divisão");
+    ["Data","Cliente","Recebido",`${cp}: energia`,`${cp}: o que pagou do bolso`,`${cp}: mão de obra`,`Total ${cp}`,"Manutenção","Guardar","Reinvestir","Sócios"],
+    ...dv.map(({v,d})=>[fmtData(v.data),v.cliente,d.caixa,d.energia,d.material,d.mao,d.gui,d.manut||0,d.guardar,d.reinvestir,d.socios]),
+    [],["TOTAL","",td_("caixa"),td_("energia"),td_("material"),td_("mao"),td_("gui"),td_("manut"),td_("guardar"),td_("reinvestir"),td_("socios")],
+    [],["Parte de cada sócio no mês"],...Sx.map(n=>[n,"",r2(td_("socios")/Sx.length)])],[11,18,12,14,18,14,12,12,12,12,12],[2,3,4,5,6,7,8,9,10]),"Divisão");
   XLSX.utils.book_append_sheet(wb,planilha([[`Resumo ${nomeMes} ${ano}`,""],["Faturamento",s.f],["Custo de produção",s.c],["Taxas de cartão",s.t],["Lucro das vendas",s.l],
     ["Despesas",td],["Lucro final",s.l-td],["Qtd. vendas",V.length],["Peças vendidas",s.p],[],["Gerado pelo Painel Impressão 3D em "+new Date().toLocaleString("pt-BR"),""]],
     [30,16],[]),"Resumo");
@@ -2302,6 +2332,11 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.21.0",data:"2026-11-12",titulo:"Resumo mais claro e caixinha de manutenção",itens:[
+    {novo:"“O que o Gui pagou do próprio dinheiro” subiu para logo depois do Resumo do mês e virou cartões: quanto pagou, quanto já voltou, quanto falta, e cada compra com a barra de quanto já voltou e de onde veio o dinheiro.",
+     uso:"Resumo › segundo quadro. Quando entregar o dinheiro ao Gui, toque em “Já entreguei tudo”."},
+    {novo:"Desgaste e manutenção agora vão para uma caixinha própria, 🔧 Manutenção da impressora, separada do Reinvestir.",
+     uso:"Resumo › Caixinhas. Ao comprar bico, placa ou correia, registre a saída de “🔧 Manutenção”."}]},
   {v:"1.20.1",data:"2026-11-12",titulo:"Lista de categorias mais curta",itens:[
     {novo:"A lista de categorias da despesa mostra só as que você já usa (e Filamento). Categoria nova continua sendo só digitar.",
      uso:"Despesas › Categoria."}]},
