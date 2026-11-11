@@ -738,7 +738,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.18.0";
+const VERSAO="1.18.1";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1141,7 +1141,7 @@ let prodFil=[];
 function rowsFil(){
   if(!D.filamentos.length){$("#pFil").innerHTML='<p class="muted">Cadastre os filamentos em Config primeiro.</p>';return}
   $("#pFil").innerHTML=prodFil.map((f,i)=>`<div class="linha">
-    <select data-i="${i}" data-k="filamentoId">${D.filamentos.map(x=>`<option value="${x.id}"${x.id===f.filamentoId?" selected":""}>${esc(nomeFil(x))} · ${brl(x.precoKg)}/kg${estTxt(x.id)}</option>`).join("")}</select>
+    <select data-i="${i}" data-k="filamentoId">${filamentoDe(f.filamentoId)?"":`<option value="" selected>⚠️ escolha o filamento${f.filamentoId?" (o anterior foi apagado)":""}</option>`}${D.filamentos.map(x=>`<option value="${x.id}"${x.id===f.filamentoId?" selected":""}>${esc(nomeFil(x))} · ${brl(x.precoKg)}/kg${estTxt(x.id)}</option>`).join("")}</select>
     <input data-i="${i}" data-k="g" type="number" step="0.1" min="0" value="${f.g||0}" style="width:100px" aria-label="gramas"><span class="muted">g</span>
     ${prodFil.length>1?`<button type="button" class="btn sm del" data-rm="${i}" title="Tirar este filamento">✕</button>`:""}</div>`).join("");
 }
@@ -1221,6 +1221,8 @@ function limparProduto(){
 }
 $("#pCancelar").onclick=limparProduto;
 fP.onsubmit=async e=>{e.preventDefault();
+  // filamento apagado ou não escolhido: a lista mostra "⚠️ escolha o filamento" (antes parecia escolhido e o produto ficava sem filamento)
+  if(prodFil.some(f=>+f.g>0&&!filamentoDe(f.filamentoId)))return avisar("Escolha o filamento do produto: o que estava nele foi apagado.");
   const p=lerProduto();p.id=p.id||novoId("p");
   if(D.produtos.some(x=>x.id!==p.id&&norm(x.nome)===norm(p.nome))&&!await confirmar(`Já existe um produto chamado "${p.nome}". Salvar outro com o mesmo nome?`))return;
   const i=D.produtos.findIndex(x=>x.id===p.id);i>=0?D.produtos[i]=p:D.produtos.push(p);
@@ -2273,6 +2275,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.18.1",data:"2026-11-12",titulo:"Correção: filamento do produto",itens:[
+    {novo:"Produto com filamento apagado mostrava um filamento como se estivesse escolhido, mas continuava sem filamento (custo do filamento R$ 0). Agora a lista mostra “⚠️ escolha o filamento”.",
+     uso:"Produtos › Editar › escolha o filamento na lista › Salvar produto. O aviso vermelho some."}]},
   {v:"1.18.0",data:"2026-11-11",titulo:"Foto e detalhes do produto",itens:[
     {novo:"Cada produto pode ter foto, tamanho, espessura e detalhes para o cliente. A foto aparece no catálogo; toque nela para ver grande.",
      uso:"Produtos › 📷 Escolher foto (no celular pode tirar na hora) › preencha Tamanho, Espessura e Detalhes › Salvar produto."},
