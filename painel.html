@@ -451,8 +451,6 @@ nav .ct{display:none}
         </div>
         <label>Tamanho<input name="tamanho" placeholder="ex.: 8 × 5 × 0,5 cm"></label>
         <label>Espessura<input name="espessura" placeholder="ex.: 3 mm"></label>
-        <label style="grid-column:span 2">Detalhes para o cliente<input name="detalhes" placeholder="ex.: acabamento fosco, argola de metal, 12 g"></label>
-        <label style="grid-column:1/-1">Observação (só para você)<input name="obs" placeholder="ex.: STL do Printables, infill 15%, bico 0.4"></label>
         <div class="row" style="grid-column:1/-1;margin-top:6px">
           <button class="btn" type="submit">Salvar produto</button>
           <button class="btn sec2" type="button" id="pCancelar">Limpar</button>
@@ -756,7 +754,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.23.1";
+const VERSAO="1.23.2";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1187,8 +1185,8 @@ function lerProduto(){
     horas:0,minutos:r2((lerMin(fP.tempoModelo.value)||0)/Math.max(1,Math.round(+fP.unidades.value||1))*1e4)/1e4,preparoMin:lerMin(fP.preparo.value),porPeca:true,unidades:Math.max(1,Math.round(+fP.unidades.value||1)),maoMin:r2((lerMin(fP.maoMin.value)||0)*1e4)/1e4,
     extras:r2(fP.extras.value),falhaPct:vazioNull(fP.falhaPct.value),margemPct:vazioNull(fP.margemPct.value),
     precoVenda:fP.precoVenda.value===""?null:r2(fP.precoVenda.value),
-    filamentos:prodFil.filter(f=>f.filamentoId&&f.g>0).map(f=>({filamentoId:f.filamentoId,g:r2(f.g)})),obs:fP.obs.value.trim(),
-    tamanho:fP.tamanho.value.trim(),espessura:fP.espessura.value.trim(),detalhes:fP.detalhes.value.trim(),...(prodFoto?{foto:prodFoto}:{})};
+    filamentos:prodFil.filter(f=>f.filamentoId&&f.g>0).map(f=>({filamentoId:f.filamentoId,g:r2(f.g)})),obs:D.produtos.find(x=>x.id===fP.id.value)?.obs||"",
+    tamanho:fP.tamanho.value.trim(),espessura:fP.espessura.value.trim(),detalhes:D.produtos.find(x=>x.id===fP.id.value)?.detalhes||"",...(prodFoto?{foto:prodFoto}:{})};
 }
 // Preço necessário em cada forma de pagamento para receber o mesmo valor do Pix.
 function precosPorPagamento(base){
@@ -2366,6 +2364,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.23.2",data:"2026-11-12",titulo:"Produto sem Detalhes e Observação",itens:[
+    {novo:"Saíram do cadastro do produto os campos “Detalhes para o cliente” e “Observação”. Ficam a foto, o tamanho e a espessura.",
+     uso:"Produtos › Editar."}]},
   {v:"1.23.1",data:"2026-11-12",titulo:"Tempo do orçamento: preparo uma vez só",itens:[
     {novo:"O tempo de impressão do orçamento agora conta o preparo uma vez só, seja 1 peça ou 10. Só o tempo do modelo multiplica pela quantidade.",
      uso:"Ex.: 10 peças de 8m9s = 1h21m30s de modelo + 6m55s de preparo = 1h28m25s."}]},
