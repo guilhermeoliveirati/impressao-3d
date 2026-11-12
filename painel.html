@@ -430,7 +430,7 @@ nav .ct{display:none}
         <label title="Do fatiador: “Tempo de impressão do modelo” da mesa inteira (todas as peças da impressão)">⏱️ Tempo do modelo (fatiador)<input name="tempoModelo" placeholder="ex.: 8m9s ou 1h20m" autocomplete="off"></label>
         <label title="Do fatiador: “Preparar e tempo de lapso de tempo”. Vazio = o tempo de aquecer e calibrar da impressora (Config)">Preparar + timelapse (fatiador)<input name="preparo" placeholder="ex.: 6m17s + 38s" autocomplete="off"></label>
         <label title="Quantas peças saem de uma impressão (mesa cheia)">Peças por impressão<input name="unidades" type="number" step="1" min="1" value="1"></label>
-        <label title="Preparar o arquivo, tirar da mesa, lixar, pintar, montar… (tempo total da impressão)">Trabalho manual (min)<input name="maoMin" type="number" step="1" min="0" value="0"></label>
+        <label title="Preparar o arquivo, tirar da mesa, lixar, pintar, montar… (tempo total da impressão). Aceita 30s, 5m, 1h30m ou só minutos">✋ Trabalho manual<input name="maoMin" placeholder="ex.: 45s, 5m, 1h30m" autocomplete="off"></label>
         <div style="grid-column:1/-1">
           <h3 style="margin-top:4px">Filamento de 1 peça</h3>
           <div id="pFil"></div>
@@ -755,7 +755,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.22.0";
+const VERSAO="1.22.1";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1183,7 +1183,7 @@ const lerTempo=(v,un)=>un==="min"?{horas:0,minutos:+v||0}:{horas:+v||0,minutos:0
 const mostrarTempo=p=>{const t=r2((+p.horas||0)*60+(+p.minutos||0));return t>0&&t%60===0?[t/60,"h"]:t>0?[t,"min"]:[0,"h"]};
 function lerProduto(){
   return{id:fP.id.value,nome:fP.nome.value.trim(),categoria:fP.categoria.value.trim(),impressoraId:fP.impressoraId.value,
-    horas:0,minutos:r2((lerMin(fP.tempoModelo.value)||0)/Math.max(1,Math.round(+fP.unidades.value||1))*1e4)/1e4,preparoMin:lerMin(fP.preparo.value),porPeca:true,unidades:Math.max(1,Math.round(+fP.unidades.value||1)),maoMin:+fP.maoMin.value||0,
+    horas:0,minutos:r2((lerMin(fP.tempoModelo.value)||0)/Math.max(1,Math.round(+fP.unidades.value||1))*1e4)/1e4,preparoMin:lerMin(fP.preparo.value),porPeca:true,unidades:Math.max(1,Math.round(+fP.unidades.value||1)),maoMin:r2((lerMin(fP.maoMin.value)||0)*1e4)/1e4,
     extras:r2(fP.extras.value),falhaPct:vazioNull(fP.falhaPct.value),margemPct:vazioNull(fP.margemPct.value),
     precoVenda:fP.precoVenda.value===""?null:r2(fP.precoVenda.value),
     filamentos:prodFil.filter(f=>f.filamentoId&&f.g>0).map(f=>({filamentoId:f.filamentoId,g:r2(f.g)})),obs:fP.obs.value.trim(),
@@ -1204,7 +1204,7 @@ function calcProduto(){
     ["⚡ Energia",c.energia/un,`${num(c.kwh,2)} kWh`],
     ["🖨️ Desgaste e manutenção",c.maquina/un,fmtTempo(c.horas)],
     ["⚠️ Perdas / falhas",c.falha/un,`${num(c.falhaPct)}%`],
-    ["✋ Mão de obra",c.mao/un,`${num(p.maoMin,0)} min`],
+    ["✋ Mão de obra",c.mao/un,p.maoMin?fmtHMS(p.maoMin):""],
     ["📦 Extras",c.extras,""]];
   const mx=Math.max(...linhas.map(l=>l[1]),0.01);
   $("#pRes").innerHTML=
@@ -1219,7 +1219,7 @@ function calcProduto(){
     <table>${precosPorPagamento(preco).map(x=>`<tr><td>${x.m}</td><td class="n muted">${x.taxa?pct(x.taxa):""}</td><td class="n"><b>${brl(x.preco)}</b></td></tr>`).join("")}</table>`;
 }
 fP.addEventListener("input",calcProduto);
-fP.addEventListener("change",e=>{const el=e.target;if((el.name==="tempoModelo"||el.name==="preparo")&&el.value.trim()&&!(lerMin(el.value)>0))status("não entendi o tempo “"+el.value+"”: use como o fatiador mostra, ex.: 8m9s",true)});
+fP.addEventListener("change",e=>{const el=e.target;if((el.name==="tempoModelo"||el.name==="preparo"||el.name==="maoMin")&&el.value.trim()&&!(lerMin(el.value)>0))status("não entendi o tempo “"+el.value+"”: use como o fatiador mostra, ex.: 8m9s",true)});
 fP.addEventListener("change",calcProduto);
 /* Foto do produto (1.18.0): reduzida no aparelho para até 600 px (JPEG) e guardada como texto (data URL) no próprio produto. */
 let prodFoto=null;
@@ -1259,12 +1259,13 @@ fP.onsubmit=async e=>{e.preventDefault();
 };
 function carregarProduto(p,copia){
   limparProduto();
-  for(const k of ["id","nome","categoria","impressoraId","horas","minutos","unidades","maoMin","extras","falhaPct","margemPct","precoVenda","obs","tamanho","espessura","detalhes"])
+  for(const k of ["id","nome","categoria","impressoraId","horas","minutos","unidades","extras","falhaPct","margemPct","precoVenda","obs","tamanho","espessura","detalhes"])
     if(fP[k])fP[k].value=p[k]??"";
   // produto antigo (tempo e gramas da impressão inteira): converte para 1 peça, tirando o aquecer e calibrar
   let q=p;if(!p.porPeca){const un=Math.max(1,Math.round(+p.unidades||1)),prep=+impressoraDe(p.impressoraId)?.preparoMin||0,tot=(+p.horas||0)*60+(+p.minutos||0);
     q={...p,horas:0,minutos:r2(Math.max(0,tot-prep)/un),filamentos:(p.filamentos||[]).map(f=>({...f,g:r2(f.g/un)}))};
     status("tempo e gramas convertidos para 1 peça: confira antes de salvar")}
+  fP.maoMin.value=+p.maoMin?fmtHMS(+p.maoMin):""; // trabalho manual em segundos, minutos ou horas (1.22.1)
   {const un=Math.max(1,Math.round(+q.unidades||1)),mod=((+q.horas||0)*60+(+q.minutos||0))*un;fP.tempoModelo.value=mod?fmtHMS(mod):"";
    fP.preparo.value=p.preparoMin!=null?fmtHMS(p.preparoMin):""}
   if(copia){fP.id.value="";fP.nome.value=p.nome+" (cópia)"}
@@ -2351,6 +2352,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.22.1",data:"2026-11-12",titulo:"Trabalho manual em segundos, minutos ou horas",itens:[
+    {novo:"O trabalho manual do produto aceita segundos, minutos ou horas, como os tempos do fatiador.",
+     uso:"Produtos › ✋ Trabalho manual › escreva 45s, 5m, 1h30m ou só o número de minutos."}]},
   {v:"1.22.0",data:"2026-11-12",titulo:"Tempo do produto igual ao fatiador",itens:[
     {novo:"Em Produtos, os tempos agora são como o fatiador mostra: “Tempo do modelo” (ex.: 8m9s) e “Preparar + timelapse” (ex.: 6m17s + 38s). O painel soma e mostra o tempo total para você conferir com o do fatiador.",
      uso:"Produtos › copie do fatiador os dois tempos. O tempo do modelo é da mesa inteira (todas as peças da impressão). Se deixar o preparo vazio, vale o da impressora (Config)."}]},
