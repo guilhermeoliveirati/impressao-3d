@@ -754,7 +754,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.23.2";
+const VERSAO="1.23.3";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1024,7 +1024,7 @@ function custoProduto(p,pk=precoKgDe){ // pk: preço do kg de cada filamento (pa
   const mao=(+p.maoMin||0)/60*C.maoDeObraHora;
   const extras=+p.extras||0;
   const impressao=fil+energia+maquina+falha+mao;
-  return{fil,energia,maquina,falha,mao,extras,impressao,un,horas:h,gramas,kwh,falhaPct,prep,tPeca:p.porPeca?t:null,
+  return{fil,energia,maquina,falha,mao,extras,impressao,un,horas:h,hMao:(+p.maoMin||0)/60,gramas,kwh,falhaPct,prep,tPeca:p.porPeca?t:null,
     unit:impressao/un+extras};
 }
 function arredondar(v){
@@ -1040,7 +1040,9 @@ const precoDe=p=>p.precoVenda!=null?p.precoVenda:precoSugerido(p);
 const produtoPorNome=n=>{const k=norm(n);return k?D.produtos.find(p=>norm(p.nome)===k):null};
 const fmtTempo=h=>{const t=Math.round(h*60);return t>=60?`${Math.floor(t/60)}h${String(t%60).padStart(2,"0")}`:`${t} min`};
 // "⏱️ 7 min (aquecer e calibrar) + 8 min × 4 peças = 39 min"
-const contaTempo=c=>c.tPeca==null?"":`<div class="calc" style="margin-bottom:8px">⏱️ Preparar ${fmtHMS(c.prep*60)} + modelo ${fmtHMS(c.tPeca*c.un*60)}${c.un>1?` (${c.un} peças, ${fmtHMS(c.tPeca*60)} cada)`:""} = <b>tempo total ${fmtHMS(c.horas*60)}</b> <span class="muted">· confira com o “Tempo total” do fatiador</span></div>`;
+// 1.23.3: o trabalho manual soma no tempo total (a impressão sozinha é a que se confere com o fatiador)
+const contaTempo=c=>c.tPeca==null?"":`<div class="calc" style="margin-bottom:8px">⏱️ Preparar ${fmtHMS(c.prep*60)} + modelo ${fmtHMS(c.tPeca*c.un*60)}${c.un>1?` (${c.un} peças, ${fmtHMS(c.tPeca*60)} cada)`:""} = impressão ${fmtHMS(c.horas*60)} <span class="muted">(confira com o “Tempo total” do fatiador)</span>`+
+  (c.hMao?`<br>+ ✋ trabalho manual ${fmtHMS(c.hMao*60)} = <b>tempo total ${fmtHMS((c.horas+c.hMao)*60)}</b>`:` = <b>tempo total ${fmtHMS(c.horas*60)}</b>`)+`</div>`;
 
 /* ---------- agregações ---------- */
 const qtdItens=v=>soma(v.itens||[],x=>x.qtd);
@@ -1570,7 +1572,7 @@ function calcOrc(){
   const T=edO.itens.map(x=>({x,t:tempoInfo(x)})).filter(y=>y.t), th=soma(T,y=>y.t.h);
   $("#oSub").innerHTML=`Itens <b>${brl(sub)}</b> · Custo <b>${brl(custo)}</b> · Lucro previsto <b class="${lucro>=0?"lucro":"taxa"}">${brl(lucro)}</b>`;
   $("#oTempo").hidden=!T.length;
-  $("#oTempo").innerHTML=T.length?`⏱️ <b>Tempo de impressão: ${fmtHMS(th*60)}</b>`+T.map(y=>`<br><span class="muted">${esc(y.x.nome)}: ${y.t.txt} = ${fmtHMS(y.t.h*60)}</span>`).join(""):"";
+  $("#oTempo").innerHTML=T.length?`⏱️ <b>Tempo total (impressão + trabalho manual): ${fmtHMS(th*60)}</b>`+T.map(y=>`<br><span class="muted">${esc(y.x.nome)}: ${y.t.txt} = ${fmtHMS(y.t.h*60)}</span>`).join(""):"";
   return{custo};
 }
 fO.addEventListener("input",e=>{if(e.target.name==="valor")valorManual=true;if(e.target.name==="valor"||e.target.name==="frete")calcOrc()});
@@ -1656,8 +1658,9 @@ const ETAPA={fila:["Na fila",""],imprimindo:["Imprimindo","ok"],pronto:["Pronto 
    preparo + qtd × tempo de 1 peça (em horas). Ex.: 6m55s + 10 × 8m9s = 1h28m25s. */
 function tempoInfo(x){const p=x.produtoId&&D.produtos.find(q=>q.id===x.produtoId);if(!p)return null;const c=custoProduto(p),q=Math.max(1,+x.qtd||1),mesas=Math.ceil(q/c.un);
   if(c.tPeca==null)return{mesas,h:mesas*c.horas,txt:`${mesas} impressão(ões) × ${fmtHMS(c.horas*60)}`};
-  const h=c.prep+q*c.tPeca;
-  return{mesas,h,txt:`preparar ${fmtHMS(c.prep*60)} (1 vez) + ${num(q,0)} × modelo ${fmtHMS(c.tPeca*60)} = ${fmtHMS(c.prep*60)} + ${fmtHMS(q*c.tPeca*60)}`}}
+  const mp=c.hMao/c.un, h=c.prep+q*c.tPeca+q*mp;
+  return{mesas,h,txt:`preparar ${fmtHMS(c.prep*60)} (1 vez) + ${num(q,0)} × modelo ${fmtHMS(c.tPeca*60)}`+(mp?` + ${num(q,0)} × manual ${fmtHMS(mp*60)}`:"")+
+    ` = ${fmtHMS(c.prep*60)} + ${fmtHMS(q*c.tPeca*60)}`+(mp?` + ${fmtHMS(q*mp*60)}`:"")}}
 function tempoItem(x){return tempoInfo(x)?.h||0}
 // ordem da fila: "ordem" (▲▼), depois a data de aprovação
 const filaProd=()=>D.orcamentos.filter(o=>o.status==="producao").sort((a,b)=>(a.ordem??1e9)-(b.ordem??1e9)||(a.aprovadoEm||a.data).localeCompare(b.aprovadoEm||b.data)||a.id.localeCompare(b.id,"pt-BR",{numeric:true}));
@@ -2364,6 +2367,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.23.3",data:"2026-11-12",titulo:"Trabalho manual soma no tempo",itens:[
+    {novo:"O tempo do trabalho manual agora soma no tempo total, no produto e no orçamento (manual × quantidade).",
+     uso:"Produtos: impressão (confira com o fatiador) + ✋ manual = tempo total. Orçamentos: preparo 1 vez + quantidade × (modelo + manual)."}]},
   {v:"1.23.2",data:"2026-11-12",titulo:"Produto sem Detalhes e Observação",itens:[
     {novo:"Saíram do cadastro do produto os campos “Detalhes para o cliente” e “Observação”. Ficam a foto, o tamanho e a espessura.",
      uso:"Produtos › Editar."}]},

@@ -230,7 +230,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-12, versão 1.23.2)
+## Estado atual (2026-11-12, versão 1.23.3)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -271,6 +271,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   `editorItens.set` troca filamento apagado do item pelo atual do produto.
 - 1.23.1: tempo de impressão (orçamento e Produção) = preparo 1 vez por item + qtd × modelo de 1 peça (regra do dono; não repete o preparo por impressão).
 - 1.23.2: saíram da tela de Produtos os campos Detalhes para o cliente e Observação (os valores já gravados em `detalhes`/`obs` são mantidos ao salvar).
+- 1.23.3: trabalho manual soma no tempo total (`c.hMao`): produto = impressão + manual; orçamento/Produção = preparo 1 vez + qtd × (modelo + manual ÷ peças por impressão).
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -317,3 +318,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.23.0 | 2026-11-12 | Orçamento: valor acompanha quantidade, produto e preço; tempo de impressão (impressões × preparo + quantidade × tempo do modelo de 1 peça), também na fila de Produção; item com filamento apagado usa o filamento atual do produto |
 | 1.23.1 | 2026-11-12 | Tempo de impressão do orçamento e da Produção: preparo uma vez só por item (seja 1 peça ou 10) + quantidade × tempo do modelo |
 | 1.23.2 | 2026-11-12 | Produtos: saem os campos “Detalhes para o cliente” e “Observação” (valores antigos continuam gravados) |
+| 1.23.3 | 2026-11-12 | Trabalho manual soma no tempo total do produto e do orçamento/Produção (quantidade × manual de 1 peça) |
