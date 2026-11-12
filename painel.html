@@ -427,14 +427,15 @@ nav .ct{display:none}
         <label style="grid-column:span 2">Nome do produto<input name="nome" required placeholder="ex.: Chaveiro personalizado"></label>
         <label>Categoria<input name="categoria" list="dlCats" placeholder="ex.: Chaveiros"></label>
         <label>Impressora<select name="impressoraId" id="pImp"></select></label>
-        <label style="grid-column:span 2" title="Só a impressão de 1 peça, sem aquecer e calibrar: isso a impressora já soma (Config)">Tempo de impressão de 1 peça<span class="campoBtn"><input name="tempo" type="number" step="any" min="0" value="0" style="flex:1;min-width:0"><select name="tempoUn" aria-label="unidade do tempo" style="width:auto"><option value="h">horas</option><option value="min">minutos</option></select></span></label>
+        <label title="Do fatiador: “Tempo de impressão do modelo” da mesa inteira (todas as peças da impressão)">⏱️ Tempo do modelo (fatiador)<input name="tempoModelo" placeholder="ex.: 8m9s ou 1h20m" autocomplete="off"></label>
+        <label title="Do fatiador: “Preparar e tempo de lapso de tempo”. Vazio = o tempo de aquecer e calibrar da impressora (Config)">Preparar + timelapse (fatiador)<input name="preparo" placeholder="ex.: 6m17s + 38s" autocomplete="off"></label>
         <label title="Quantas peças saem de uma impressão (mesa cheia)">Peças por impressão<input name="unidades" type="number" step="1" min="1" value="1"></label>
         <label title="Preparar o arquivo, tirar da mesa, lixar, pintar, montar… (tempo total da impressão)">Trabalho manual (min)<input name="maoMin" type="number" step="1" min="0" value="0"></label>
         <div style="grid-column:1/-1">
           <h3 style="margin-top:4px">Filamento de 1 peça</h3>
           <div id="pFil"></div>
           <button type="button" class="btn sm sec2" id="pAddFil">＋ Outra cor / filamento</button>
-          <p class="muted" style="margin:6px 0 0">Tempo e gramas de 1 peça, como o fatiador mostra (Bambu Studio, Orca, Cura…), sem o aquecimento e a calibração: o painel soma o tempo de “Aquecer e calibrar” da impressora uma vez por impressão.</p>
+          <p class="muted" style="margin:6px 0 0">Copie os tempos do fatiador como ele mostra (Bambu Studio, Orca…): “Tempo de impressão do modelo” (da mesa inteira) e “Preparar e tempo de lapso de tempo” (ex.: 6m17s + 38s). O painel soma e mostra o tempo total para você conferir. Os gramas são de 1 peça.</p>
         </div>
         <label title="Embalagem, argola, ímã, parafuso, adesivo… valor por peça">Extras por peça (R$)<input name="extras" type="number" step="0.01" min="0" value="0"></label>
         <label>Perda / falhas (%)<input name="falhaPct" type="number" step="1" min="0" placeholder="padrão"></label>
@@ -754,7 +755,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.21.1";
+const VERSAO="1.22.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1014,7 +1015,7 @@ const custoHoraImp=i=>i?((+i.potenciaW||0)/1000*D.config.energiaKwh)+((+i.valor|
 function custoProduto(p,pk=precoKgDe){ // pk: preço do kg de cada filamento (padrão: o do lote em uso)
   const C=D.config, imp=impressoraDe(p.impressoraId)||{};
   const t=(+p.horas||0)+(+p.minutos||0)/60, un=Math.max(1,Math.round(+p.unidades||1));
-  const prep=p.porPeca?(+imp.preparoMin||0)/60:0, h=p.porPeca?prep+t*un:t, fator=p.porPeca?un:1;
+  const prep=p.porPeca?(+(p.preparoMin??imp.preparoMin)||0)/60:0, h=p.porPeca?prep+t*un:t, fator=p.porPeca?un:1;
   const gramas=soma(p.filamentos||[],f=>f.g)*fator;
   const fil=soma(p.filamentos||[],f=>(pk(f.filamentoId)||0)*(+f.g||0)/1000)*fator;
   const kwh=(+imp.potenciaW||0)/1000*h, energia=kwh*C.energiaKwh;
@@ -1040,7 +1041,7 @@ const precoDe=p=>p.precoVenda!=null?p.precoVenda:precoSugerido(p);
 const produtoPorNome=n=>{const k=norm(n);return k?D.produtos.find(p=>norm(p.nome)===k):null};
 const fmtTempo=h=>{const t=Math.round(h*60);return t>=60?`${Math.floor(t/60)}h${String(t%60).padStart(2,"0")}`:`${t} min`};
 // "⏱️ 7 min (aquecer e calibrar) + 8 min × 4 peças = 39 min"
-const contaTempo=c=>c.tPeca==null?"":`<div class="calc" style="margin-bottom:8px">⏱️ Tempo da impressão: ${fmtTempo(c.prep)} (aquecer e calibrar) + ${fmtTempo(c.tPeca)} × ${c.un} ${c.un>1?"peças":"peça"} = <b>${fmtTempo(c.horas)}</b></div>`;
+const contaTempo=c=>c.tPeca==null?"":`<div class="calc" style="margin-bottom:8px">⏱️ Preparar ${fmtHMS(c.prep*60)} + modelo ${fmtHMS(c.tPeca*c.un*60)}${c.un>1?` (${c.un} peças, ${fmtHMS(c.tPeca*60)} cada)`:""} = <b>tempo total ${fmtHMS(c.horas*60)}</b> <span class="muted">· confira com o “Tempo total” do fatiador</span></div>`;
 
 /* ---------- agregações ---------- */
 const qtdItens=v=>soma(v.itens||[],x=>x.qtd);
@@ -1169,11 +1170,20 @@ $("#pFil").addEventListener("click",e=>{const i=e.target.dataset?.rm;if(i==null)
 $("#pAddFil").onclick=()=>{prodFil.push({filamentoId:D.filamentos[0]?.id||"",g:0});rowsFil();calcProduto()};
 const vazioNull=v=>v===""||v==null?null:+v;
 /* Tempo de impressão: um campo só, em horas ou em minutos (o dados.json continua com "horas" e "minutos"). */
+/* Tempos do fatiador (1.22.0): aceita "8m9s", "1h20m", "6m17s + 38s", "8:09" (min:s), "1:08:09" (h:min:s) ou só número (minutos).
+   Devolve minutos. O tempo do modelo é da mesa inteira; o produto guarda o de 1 peça (÷ peças por impressão), como antes. */
+function lerMin(txt){const t=String(txt||"").trim().toLowerCase().replace(",",".");if(!t)return null;
+  return t.split("+").reduce((tot,pt)=>{pt=pt.trim();if(!pt)return tot;
+    if(/^\d+(:\d+){1,2}$/.test(pt)){const a=pt.split(":").map(Number);return tot+(a.length===3?a[0]*60+a[1]+a[2]/60:a[0]+a[1]/60)}
+    const h=+(pt.match(/([\d.]+)\s*h/)||[])[1]||0, m=+(pt.match(/([\d.]+)\s*m(?!s)/)||[])[1]||0, s_=+(pt.match(/([\d.]+)\s*s/)||[])[1]||0;
+    if(!h&&!m&&!s_&&/^[\d.]+$/.test(pt))return tot+(+pt);return tot+h*60+m+s_/60},0)}
+// minutos → "1h08m09s" / "15m4s" (como o fatiador)
+const fmtHMS=min=>{const t=Math.round((+min||0)*60),h=Math.floor(t/3600),m=Math.floor(t%3600/60),s_=t%60;return(h?h+"h":"")+(h||m?m+"m":"")+(s_||(!h&&!m)?s_+"s":"")};
 const lerTempo=(v,un)=>un==="min"?{horas:0,minutos:+v||0}:{horas:+v||0,minutos:0};
 const mostrarTempo=p=>{const t=r2((+p.horas||0)*60+(+p.minutos||0));return t>0&&t%60===0?[t/60,"h"]:t>0?[t,"min"]:[0,"h"]};
 function lerProduto(){
   return{id:fP.id.value,nome:fP.nome.value.trim(),categoria:fP.categoria.value.trim(),impressoraId:fP.impressoraId.value,
-    ...lerTempo(fP.tempo.value,fP.tempoUn.value),porPeca:true,unidades:Math.max(1,Math.round(+fP.unidades.value||1)),maoMin:+fP.maoMin.value||0,
+    horas:0,minutos:r2((lerMin(fP.tempoModelo.value)||0)/Math.max(1,Math.round(+fP.unidades.value||1))*1e4)/1e4,preparoMin:lerMin(fP.preparo.value),porPeca:true,unidades:Math.max(1,Math.round(+fP.unidades.value||1)),maoMin:+fP.maoMin.value||0,
     extras:r2(fP.extras.value),falhaPct:vazioNull(fP.falhaPct.value),margemPct:vazioNull(fP.margemPct.value),
     precoVenda:fP.precoVenda.value===""?null:r2(fP.precoVenda.value),
     filamentos:prodFil.filter(f=>f.filamentoId&&f.g>0).map(f=>({filamentoId:f.filamentoId,g:r2(f.g)})),obs:fP.obs.value.trim(),
@@ -1209,6 +1219,7 @@ function calcProduto(){
     <table>${precosPorPagamento(preco).map(x=>`<tr><td>${x.m}</td><td class="n muted">${x.taxa?pct(x.taxa):""}</td><td class="n"><b>${brl(x.preco)}</b></td></tr>`).join("")}</table>`;
 }
 fP.addEventListener("input",calcProduto);
+fP.addEventListener("change",e=>{const el=e.target;if((el.name==="tempoModelo"||el.name==="preparo")&&el.value.trim()&&!(lerMin(el.value)>0))status("não entendi o tempo “"+el.value+"”: use como o fatiador mostra, ex.: 8m9s",true)});
 fP.addEventListener("change",calcProduto);
 /* Foto do produto (1.18.0): reduzida no aparelho para até 600 px (JPEG) e guardada como texto (data URL) no próprio produto. */
 let prodFoto=null;
@@ -1254,7 +1265,8 @@ function carregarProduto(p,copia){
   let q=p;if(!p.porPeca){const un=Math.max(1,Math.round(+p.unidades||1)),prep=+impressoraDe(p.impressoraId)?.preparoMin||0,tot=(+p.horas||0)*60+(+p.minutos||0);
     q={...p,horas:0,minutos:r2(Math.max(0,tot-prep)/un),filamentos:(p.filamentos||[]).map(f=>({...f,g:r2(f.g/un)}))};
     status("tempo e gramas convertidos para 1 peça: confira antes de salvar")}
-  [fP.tempo.value,fP.tempoUn.value]=mostrarTempo(q);
+  {const un=Math.max(1,Math.round(+q.unidades||1)),mod=((+q.horas||0)*60+(+q.minutos||0))*un;fP.tempoModelo.value=mod?fmtHMS(mod):"";
+   fP.preparo.value=p.preparoMin!=null?fmtHMS(p.preparoMin):""}
   if(copia){fP.id.value="";fP.nome.value=p.nome+" (cópia)"}
   prodFil=q.filamentos?.length?q.filamentos.map(f=>({...f})):[{filamentoId:D.filamentos[0]?.id||"",g:0}];
   prodFoto=p.foto||null;mostrarFoto();
@@ -2339,6 +2351,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.22.0",data:"2026-11-12",titulo:"Tempo do produto igual ao fatiador",itens:[
+    {novo:"Em Produtos, os tempos agora são como o fatiador mostra: “Tempo do modelo” (ex.: 8m9s) e “Preparar + timelapse” (ex.: 6m17s + 38s). O painel soma e mostra o tempo total para você conferir com o do fatiador.",
+     uso:"Produtos › copie do fatiador os dois tempos. O tempo do modelo é da mesa inteira (todas as peças da impressão). Se deixar o preparo vazio, vale o da impressora (Config)."}]},
   {v:"1.21.1",data:"2026-11-12",titulo:"Caixinhas explicam quando estão zeradas",itens:[
     {novo:"Enquanto o dinheiro das vendas ainda está devolvendo o que o Gui pagou do bolso, as caixinhas não recebem nada. Agora o quadro explica isso e mostra quanto ainda falta devolver.",
      uso:"Resumo › Caixinhas › aviso ℹ️ abaixo da tabela."}]},
@@ -2543,7 +2558,7 @@ const PASSOS=[
     <li><b>Divisão do dinheiro</b>: quem compra o material, os sócios e os % para guardar, reinvestir e sócios.</li></ol>`},
   {ico:"🧊",titulo:"2. Cadastre seus produtos",aba:"produtos",texto:`<p>Na aba <b>Produtos</b>, para cada peça:</p><ol>
     <li>Digite o <b>nome</b> e escolha a impressora.</li>
-    <li>Coloque o <b>tempo</b> e os <b>gramas de 1 peça</b> que o fatiador mostra (o aquecer e calibrar o painel soma sozinho).</li>
+    <li>Copie do fatiador o <b>tempo do modelo</b> e o <b>preparar + timelapse</b> (ex.: 8m9s e 6m17s + 38s), e os <b>gramas de 1 peça</b>.</li>
     <li>Diga quantas <b>peças saem por impressão</b>.</li></ol>
     <p>Ao lado aparecem o <b>custo por peça</b>, o <b>preço sugerido</b> e o lucro. Toque em <b>Salvar produto</b>.</p>`},
   {ico:"📝",titulo:"3. Faça orçamentos",aba:"orcamentos",texto:`<p>Na aba <b>Orçamentos</b>, escolha o <b>cliente</b> e os <b>produtos</b> na lista, coloque a quantidade e toque em <b>Salvar orçamento</b>.</p>

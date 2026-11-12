@@ -79,7 +79,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
   "produtos": [ { "id", "nome", "categoria", "impressoraId", "horas", "minutos", "unidades", "maoMin", "extras",
                   "falhaPct": null, "margemPct": null, "precoVenda": null,   // null = usa o padrão de Config / o preço sugerido
                   "porPeca": true,   // desde 1.7.0: horas/minutos e filamentos.g são de 1 peça (sem: da impressão inteira)
-                  "filamentos": [ { "filamentoId", "g" } ], "obs",
+                  "filamentos": [ { "filamentoId", "g" } ], "obs", "preparoMin" /* preparar + timelapse do fatiador, min; null = da impressora (1.22.0) */,
                   "foto" /* data URL JPEG até 600 px (1.18.0) */, "tamanho", "espessura", "detalhes" /* para o cliente */ } ],
   "vendas": [ { "id", "data", "cliente", "itens": [ { "produtoId"|null, "nome", "qtd", "preco", "custo" } ],
                 "frete", "cobrado", "metodo", "custo", "taxa", "lucro", "obs", "clienteId",
@@ -230,7 +230,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-12, versão 1.21.1)
+## Estado atual (2026-11-12, versão 1.22.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -265,6 +265,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.21.0: Resumo › quadro do Gui em cartões (`renderGui`: totais, entregar, cada compra com barra e origem), logo após o Resumo do mês;
   4º no fluxo: desgaste e manutenção (`manut`) vão para a caixinha 🔧 Manutenção (retirada `manutencao`), separada do reinvestir.
 - 1.21.1: Caixinhas mostram aviso (`#cxObs`) quando estão zeradas porque as vendas ainda devolvem o bolso do Gui (dado real: venda Teste R$ 25 foi toda para o Gui; faltam R$ 431,23).
+- 1.22.0: Produtos com tempos do fatiador em texto (`lerMin`: 8m9s, 6m17s + 38s, 8:09; `fmtHMS`): tempo do modelo da mesa inteira (guardado ÷ peças em `minutos`) e preparo por produto (`preparoMin`, vazio = impressora); mostra o tempo total para conferir.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -306,3 +307,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.20.1 | 2026-11-12 | Lista de categorias da despesa mostra só as já usadas (e Filamento), sem as categorias padrão |
 | 1.21.0 | 2026-11-12 | Resumo: “O que o Gui pagou do próprio dinheiro” logo após o Resumo do mês, em cartões (pagou, já voltou, falta voltar, falta entregar, cada compra com barra e origem do dinheiro); desgaste e manutenção viram a caixinha 🔧 Manutenção da impressora (4º no fluxo, depois da mão de obra), separada do reinvestir, com saída própria |
 | 1.21.1 | 2026-11-12 | Caixinhas explicam por que estão zeradas/baixas: o dinheiro das vendas ainda está devolvendo o que o Gui pagou do bolso (mostra quanto foi para ele e quanto falta) |
+| 1.22.0 | 2026-11-12 | Produtos: tempos como o fatiador mostra (“Tempo do modelo” 8m9s, “Preparar + timelapse” 6m17s + 38s), preparo por produto (`preparoMin`, vazio = o da impressora) e tempo total para conferir com o fatiador |
