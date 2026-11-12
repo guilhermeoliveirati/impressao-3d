@@ -230,7 +230,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-12, versão 1.23.0)
+## Estado atual (2026-11-12, versão 1.23.1)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -269,6 +269,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.22.1: trabalho manual em texto (`lerMin`/`fmtHMS`: 45s, 5m, 1h30m); no dados.json continua `maoMin` em minutos.
 - 1.23.0: orçamento: mudar item/qtd/preço volta o valor para a soma (`valorManual=false`); ⏱️ tempo de impressão (`tempoInfo`: impressões × preparo + qtd × modelo de 1 peça; também usado na Produção);
   `editorItens.set` troca filamento apagado do item pelo atual do produto.
+- 1.23.1: tempo de impressão (orçamento e Produção) = preparo 1 vez por item + qtd × modelo de 1 peça (regra do dono; não repete o preparo por impressão).
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -313,3 +314,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.22.0 | 2026-11-12 | Produtos: tempos como o fatiador mostra (“Tempo do modelo” 8m9s, “Preparar + timelapse” 6m17s + 38s), preparo por produto (`preparoMin`, vazio = o da impressora) e tempo total para conferir com o fatiador |
 | 1.22.1 | 2026-11-12 | Trabalho manual do produto aceita segundos, minutos ou horas (45s, 5m, 1h30m); continua guardado em minutos (`maoMin`) |
 | 1.23.0 | 2026-11-12 | Orçamento: valor acompanha quantidade, produto e preço; tempo de impressão (impressões × preparo + quantidade × tempo do modelo de 1 peça), também na fila de Produção; item com filamento apagado usa o filamento atual do produto |
+| 1.23.1 | 2026-11-12 | Tempo de impressão do orçamento e da Produção: preparo uma vez só por item (seja 1 peça ou 10) + quantidade × tempo do modelo |

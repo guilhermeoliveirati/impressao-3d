@@ -756,7 +756,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.23.0";
+const VERSAO="1.23.1";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1654,11 +1654,12 @@ window.enviarOrc=async id=>{const o=D.orcamentos.find(x=>x.id===id);
    Tempo estimado de cada item = impressões necessárias (qtd ÷ peças por impressão, para cima) × tempo da impressão. */
 const ETAPA={fila:["Na fila",""],imprimindo:["Imprimindo","ok"],pronto:["Pronto · falta a venda","ok"]};
 /* Tempo de impressão de um item (1.23.0): impressões (mesas) = qtd ÷ peças por impressão, para cima.
-   Cada impressão tem o preparo (preparar + timelapse) uma vez; o modelo conta por peça: mesas × preparo + qtd × tempo de 1 peça (em horas). */
+   1.23.1 (regra do dono): o preparo (preparar + timelapse) é UMA vez por item, seja 1 peça ou 10; só o modelo multiplica:
+   preparo + qtd × tempo de 1 peça (em horas). Ex.: 6m55s + 10 × 8m9s = 1h28m25s. */
 function tempoInfo(x){const p=x.produtoId&&D.produtos.find(q=>q.id===x.produtoId);if(!p)return null;const c=custoProduto(p),q=Math.max(1,+x.qtd||1),mesas=Math.ceil(q/c.un);
   if(c.tPeca==null)return{mesas,h:mesas*c.horas,txt:`${mesas} impressão(ões) × ${fmtHMS(c.horas*60)}`};
-  const h=mesas*c.prep+q*c.tPeca;
-  return{mesas,h,txt:`${mesas} ${mesas>1?"impressões":"impressão"} × preparar ${fmtHMS(c.prep*60)} + ${num(q,0)} × modelo ${fmtHMS(c.tPeca*60)}${c.un>1?` (cabem ${c.un} por impressão)`:""}`}}
+  const h=c.prep+q*c.tPeca;
+  return{mesas,h,txt:`preparar ${fmtHMS(c.prep*60)} (1 vez) + ${num(q,0)} × modelo ${fmtHMS(c.tPeca*60)} = ${fmtHMS(c.prep*60)} + ${fmtHMS(q*c.tPeca*60)}`}}
 function tempoItem(x){return tempoInfo(x)?.h||0}
 // ordem da fila: "ordem" (▲▼), depois a data de aprovação
 const filaProd=()=>D.orcamentos.filter(o=>o.status==="producao").sort((a,b)=>(a.ordem??1e9)-(b.ordem??1e9)||(a.aprovadoEm||a.data).localeCompare(b.aprovadoEm||b.data)||a.id.localeCompare(b.id,"pt-BR",{numeric:true}));
@@ -2365,6 +2366,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.23.1",data:"2026-11-12",titulo:"Tempo do orçamento: preparo uma vez só",itens:[
+    {novo:"O tempo de impressão do orçamento agora conta o preparo uma vez só, seja 1 peça ou 10. Só o tempo do modelo multiplica pela quantidade.",
+     uso:"Ex.: 10 peças de 8m9s = 1h21m30s de modelo + 6m55s de preparo = 1h28m25s."}]},
   {v:"1.23.0",data:"2026-11-12",titulo:"Orçamento: valor e tempo de impressão pela quantidade",itens:[
     {novo:"Ao mudar a quantidade (ou o produto ou o preço), o valor do orçamento acompanha. Se quiser dar desconto, mude o valor por último.",
      uso:"Orçamentos › Qtd › o valor muda sozinho."},
