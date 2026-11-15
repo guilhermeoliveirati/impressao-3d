@@ -73,7 +73,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
   "clientes": [ { "id", "codigo", "nome", "telefone" /* só números */ } ],
   "parcelamentos": [ { "id", "descricao", "total", "parcelas", "inicio": "AAAA-MM", "pessoas": ["Eu", …], "pagos": { "AAAA-MM": [true, false, …] },
                      "material": filamentoId | null, "materialG" /* compra de filamento parcelada: entra no estoque */, "data" /* dia da compra (1.13.0) */, "doGui" /* 💰 pago do bolso do Gui (1.14.0) */ } ],
-  "estoque": [ { "id", "data", "filamentoId", "tipo": "compra" | "inicial" | "perda", "g", "valor", "kg" /* só inicial: preço do kg do dia */ } ],
+  "estoque": [ { "id", "data", "filamentoId", "tipo": "compra" | "inicial" | "perda", "g", "valor", "kg" /* só inicial: preço do kg do dia */, "obs" /* "acerto de estoque" (1.27.0) */ } ],
   "orcamentos": [ { "id", "data", "cliente", "validade" /* dias */, "itens": [ …iguais aos da venda… ], "frete", "valor", "custo", "obs",
                     "status": "aberto" | "producao" | "aprovado" /* vendido */ | "recusado", "vendaId": null, "clienteId",
                     "etapa": "fila" | "imprimindo" | "pronto" /* só em producao */, "aprovadoEm": "AAAA-MM-DD",
@@ -233,7 +233,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-15, versão 1.26.0)
+## Estado atual (2026-11-15, versão 1.27.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -281,6 +281,9 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.26.0: materiais num lugar só na tela (dados continuam em `filamentos` = por grama e `insumos` = por unidade): tabela única `#tMatCfg`, ＋ Novo material pergunta a medida (`novoMat`),
   um formulário de compra/baixa (`fE` decide pelo `insumoDe`), movimentações juntas; produto com uma lista `prodFil` [{id,q}] (`medidaDe`, `opcoesMat` com optgroups).
   Estoque das unidades conta só o `ins` gravado na venda (`insDoItem`): venda antiga não desconta material que o produto ganhou depois; `insGravar` usa o produto ao salvar a venda.
+- 2026-11-15: apagadas do `dados.json` 2 compras repetidas do Filamento Vermelho (e111, e112, 1 kg cada, sem valor); cópia em `backup/`.
+  Ainda há compras sem valor de filamentos apagados (e92, e93 de f63; e107 de f64): não aparecem no estoque de ninguém; o dono decide se apaga.
+- 1.27.0: ✏️ corrigir movimentação do estoque (`editarMov`: o form `fE` troca o lançamento mantendo o id) e “Acertar: contei e tenho…” (lança a diferença com `obs`).
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -331,3 +334,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.24.0 | 2026-11-15 | Outros materiais por unidade (chaveiro, ímã, embalagem): cadastro, compras, estoque e perdas em Estoque; produto diz quantas unidades usa por peça (custo entra em extras); venda desconta as unidades; compra entra no que o Gui pagou do bolso |
 | 1.25.0 | 2026-11-15 | Bolinha com a cor do filamento (⚪ ⚫ 🔴 🔵…) em todas as listas, cartões e textos; cor adivinhada pelo nome ou escolhida em Estoque › Materiais |
 | 1.26.0 | 2026-11-15 | Materiais num lugar só: uma tabela em Estoque (por grama ou por unidade, escolhido ao cadastrar), um formulário de compra/baixa e uma lista de movimentações; no produto, uma lista só de materiais de 1 peça (g ou un) |
+| 1.27.0 | 2026-11-15 | Estoque: ✏️ corrigir cada movimentação (material, tipo, quantidade, valor, data) e “Acertar: contei e tenho…”, que lança a diferença como perda ou estoque que já tinha |

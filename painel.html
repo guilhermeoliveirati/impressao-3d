@@ -561,16 +561,16 @@ nav .ct{display:none}
       (pelos materiais cadastrados no produto ou na peça sob medida). Editar ou apagar uma venda devolve os gramas. Orçamento não mexe no estoque.</p>
   </div>
   <div class="card"><h2>Registrar compra ou baixa</h2>
-    <form class="f" id="fEst" autocomplete="off">
+    <form class="f" id="fEst" autocomplete="off"><input type="hidden" name="id">
       <label>Material<select name="filamentoId" id="estFil"></select></label>
-      <label>O que foi<select name="tipo"><option value="compra">Compra</option><option value="inicial">Estoque que já tenho</option><option value="perda">Perda / teste / falha</option></select></label>
+      <label>O que foi<select name="tipo"><option value="compra">Compra</option><option value="inicial">Estoque que já tenho</option><option value="perda">Perda / teste / falha</option><option value="acerto" id="optAcerto">✏️ Acertar: contei e tenho…</option></select></label>
       <label><span id="estQtdRot">Quantidade (g)</span><input name="g" type="number" min="1" step="1" value="1000" required></label>
       <label class="soCompra">Valor pago (R$)<input name="valor" type="number" min="0" step="0.01" value="0"></label>
       <label>Data<input name="data" type="date" required></label>
       <p class="muted soCompra" style="grid-column:1/-1;margin:0">Cada compra vira um rolo (lote): o painel gasta primeiro o que sobrou do anterior, com o preço dele, e depois o novo.</p>
-      <div class="row" style="grid-column:1/-1"><button class="btn" type="submit">Registrar</button></div>
+      <div class="row" style="grid-column:1/-1"><button class="btn" type="submit" id="estSalvar">Registrar</button><button class="btn sec2" type="button" id="estCancelar" hidden>Cancelar</button></div>
     </form>
-    <p class="muted">A compra de material não entra em Despesas: o custo dele já sai do lucro de cada venda.</p>
+    <p class="muted"><b>Errou um lançamento?</b> Em Movimentações, toque em ✏️ para corrigir ou ✕ para apagar. Para acertar pela contagem, escolha “✏️ Acertar: contei e tenho…” e digite quanto tem de verdade: o painel lança a diferença.<br>A compra de material não entra em Despesas: o custo dele já sai do lucro de cada venda.</p>
   </div>
   <div class="card"><h2>🧵 Materiais</h2>
     <p class="muted" style="margin-top:0">Tudo num lugar só: filamentos (medidos <b>por grama</b>) e outros materiais como argola de chaveiro, ímã ou embalagem (medidos <b>por unidade</b>). Ao cadastrar, você escolhe a medida; o custo é calculado por ela.</p>
@@ -756,7 +756,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.26.0";
+const VERSAO="1.27.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -2289,24 +2289,38 @@ const estCel=f=>{const a=_E[f.id];if(!a||(!a.registrado&&!a.usado))return'<span 
     (L.length?`<br><span class="muted">rolos: ${L.map(l=>`${fmtG(l.resto)} a ${brl(l.kg)}/kg`).join(" → ")}</span>`:"")};
 const fE=$("#fEst");
 const TIPO_EST={compra:"Compra",inicial:"Estoque que já tinha",perda:"Perda / teste",parcelada:"Compra parcelada"};
-fE.tipo.onchange=()=>document.querySelectorAll("#fEst .soCompra").forEach(el=>el.style.display=fE.tipo.value==="compra"?"":"none");
+// rótulo da quantidade: gramas ou unidades; no acerto, "quanto tenho agora"
+function rotQtd(){const un=!!insumoDe(fE.filamentoId.value),ac=fE.tipo.value==="acerto";$("#estQtdRot").textContent=(ac?"Quanto tenho agora ":"Quantidade ")+(un?"(unidades)":"(g)")}
+fE.tipo.onchange=()=>{document.querySelectorAll("#fEst .soCompra").forEach(el=>el.style.display=fE.tipo.value==="compra"?"":"none");rotQtd()};
 // material escolhido: a quantidade é em gramas ou em unidades (1.26.0)
-fE.filamentoId.onchange=()=>{const un=!!insumoDe(fE.filamentoId.value);$("#estQtdRot").textContent=un?"Quantidade (unidades)":"Quantidade (g)";fE.g.value=un?100:1000;
+fE.filamentoId.onchange=()=>{const un=!!insumoDe(fE.filamentoId.value);if(!fE.id.value)fE.g.value=un?100:1000;rotQtd();
   document.querySelector("#fEst p.soCompra").textContent=un?"A compra atualiza o preço de 1 unidade (valor ÷ quantidade).":"Cada compra vira um rolo (lote): o painel gasta primeiro o que sobrou do anterior, com o preço dele, e depois o novo."};
+/* Registrar, corrigir (✏️, 1.27.0) ou acertar o estoque.
+   Material por grama → D.estoque (g); por unidade → D.insumoMovs (qtd; a compra atualiza o preço de 1 unidade).
+   "Acertar: contei e tenho X": lança a diferença para o saldo de hoje (perda se tem menos, estoque que já tinha se tem mais), com obs "acerto de estoque". */
 fE.onsubmit=e=>{e.preventDefault();
-  if(!fE.filamentoId.value)return avisar("Cadastre o material primeiro (＋ Novo material).");
-  // material por unidade: vai para D.insumoMovs e a compra atualiza o preço de 1 unidade
-  {const x=insumoDe(fE.filamentoId.value);if(x){const q=Math.round(+fE.g.value||0);if(!(q>0))return avisar("Coloque a quantidade.");
-    const m={id:novoId("e"),data:fE.data.value||hoje(),insumoId:x.id,tipo:fE.tipo.value,qtd:q,valor:fE.tipo.value==="compra"?r2(fE.valor.value):0};
-    D.insumoMovs.push(m);if(m.tipo==="compra"&&m.valor>0)x.precoUn=r2(m.valor/q*1e4)/1e4;
-    salvar();fE.valor.value=0;render();status(`${TIPO_EST[m.tipo].toLowerCase()} de ${fmtUn(q)} de ${x.nome} registrada`+(m.tipo==="compra"&&m.valor>0?` · ${brl(x.precoUn)} por unidade`:""));return}}
-  const g=r2(fE.g.value);if(!(g>0))return avisar("Coloque a quantidade em gramas.");
-  const m={id:novoId("e"),data:fE.data.value,filamentoId:fE.filamentoId.value,tipo:fE.tipo.value,g,valor:fE.tipo.value==="compra"?r2(fE.valor.value):0};
-  const f=filamentoDe(m.filamentoId), rg=m.tipo==="compra"&&m.valor>0&&f?regraPrecoKg(f,m.valor,g):null; // antes de somar a compra ao estoque
-  if(m.tipo==="inicial"&&f)m.kg=+f.precoKg||0; // estoque que já tinha: guarda o preço do kg de hoje
-  D.estoque.push(m);
-  salvar();fE.g.value=1000;fE.valor.value=0;render();
-  status(`${TIPO_EST[m.tipo].toLowerCase()} de ${fmtG(g)} registrada`+(rg?" · "+rg.txt.replace(/<\/?b>/g,""):""))};
+  const id=fE.filamentoId.value, x=insumoDe(id), f=filamentoDe(id), ed=fE.id.value;
+  if(!x&&!f)return avisar("Cadastre o material primeiro (＋ Novo material).");
+  let qtd=x?Math.round(+fE.g.value||0):r2(fE.g.value), tipo=fE.tipo.value, obs="";
+  if(tipo==="acerto"){const saldo=(x?estInsumos()[id]:estoques()[id])?.saldo||0, dif=r2(qtd-saldo);
+    if(Math.abs(dif)<0.01)return avisar("O estoque já está com essa quantidade.");
+    tipo=dif<0?"perda":"inicial";qtd=Math.abs(dif);obs="acerto de estoque"}
+  else if(!(qtd>0))return avisar("Coloque a quantidade.");
+  if(ed){D.estoque=D.estoque.filter(m=>m.id!==ed);D.insumoMovs=D.insumoMovs.filter(m=>m.id!==ed)} // corrigir = trocar o lançamento
+  const base={id:ed||novoId("e"),data:fE.data.value||hoje(),tipo,valor:tipo==="compra"?r2(fE.valor.value):0,...(obs?{obs}:{})};
+  let txt;
+  if(x){const m={...base,insumoId:id,qtd};D.insumoMovs.push(m);if(m.tipo==="compra"&&m.valor>0)x.precoUn=r2(m.valor/qtd*1e4)/1e4;txt=`${fmtUn(qtd)} de ${x.nome}`}
+  else{const m={...base,filamentoId:id,g:qtd};if(m.tipo==="inicial")m.kg=+f.precoKg||0;D.estoque.push(m);txt=`${fmtG(qtd)} de ${nomeFilTxt(f)}`}
+  limparEst();salvar();render();
+  status(ed?`movimentação corrigida: ${txt}`:`${TIPO_EST[tipo].toLowerCase()}${obs?" ("+obs+")":""} registrada: ${txt}`)};
+function limparEst(){fE.id.value="";fE.valor.value=0;fE.g.value=insumoDe(fE.filamentoId.value)?100:1000;
+  $("#estSalvar").textContent="Registrar";$("#estCancelar").hidden=true;$("#optAcerto").hidden=false;if(fE.tipo.value==="acerto"&&false)fE.tipo.value="compra";rotQtd()}
+window.editarMov=(col,id)=>{const m=D[col].find(y=>y.id===id);if(!m)return;
+  fE.filamentoId.value=m.filamentoId||m.insumoId;if(fE.filamentoId.value!==(m.filamentoId||m.insumoId))return avisar("O material deste lançamento foi apagado: apague o lançamento (✕).");
+  fE.tipo.value=m.tipo;fE.g.value=m.g??m.qtd;fE.valor.value=m.valor||0;fE.data.value=m.data;fE.id.value=id;
+  $("#optAcerto").hidden=true;fE.tipo.onchange();$("#estSalvar").textContent="Salvar correção";$("#estCancelar").hidden=false;
+  fE.scrollIntoView({behavior:"smooth",block:"center"});status("corrija o lançamento e toque em Salvar correção")};
+$("#estCancelar").onclick=limparEst;
 // Lista de compras (1.16.0): filamentos abaixo do mínimo, com a última compra (marca, quantidade, preço)
 $("#btnListaCompras").onclick=()=>{
   const E=estoques(), L=D.filamentos.filter(f=>{const a=E[f.id];return a&&(a.registrado||a.usado)&&a.saldo<minimoG()});
@@ -2352,9 +2366,9 @@ function renderEstoque(){
       return`<div class="m${baixo?" baixo":""}"><small>🔩 ${esc(x.nome)}</small><b class="${baixo?"taxa":""}">${reg?fmtUn(a.saldo):"–"}</b><small>${reg?(baixo?"⚠️ acabou":"em estoque"):"sem registro"}</small></div>`}).join("")})();
   const L=[...movsEstoque(),...(D.insumoMovs||[]).map(m=>({...m,un:true}))].sort((a,b)=>b.data.localeCompare(a.data));
   $("#tEst").innerHTML=L.length?`<tr><th>Data</th><th>Material</th><th>O que foi</th><th class="n">Quantidade</th><th class="n">Valor</th><th></th></tr>`+
-    L.map(m=>`<tr><td>${fmtData(m.data)}</td><td>${m.un?"🔩 "+esc(insumoDe(m.insumoId)?.nome||"(apagado)"):esc(nomeFil(filamentoDe(m.filamentoId)))}</td><td>${TIPO_EST[m.tipo]||m.tipo}</td>
+    L.map(m=>`<tr><td>${fmtData(m.data)}</td><td>${m.un?"🔩 "+esc(insumoDe(m.insumoId)?.nome||"(apagado)"):esc(nomeFil(filamentoDe(m.filamentoId)))}</td><td>${TIPO_EST[m.tipo]||m.tipo}${m.obs?` <span class="muted">(${esc(m.obs)})</span>`:""}</td>
       <td class="n ${m.tipo==="perda"?"taxa":"lucro"}">${m.tipo==="perda"?"−":"+"}${m.un?fmtUn(m.qtd):fmtG(m.g)}</td><td class="n">${m.valor?brl(m.valor):"–"}</td>
-      <td>${m.id?`<button class="btn sm del" onclick="apagar('${m.un?"insumoMovs":"estoque"}','${m.id}')">✕</button>`:`<span class="muted" title="Mude em Despesas › Parcelamentos">parcelamento</span>`}</td></tr>`).join("")
+      <td style="white-space:nowrap">${m.id?`<button class="btn sm sec2" onclick="editarMov('${m.un?"insumoMovs":"estoque"}','${m.id}')" title="Corrigir">✏️</button> <button class="btn sm del" onclick="apagar('${m.un?"insumoMovs":"estoque"}','${m.id}')">✕</button>`:`<span class="muted" title="Mude em Despesas › Parcelamentos">parcelamento</span>`}</td></tr>`).join("")
     :'<tr><td class="muted">Nada registrado ainda. Comece registrando o que você já tem em casa ("Estoque que já tenho").</td></tr>';
 }
 
@@ -2432,6 +2446,11 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.27.0",data:"2026-11-15",titulo:"Corrigir o estoque",itens:[
+    {novo:"Cada movimentação do estoque tem ✏️ para corrigir (material, tipo, quantidade, valor, data), além do ✕ para apagar.",
+     uso:"Estoque › Movimentações › ✏️ › corrija › Salvar correção."},
+    {novo:"Acertar pela contagem: escolha “✏️ Acertar: contei e tenho…” e digite quanto tem de verdade. O painel lança a diferença como perda ou como estoque que já tinha.",
+     uso:"Estoque › Registrar compra ou baixa › O que foi › Acertar."}]},
   {v:"1.26.0",data:"2026-11-15",titulo:"Materiais num lugar só",itens:[
     {novo:"Filamentos e outros materiais (argola, ímã, embalagem…) agora ficam numa tabela só, em Estoque › Materiais. Ao cadastrar, você escolhe se é medido por grama ou por unidade, e o custo é calculado por essa medida.",
      uso:"Estoque › ＋ Novo material › 🧵 Por grama ou 🔩 Por unidade. A compra e a baixa usam o mesmo formulário: a quantidade vira gramas ou unidades conforme o material."},
