@@ -233,7 +233,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-15, versão 1.31.0)
+## Estado atual (2026-11-15, versão 1.32.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -291,6 +291,8 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.31.0: Lançar despesa pergunta “Quem pagou?” (`pagou`: gui/empresa; conta → `doGui`; material → `pagoPor` em estoque/insumoMovs/parcelamento).
   Material da empresa (`comprasEmpresa`) não entra no bolso do Gui e sai do 🔁 Reinvestir (caixinha e saldo da regra dos 4 filamentos). Lista de Despesas mostra as compras de material do mês (não somam).
   Compras antigas sem `pagoPor` contam como do Gui.
+- 2026-11-15: no dados.json, tudo menos a impressora marcado como pago pelo Gui (`pagoPor:"gui"` nos 8 filamentos parcelados e na compra do NFC; despesas já tinham `doGui`); cópia em `backup/`.
+- 1.32.0: Parcelamentos mostra só os não-Gui (`!doGuiPc`, a impressora); lista de Despesas traz compras de material e parcelados 💰 com Editar (`editarMovAqui`, `editarParc` em janela) e ✕, e situação automática pelas vendas (`statusDev` pela chave da fila do `fluxo`).
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -346,3 +348,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.29.0 | 2026-11-15 | Categoria da despesa vira lista fixa sem digitar (Acessórios, Ferramentas, Manutenção, Filamento); Acessórios pede material, valor total e unidades; cadastrar material novo na própria despesa |
 | 1.30.0 | 2026-11-15 | Despesa de Acessórios: material antes do valor e da quantidade; Estoque mostra o preço de 1 unidade e o preço de venda ao lado (com lucro por unidade) |
 | 1.31.0 | 2026-11-15 | Lançar despesa: “Quem pagou?” (Gui, do próprio dinheiro, ou Empresa); material pago pela empresa sai do Reinvestir e não entra no bolso do Gui; compras de material aparecem na lista de Despesas do mês |
+| 1.32.0 | 2026-11-15 | Parcelamentos só com a impressora; compras e parcelados do Gui na lista de despesas com Editar e ✕; situação paga automática pelas vendas (✓ pago pelas vendas / falta R$ X / a pagar pelas vendas) |

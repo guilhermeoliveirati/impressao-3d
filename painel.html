@@ -510,7 +510,7 @@ nav .ct{display:none}
       <h2 style="margin:0">💳 Parcelamentos</h2>
     </div>
     <div id="pcLista"></div>
-    <p class="muted" style="margin:4px 0 0">Para lançar uma compra parcelada nova, use <b>Lançar despesa › Parcelado</b>, acima.</p>
+    <p class="muted" style="margin:4px 0 0">Aqui ficam só os parcelamentos divididos entre os sócios (ex.: impressora). As compras parceladas do Gui estão na lista de despesas, acima.</p>
     <p class="muted">Marque ✓ quando cada pessoa pagar a parte do mês; o mês atual fica em amarelo. As parcelas não entram na lista de despesas:
       aparecem no Resumo (Parcelas do mês, Sobra e Contas do mês) e no gráfico de positivo × negativo em Geral.</p>
   </div>
@@ -761,7 +761,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.31.0";
+const VERSAO="1.32.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1792,9 +1792,10 @@ const nomeMes=m=>`${MESES[+m.slice(5)-1]}/${m.slice(0,4)}`;
 const doGuiPc=pc=>!!(pc.material||pc.doGui);
 function renderParcelas(){
   const box=$("#pcLista");
-  if(!D.parcelamentos.length){box.innerHTML='<p class="muted">Nenhum parcelamento. Toque em ＋ Novo parcelamento.</p>';return}
+  // 1.32.0: aqui só os parcelamentos divididos entre os sócios (ex.: impressora); os do Gui (filamento ou 💰) estão na lista de despesas
+  if(!D.parcelamentos.some(pc=>!doGuiPc(pc))){box.innerHTML='<p class="muted">Nenhum parcelamento entre os sócios.</p>';return}
   const atual=hoje().slice(0,7);
-  box.innerHTML=D.parcelamentos.map((pc,ip)=>{
+  box.innerHTML=D.parcelamentos.map((pc,ip)=>{if(doGuiPc(pc))return"";
     const parc=r2(pc.total/pc.parcelas), parte=r2(parc/pc.pessoas.length);
     const meses=Array.from({length:pc.parcelas},(_,i)=>mesMais(pc.inicio,i));
     const pago=(m,j)=>!!pc.pagos?.[m]?.[j];
@@ -1931,6 +1932,26 @@ $("#dCancelar").onclick=limparDesp;
 window.editarDesp=id=>{const d=D.despesas.find(x=>x.id===id);limparDesp();fD.tipo.value="conta";fD.forma.value="avista";
   if(d.categoria&&![...$("#dCat").options].some(o=>o.value===d.categoria))$("#dCat").add(new Option(d.categoria,d.categoria));
   for(const k of ["id","data","categoria","descricao","valor"])fD[k].value=d[k]??"";fD.pago.checked=d.pago!==false;fD.repete.checked=!!d.repete;fD.doGui.checked=!!d.doGui;fD.pagou.value=d.doGui?"gui":"empresa";ajustaDesp();scrollTo({top:0,behavior:"smooth"})};
+/* Situação de uma compra do Gui (1.32.0): pago automaticamente pelas vendas (fila do fluxo: energia → bolso do Gui).
+   key: id da compra no estoque, "pc:"+parcelamento de filamento, "im:"+material por unidade, "d:"+despesa 💰, "pcc:"+parcelamento 💰. */
+function statusDev(key){const c=fluxo().compras.find(x=>x.key===key);if(!c)return"";
+  return c.resto<=0.004?'<span class="tag ok" title="As vendas já devolveram tudo ao Gui">✓ pago pelas vendas</span>'
+    :c.resto<c.valor-0.004?`<span class="tag aberto" title="As vendas já devolveram ${brl(c.valor-c.resto)}">falta ${brl(c.resto)}</span>`:'<span class="tag aberto" title="Será pago pelas próximas vendas">a pagar pelas vendas</span>'}
+// Editar uma compra do estoque a partir da lista de despesas: abre o Estoque com o lançamento no formulário
+window.editarMovAqui=(col,id)=>{abrirEstoque();setTimeout(()=>editarMov(col,id),150)};
+// Editar um parcelamento do Gui (filamento ou 💰): valor, gramas, parcelas, mês da 1ª parcela, data da compra
+window.editarParc=id=>{const pc=D.parcelamentos.find(x=>x.id===id);if(!pc)return;
+  abrirModal(`<h2>Editar parcelado</h2><form class="f" id="fPcEd" onsubmit="return false">
+    <label style="grid-column:1/-1">Descrição<input name="descricao" value="${esc(pc.descricao)}"></label>
+    <label>Valor total (R$)<input name="total" type="number" step="0.01" min="0" value="${pc.total}"></label>
+    ${pc.material?`<label>Quantidade (g)<input name="materialG" type="number" step="1" min="0" value="${+pc.materialG||0}"></label>`:""}
+    <label>Parcelas<select name="parcelas">${Array.from({length:10},(_,i)=>`<option value="${i+1}"${pc.parcelas===i+1?" selected":""}>${i+1}x</option>`).join("")}</select></label>
+    <label>1ª parcela<input name="inicio" type="month" value="${pc.inicio}"></label>
+    <label>Data da compra<input name="data" type="date" value="${pc.data||pc.inicio+"-01"}"></label>
+    <div class="row" style="grid-column:1/-1"><button class="btn" id="pcEdOk">Salvar</button></div></form>`);
+  $("#pcEdOk").onclick=()=>{const f=$("#fPcEd");pc.descricao=f.descricao.value.trim()||pc.descricao;pc.total=r2(f.total.value);
+    if(f.materialG)pc.materialG=+f.materialG.value||0;pc.parcelas=Math.min(10,Math.max(1,+f.parcelas.value||1));pc.inicio=f.inicio.value||pc.inicio;pc.data=f.data.value||pc.data;
+    $("#modal").hidden=true;salvar();render();status("parcelado alterado")}};
 function renderDesp(){
   {const sc=$("#dCat"),ac=sc.value;sc.innerHTML='<option value="">— escolha —</option>'+catsDesp().map(c=>`<option value="${esc(c)}">${c==="Filamento"?"🧵 ":c==="Acessórios"?"🔩 ":""}${esc(c)}</option>`).join("");
    if([...sc.options].some(o=>o.value===ac))sc.value=ac}
@@ -1942,19 +1963,22 @@ function renderDesp(){
    if(!fD.id.value&&!fD.pessoas.value)fD.pessoas.value=D.parcelamentos.at(-1)?.pessoas.join(", ")||"";ajustaDesp()}
   const mes=$("#dMes").value, L=D.despesas.filter(d=>d.data.startsWith(mes));
   $("#tDesp").innerHTML=`<tr><th>Data</th><th>Categoria</th><th>Descrição</th><th class="n">Valor</th><th></th></tr>`+
-    L.map(d=>`<tr><td>${fmtData(d.data)}</td><td>${esc(d.categoria)}${d.vendaId?' <span class="tag">da venda</span>':""}${d.repete?' <span title="Repete todo mês">🔁</span>':""}${d.doGui?` <span class="tag" title="Pago do bolso: as vendas devolvem">💰 ${esc(comprador())}</span>`:""}</td><td style="white-space:normal">${esc(d.descricao)}</td><td class="n">${brl(d.valor)}${d.vendaId||d.doGui?"":d.pago===false?' <span class="tag aberto">a pagar</span>':' <span class="tag ok">pago</span>'}</td><td>${d.vendaId
+    L.map(d=>`<tr><td>${fmtData(d.data)}</td><td>${esc(d.categoria)}${d.vendaId?' <span class="tag">da venda</span>':""}${d.repete?' <span title="Repete todo mês">🔁</span>':""}${d.doGui?` <span class="tag" title="Pago do bolso: as vendas devolvem">💰 ${esc(comprador())}</span>`:""}</td><td style="white-space:normal">${esc(d.descricao)}</td><td class="n">${brl(d.valor)}${d.vendaId?"":d.doGui?" "+statusDev("d:"+d.id):d.pago===false?' <span class="tag aberto">a pagar</span>':' <span class="tag ok">pago</span>'}</td><td>${d.vendaId
       ?`<button class="btn sm sec2" onclick="verVendaDesp('${d.vendaId}')" title="Esses valores vêm da venda: edite ou apague a venda">Ver venda</button>`
       :`<button class="btn sm sec2" onclick="editarDesp('${d.id}')">Editar</button> <button class="btn sm del" onclick="apagar('despesas','${d.id}')">✕</button>`}</td></tr>`).join("")+
     `<tr><th colspan="3">Total do mês</th><th class="n">${brl(soma(L,d=>d.valor))}</th><th></th></tr>`+
-    // compras de material do mês (1.31.0): aparecem aqui, mas vão para o Estoque (o custo entra pelas vendas)
-    (()=>{const M=[...movsEstoque().filter(m=>(m.tipo==="compra"||m.tipo==="parcelada")&&m.data.startsWith(mes)).map(m=>({...m,txt:`${fmtG(m.g)} de ${nomeFil(filamentoDe(m.filamentoId))}`,cat:"🧵 Filamento",col:"estoque"})),
-        ...(D.insumoMovs||[]).filter(m=>m.tipo==="compra"&&m.data.startsWith(mes)).map(m=>({...m,txt:`${fmtUn(m.qtd)} de ${insumoDe(m.insumoId)?.nome||"(apagado)"}`,cat:"🔩 Acessórios",col:"insumoMovs"}))].sort((a,b)=>a.data.localeCompare(b.data));
+    // compras de material e parcelados do Gui (1.31.0 / 1.32.0): aparecem aqui; o material vai para o Estoque (o custo entra pelas vendas)
+    (()=>{const M=[...movsEstoque().filter(m=>(m.tipo==="compra"||m.tipo==="parcelada")&&m.data.startsWith(mes)).map(m=>({...m,txt:`${fmtG(m.g)} de ${nomeFil(filamentoDe(m.filamentoId))}`,cat:"🧵 Filamento",col:"estoque",key:m.id||"pc:"+m.pcId})),
+        ...(D.insumoMovs||[]).filter(m=>m.tipo==="compra"&&m.data.startsWith(mes)).map(m=>({...m,txt:`${fmtUn(m.qtd)} de ${insumoDe(m.insumoId)?.nome||"(apagado)"}`,cat:"🔩 Acessórios",col:"insumoMovs",key:"im:"+m.id})),
+        ...D.parcelamentos.filter(pc=>pc.doGui&&!pc.material&&(pc.data||pc.inicio+"-01").startsWith(mes)).map(pc=>({id:null,pcId:pc.id,data:pc.data||pc.inicio+"-01",tipo:"parcelada",valor:pc.total,
+          txt:pc.descricao,cat:esc(pc.categoria||"Conta"),key:"pcc:"+pc.id}))].sort((a,b)=>a.data.localeCompare(b.data));
       if(!M.length)return"";const cp=esc(comprador());
-      return`<tr><td colspan="5" style="padding-top:14px;font-weight:700">Compras de material (vão para o Estoque)</td></tr>`+
-        M.map(m=>`<tr><td>${fmtData(m.data)}</td><td>${m.cat} ${m.pagoPor==="empresa"?'<span class="tag" title="Saiu do Reinvestir">🏢 Empresa</span>':`<span class="tag" title="Pago do bolso: as vendas devolvem">💰 ${cp}</span>`}${m.tipo==="parcelada"?' <span class="tag">parcelado</span>':""}</td>
-          <td style="white-space:normal">${esc(m.txt)}</td><td class="n">${m.valor?brl(m.valor):"–"}</td>
-          <td>${m.id?`<button class="btn sm sec2" onclick="abrirEstoque()" title="Corrigir em Estoque › Movimentações">Estoque</button> <button class="btn sm del" onclick="apagar('${m.col}','${m.id}')">✕</button>`:'<span class="muted">em Parcelamentos</span>'}</td></tr>`).join("")+
-        `<tr><th colspan="3">Total de compras de material</th><th class="n">${brl(soma(M,m=>m.valor))}</th><th></th></tr>`})();
+      return`<tr><td colspan="5" style="padding-top:14px;font-weight:700">Compras de material e parcelados (o material vai para o Estoque)</td></tr>`+
+        M.map(m=>`<tr><td>${fmtData(m.data)}</td><td>${m.cat} ${m.pagoPor==="empresa"?'<span class="tag" title="Saiu do Reinvestir">🏢 Empresa</span>':`<span class="tag" title="Pago do bolso: as vendas devolvem">💰 ${cp}</span>`}${m.tipo==="parcelada"?` <span class="tag">${D.parcelamentos.find(pc=>pc.id===m.pcId)?.parcelas||""}x</span>`:""}</td>
+          <td style="white-space:normal">${esc(m.txt)}</td><td class="n">${m.valor?brl(m.valor):"–"} ${m.pagoPor==="empresa"?"":statusDev(m.key)}</td>
+          <td style="white-space:nowrap">${m.id?`<button class="btn sm sec2" onclick="editarMovAqui('${m.col}','${m.id}')">Editar</button> <button class="btn sm del" onclick="apagar('${m.col}','${m.id}')">✕</button>`
+            :`<button class="btn sm sec2" onclick="editarParc('${m.pcId}')">Editar</button> <button class="btn sm del" onclick="apagar('parcelamentos','${m.pcId}')">✕</button>`}</td></tr>`).join("")+
+        `<tr><th colspan="3">Total de compras</th><th class="n">${brl(soma(M,m=>m.valor))}</th><th></th></tr>`})();
   const prod=soma(L.filter(d=>d.vendaId),d=>d.valor);
   const fil=movsEstoque().filter(m=>m.tipo!=="perda"&&m.tipo!=="inicial"&&m.valor&&m.data.startsWith(mes));
   $("#dObs").innerHTML=[prod?`Gastos de produção das vendas: <b>${brl(prod)}</b> (já descontados no lucro de cada venda) · Outras despesas: <b>${brl(soma(L.filter(d=>!d.vendaId),d=>d.valor))}</b>`:"",
@@ -2502,6 +2526,11 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.32.0",data:"2026-11-15",titulo:"Parcelamentos só da impressora e compras do Gui na lista",itens:[
+    {novo:"Parcelamentos mostra só o que é dividido entre os sócios (a impressora). Os parcelados do Gui (filamentos e outros) ficam na lista de despesas, com Editar e ✕.",
+     uso:"Despesas › lista do mês › Compras de material e parcelados."},
+    {novo:"Cada compra do Gui mostra sozinha se já foi paga pelas vendas: ✓ pago pelas vendas, falta R$ X ou a pagar pelas vendas.",
+     uso:"Não precisa marcar nada: muda conforme as vendas entram."}]},
   {v:"1.31.0",data:"2026-11-15",titulo:"Quem pagou a despesa",itens:[
     {novo:"Toda despesa pergunta quem pagou: 💰 Gui, do próprio dinheiro (as vendas devolvem para ele) ou 🏢 Empresa. Compra de material paga pela empresa sai da caixinha 🔁 Reinvestir.",
      uso:"Despesas › Lançar despesa › Quem pagou? › toque em um dos dois."},
