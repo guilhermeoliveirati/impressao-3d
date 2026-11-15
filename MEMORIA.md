@@ -62,6 +62,8 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
   "config": { "energiaKwh": 0.95, "maoDeObraHora": 25, "falhaPct": 10, "margemPct": 100, "arredondar": "90", "estoqueMinimoG": 200, "metaSobra": 0,
               "comprador": "Gui" /* compra o material e paga a luz */, "socios": "Gui, Luan, Caique" /* vazio = pessoas do parcelamento da impressora */,
               "guardarPct": 40, "reinvestirPct": 30, "sociosPct": 30, "minReinvestir": 400 /* valor de 4 filamentos (1.17.0) */ },   // dividasPct saiu na 1.13.0
+  "insumos": [ { "id" /* u… */, "nome", "precoUn" } ],   // materiais por unidade: chaveiro, ímã, embalagem (1.24.0)
+  "insumoMovs": [ { "id", "data", "insumoId", "tipo": "compra" | "inicial" | "perda", "qtd", "valor" } ],
   "reembolsos": [ { "id", "data", "valor", "fonte", "obs" } ],   // pagamento ao Gui de outra fonte (abate as compras de filamento)
   "retiradas": [ { "id", "data", "caixa": "guardar" | "reinvestir" | "socio:Nome", "valor", "obs" } ],   // saídas das caixinhas (1.16.0)
   "backups": [ { "id" /* arquivo no Drive */, "data" } ], "ultimoBackup": "AAAA-MM-DD",   // cópia semanal (1.16.0); config.backupPasta se precisou criar pasta  // arredondar: nao | 1 | 90 | 5
@@ -79,12 +81,13 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
   "produtos": [ { "id", "nome", "categoria", "impressoraId", "horas", "minutos", "unidades", "maoMin", "extras",
                   "falhaPct": null, "margemPct": null, "precoVenda": null,   // null = usa o padrão de Config / o preço sugerido
                   "porPeca": true,   // desde 1.7.0: horas/minutos e filamentos.g são de 1 peça (sem: da impressão inteira)
-                  "filamentos": [ { "filamentoId", "g" } ], "obs", "preparoMin" /* preparar + timelapse do fatiador, min; null = da impressora (1.22.0) */,
+                  "filamentos": [ { "filamentoId", "g" } ], "insumos": [ { "insumoId", "qtd" /* de 1 peça */ } ], "obs", "preparoMin" /* preparar + timelapse do fatiador, min; null = da impressora (1.22.0) */,
                   "foto" /* data URL JPEG até 600 px (1.18.0) */, "tamanho", "espessura", "detalhes" /* para o cliente */ } ],
   "vendas": [ { "id", "data", "cliente", "itens": [ { "produtoId"|null, "nome", "qtd", "preco", "custo" } ],
                 "frete", "cobrado", "metodo", "custo", "taxa", "lucro", "obs", "clienteId",
                 "recebido": false /* cliente ainda deve; sem o campo = recebido */, "sinal", "repassado" /* parte do material já entregue ao comprador */ } ],
                 // cada item pode ter "mat": [ { "f": filamentoId, "g": gramas POR UNIDADE } ] — usado pelo estoque
+                // e "ins": [ { "i": insumoId, "q": unidades POR UNIDADE vendida } ] — estoque dos materiais por unidade (1.24.0)
                 // e "partes": custo de 1 unidade por tipo { fil, energia, maquina, falha, mao, extras | outros } — usado nas despesas de produção
   "despesas": [ { "id", "data", "categoria", "descricao", "valor", "pago" /* false = a pagar; sem o campo = paga */, "repete" /* 🔁 todo mês */, "serie" /* id da primeira da série */, "doGui" /* 💰 o Gui pagou do bolso: vendas devolvem (1.14.0) */, "vendaId" /* só nos gastos de produção, lançados pela venda */ } ],
 }
@@ -230,7 +233,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-12, versão 1.23.3)
+## Estado atual (2026-11-15, versão 1.24.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -272,6 +275,8 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.23.1: tempo de impressão (orçamento e Produção) = preparo 1 vez por item + qtd × modelo de 1 peça (regra do dono; não repete o preparo por impressão).
 - 1.23.2: saíram da tela de Produtos os campos Detalhes para o cliente e Observação (os valores já gravados em `detalhes`/`obs` são mantidos ao salvar).
 - 1.23.3: trabalho manual soma no tempo total (`c.hMao`): produto = impressão + manual; orçamento/Produção = preparo 1 vez + qtd × (modelo + manual ÷ peças por impressão).
+- 1.24.0: materiais por unidade (`insumos`, `insumoMovs`, `estInsumos`, `insDoItem`): cadastro e compras em Estoque; produto com `insumos` (custo soma em extras);
+  venda grava `ins` e desconta; compra com valor atualiza `precoUn` e entra no que o Gui pagou do bolso (`contasDoGui`, `insQ`).
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -319,3 +324,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.23.1 | 2026-11-12 | Tempo de impressão do orçamento e da Produção: preparo uma vez só por item (seja 1 peça ou 10) + quantidade × tempo do modelo |
 | 1.23.2 | 2026-11-12 | Produtos: saem os campos “Detalhes para o cliente” e “Observação” (valores antigos continuam gravados) |
 | 1.23.3 | 2026-11-12 | Trabalho manual soma no tempo total do produto e do orçamento/Produção (quantidade × manual de 1 peça) |
+| 1.24.0 | 2026-11-15 | Outros materiais por unidade (chaveiro, ímã, embalagem): cadastro, compras, estoque e perdas em Estoque; produto diz quantas unidades usa por peça (custo entra em extras); venda desconta as unidades; compra entra no que o Gui pagou do bolso |

@@ -436,6 +436,9 @@ nav .ct{display:none}
           <h3 style="margin-top:4px">Filamento de 1 peça</h3>
           <div id="pFil"></div>
           <button type="button" class="btn sm sec2" id="pAddFil">＋ Outra cor / filamento</button>
+          <h3 style="margin-top:12px">🔩 Outros materiais de 1 peça</h3>
+          <div id="pIns"></div>
+          <button type="button" class="btn sm sec2" id="pAddIns">＋ Material por unidade (chaveiro, ímã…)</button>
           <p class="muted" style="margin:6px 0 0">Copie os tempos do fatiador como ele mostra (Bambu Studio, Orca…): “Tempo de impressão do modelo” (da mesa inteira) e “Preparar e tempo de lapso de tempo” (ex.: 6m17s + 38s). O painel soma e mostra o tempo total para você conferir. Os gramas são de 1 peça.</p>
         </div>
         <label title="Embalagem, argola, ímã, parafuso, adesivo… valor por peça">Extras por peça (R$)<input name="extras" type="number" step="0.01" min="0" value="0"></label>
@@ -579,6 +582,22 @@ nav .ct{display:none}
   </div>
   <div class="card"><h2>Movimentações</h2>
     <div class="scroll" style="max-height:320px"><table id="tEst"></table></div>
+  </div>
+  <div class="card"><h2>🔩 Outros materiais (por unidade)</h2>
+    <p class="muted" style="margin-top:0">Argola de chaveiro, ímã, parafuso, embalagem… Coloque no produto quantas unidades cada peça usa: a venda desconta do estoque e o custo entra no preço.</p>
+    <div class="scroll"><table class="cfgtab" id="tInsCfg"></table></div>
+    <button class="btn sm sec2" id="cfgAddIns" style="margin-top:8px">＋ Novo material por unidade</button>
+    <h3>Registrar compra ou baixa</h3>
+    <form class="f" id="fIns" autocomplete="off">
+      <label>Material<select name="insumoId" id="insSel"></select></label>
+      <label>O que foi<select name="tipo"><option value="compra">Compra</option><option value="inicial">Estoque que já tenho</option><option value="perda">Perda / quebrou</option></select></label>
+      <label>Quantidade (unidades)<input name="qtd" type="number" min="1" step="1" value="100" required></label>
+      <label class="soCompraI">Valor pago (R$)<input name="valor" type="number" min="0" step="0.01" value="0"></label>
+      <label>Data<input name="data" type="date" required></label>
+      <div class="row" style="grid-column:1/-1"><button class="btn" type="submit">Registrar</button></div>
+    </form>
+    <p class="muted">A compra atualiza o preço por unidade (valor ÷ quantidade) e entra no que o <span class="nmComp">Gui</span> pagou do bolso: as vendas devolvem.</p>
+    <div class="scroll" style="max-height:260px"><table id="tInsMov"></table></div>
   </div>
 </section>
 
@@ -754,7 +773,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.23.3";
+const VERSAO="1.24.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -962,6 +981,8 @@ function normalizar(){
     comprador:"Gui",socios:"",guardarPct:40,reinvestirPct:30,sociosPct:30,minReinvestir:400,...(D.config||{})};
   delete D.config.dividasPct; // 1.13.0: "pagar dívidas" virou a parte dos sócios
   D.reembolsos??=[]; // pagamentos ao Gui de outra fonte (não das vendas)
+  D.insumos??=[];     // outros materiais contados por unidade: chaveiro, ímã, embalagem… (1.24.0)
+  D.insumoMovs??=[];  // compras, estoque inicial e perdas desses materiais
   D.retiradas??=[];  // saídas das caixinhas: guardar, reinvestir ou pagamento a um sócio (1.16.0)
   D.backups??=[];    // cópias semanais no Google Drive: [{id, data}] (1.16.0)
   (D.filamentos||[]).forEach(f=>f.marca??="");
@@ -1022,9 +1043,9 @@ function custoProduto(p,pk=precoKgDe){ // pk: preço do kg de cada filamento (pa
   const falhaPct=p.falhaPct??C.falhaPct;
   const falha=(fil+energia+maquina)*falhaPct/100;
   const mao=(+p.maoMin||0)/60*C.maoDeObraHora;
-  const extras=+p.extras||0;
+  const insumos=custoInsumos(p), extras=(+p.extras||0)+insumos; // extras por peça + materiais por unidade (1.24.0)
   const impressao=fil+energia+maquina+falha+mao;
-  return{fil,energia,maquina,falha,mao,extras,impressao,un,horas:h,hMao:(+p.maoMin||0)/60,gramas,kwh,falhaPct,prep,tPeca:p.porPeca?t:null,
+  return{fil,energia,maquina,falha,mao,extras,insumos,impressao,un,horas:h,hMao:(+p.maoMin||0)/60,gramas,kwh,falhaPct,prep,tPeca:p.porPeca?t:null,
     unit:impressao/un+extras};
 }
 function arredondar(v){
@@ -1169,6 +1190,20 @@ $("#pFil").addEventListener("input",atualizaFil);
 $("#pFil").addEventListener("change",atualizaFil);
 $("#pFil").addEventListener("click",e=>{const i=e.target.dataset?.rm;if(i==null)return;prodFil.splice(+i,1);rowsFil();calcProduto()});
 $("#pAddFil").onclick=()=>{prodFil.push({filamentoId:D.filamentos[0]?.id||"",g:0});rowsFil();calcProduto()};
+// materiais por unidade do produto (1.24.0)
+let prodIns=[];
+function rowsIns(){
+  if(!(D.insumos||[]).length){$("#pIns").innerHTML='<p class="muted" style="margin:0 0 6px">Cadastre em Estoque › 🔩 Outros materiais.</p>';$("#pAddIns").hidden=true;return}
+  $("#pAddIns").hidden=false;
+  $("#pIns").innerHTML=prodIns.map((x,i)=>`<div class="linha">
+    <select data-i="${i}" data-k="insumoId">${insumoDe(x.insumoId)?"":'<option value="" selected>— escolha —</option>'}${D.insumos.map(y=>`<option value="${y.id}"${y.id===x.insumoId?" selected":""}>${esc(y.nome)} · ${brl(y.precoUn)}/un</option>`).join("")}</select>
+    <input data-i="${i}" data-k="qtd" type="number" step="1" min="0" value="${x.qtd||0}" style="width:90px" aria-label="unidades"><span class="muted">un</span>
+    <button type="button" class="btn sm del" data-rm="${i}" title="Tirar este material">✕</button></div>`).join("");
+}
+const atualizaIns=e=>{const el=e.target;if(el.dataset.k==null)return;const x=prodIns[el.dataset.i];x[el.dataset.k]=el.dataset.k==="qtd"?(+el.value||0):el.value;calcProduto()};
+$("#pIns").addEventListener("input",atualizaIns);$("#pIns").addEventListener("change",atualizaIns);
+$("#pIns").addEventListener("click",e=>{const i=e.target.dataset?.rm;if(i==null)return;prodIns.splice(+i,1);rowsIns();calcProduto()});
+$("#pAddIns").onclick=()=>{prodIns.push({insumoId:D.insumos[0]?.id||"",qtd:1});rowsIns();calcProduto()};
 const vazioNull=v=>v===""||v==null?null:+v;
 /* Tempo de impressão: um campo só, em horas ou em minutos (o dados.json continua com "horas" e "minutos"). */
 /* Tempos do fatiador (1.22.0): aceita "8m9s", "1h20m", "6m17s + 38s", "8:09" (min:s), "1:08:09" (h:min:s) ou só número (minutos).
@@ -1187,7 +1222,8 @@ function lerProduto(){
     horas:0,minutos:r2((lerMin(fP.tempoModelo.value)||0)/Math.max(1,Math.round(+fP.unidades.value||1))*1e4)/1e4,preparoMin:lerMin(fP.preparo.value),porPeca:true,unidades:Math.max(1,Math.round(+fP.unidades.value||1)),maoMin:r2((lerMin(fP.maoMin.value)||0)*1e4)/1e4,
     extras:r2(fP.extras.value),falhaPct:vazioNull(fP.falhaPct.value),margemPct:vazioNull(fP.margemPct.value),
     precoVenda:fP.precoVenda.value===""?null:r2(fP.precoVenda.value),
-    filamentos:prodFil.filter(f=>f.filamentoId&&f.g>0).map(f=>({filamentoId:f.filamentoId,g:r2(f.g)})),obs:D.produtos.find(x=>x.id===fP.id.value)?.obs||"",
+    filamentos:prodFil.filter(f=>f.filamentoId&&f.g>0).map(f=>({filamentoId:f.filamentoId,g:r2(f.g)})),
+    insumos:prodIns.filter(x=>x.insumoId&&+x.qtd>0).map(x=>({insumoId:x.insumoId,qtd:+x.qtd})),obs:D.produtos.find(x=>x.id===fP.id.value)?.obs||"",
     tamanho:fP.tamanho.value.trim(),espessura:fP.espessura.value.trim(),detalhes:D.produtos.find(x=>x.id===fP.id.value)?.detalhes||"",...(prodFoto?{foto:prodFoto}:{})};
 }
 // Preço necessário em cada forma de pagamento para receber o mesmo valor do Pix.
@@ -1206,7 +1242,7 @@ function calcProduto(){
     ["🖨️ Desgaste e manutenção",c.maquina/un,fmtTempo(c.horas)],
     ["⚠️ Perdas / falhas",c.falha/un,`${num(c.falhaPct)}%`],
     ["✋ Mão de obra",c.mao/un,p.maoMin?fmtHMS(p.maoMin):""],
-    ["📦 Extras",c.extras,""]];
+    ["📦 Extras e materiais",c.extras,c.insumos?(p.insumos||[]).filter(x=>insumoDe(x.insumoId)&&+x.qtd>0).map(x=>`${num(x.qtd,0)} ${insumoDe(x.insumoId).nome}`).join(", "):""]];
   const mx=Math.max(...linhas.map(l=>l[1]),0.01);
   $("#pRes").innerHTML=
     contaTempo(c)+(un>1?`<p class="muted" style="margin-top:0">Valores por peça (a impressão rende ${un} peças e custa ${brl(c.impressao)} no total).</p>`:"")+
@@ -1242,7 +1278,7 @@ window.enviarProd=async id=>{const p=D.produtos.find(x=>x.id===id);if(!p)return;
     if(navigator.canShare({files:[f]})){await navigator.share({files:[f],text:txt});return}}catch(e){if(e.name==="AbortError")return}}
   window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank")};
 function limparProduto(){
-  fP.reset();fP.id.value="";prodFoto=null;mostrarFoto();
+  fP.reset();fP.id.value="";prodFoto=null;mostrarFoto();prodIns=[];rowsIns();
   $("#pImp").innerHTML=D.impressoras.map(i=>`<option value="${i.id}">${esc(i.nome)}</option>`).join("")||'<option value="">(cadastre em Config)</option>';
   prodFil=[{filamentoId:D.filamentos[0]?.id||"",g:0}];
   $("#pTitulo").textContent="🧮 Novo produto";rowsFil();calcProduto();
@@ -1271,7 +1307,7 @@ function carregarProduto(p,copia){
    fP.preparo.value=p.preparoMin!=null?fmtHMS(p.preparoMin):""}
   if(copia){fP.id.value="";fP.nome.value=p.nome+" (cópia)"}
   prodFil=q.filamentos?.length?q.filamentos.map(f=>({...f})):[{filamentoId:D.filamentos[0]?.id||"",g:0}];
-  prodFoto=p.foto||null;mostrarFoto();
+  prodFoto=p.foto||null;mostrarFoto();prodIns=(p.insumos||[]).map(x=>({...x}));rowsIns();
   $("#pTitulo").textContent=copia?"🧮 Novo produto (cópia)":"✏️ Editando "+p.nome;
   rowsFil();calcProduto();scrollTo({top:0,behavior:"smooth"});
 }
@@ -1286,7 +1322,7 @@ function renderProdutos(){
   $("#pLista").innerHTML=L.length?L.map(p=>{const c=custoProduto(p),pr=precoDe(p),l=pr-c.unit;return`<div class="pcard">
     ${p.foto?`<img class="foto" src="${p.foto}" alt="${esc(p.nome)}" onclick="verFoto('${p.id}')" loading="lazy">`:""}
     <div class="l1"><b>${esc(p.nome)}</b>${p.categoria?`<span class="tag">${esc(p.categoria)}</span>`:""}${(p.filamentos||[]).some(f=>!filamentoDe(f.filamentoId))?'<span class="tag aberto" title="O filamento deste produto foi apagado: o custo do filamento está saindo R$ 0">⚠️ filamento apagado: toque em Editar e escolha de novo</span>':""}</div>
-    <div class="l3">${fmtTempo(c.horas)} · ${num(c.gramas)} g${c.un>1?` · ${c.un} por impressão`:""} · ${esc(impressoraDe(p.impressoraId)?.nome||"sem impressora")}</div>
+    <div class="l3">${fmtTempo(c.horas)} · ${num(c.gramas)} g${(p.insumos||[]).filter(x=>insumoDe(x.insumoId)).map(x=>` · ${num(x.qtd,0)} ${esc(insumoDe(x.insumoId).nome)}`).join("")}${c.un>1?` · ${c.un} por impressão`:""} · ${esc(impressoraDe(p.impressoraId)?.nome||"sem impressora")}</div>
     <div class="nums"><div><small>Custo</small><b>${brl(c.unit)}</b></div><div><small>Preço${p.precoVenda==null?" sug.":""}</small><b>${brl(pr)}</b></div><div><small>Lucro</small><b class="${l>=0?"lucro":"taxa"}">${brl(l)}</b></div></div>
     ${detalhesProd(p)?`<div class="det">${esc(detalhesProd(p))}</div>`:""}
     <div class="l3">Margem ${pct(pr?l/pr:0)} do preço · ${vend[p.id]?`${num(vend[p.id],0)} vendidos`:"nenhum vendido"}${p.obs?` · ${esc(p.obs)}`:""}</div>
@@ -1414,7 +1450,7 @@ fV.onsubmit=async e=>{e.preventDefault();
   if(lucro<0&&!await confirmar(`Esta venda não paga todos os custos (material, energia, manutenção, taxa): faltam ${brl(-lucro)}.\nSalvar mesmo assim?`,"Salvar mesmo assim",true))return;
   const ant=D.vendas.find(x=>x.id===fV.id.value);
   const v={id:fV.id.value||novoId("v"),data:fV.data.value,cliente:nomeProprio(fV.cliente.value),clienteId:garantirCliente(fV.cliente.value).id,
-    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{}),...(x.partes?{partes:x.partes}:{})})),
+    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(insDoItem(x).length?{ins:insDoItem(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{}),...(x.partes?{partes:x.partes}:{})})),
     frete:r2(fV.frete.value),cobrado:r2(fV.cobrado.value),metodo:fV.metodo.value,custo,taxa,lucro,recebido:fV.recebido.checked,repassado:!!ant?.repassado,obs:ant?.obs||""};
   const i=D.vendas.findIndex(x=>x.id===v.id); i>=0?D.vendas[i]=v:D.vendas.push(v);
   D.vendas.sort((a,b)=>a.data.localeCompare(b.data));
@@ -1443,6 +1479,7 @@ const nomeCompra=c=>`${c.nome||nomeFil(filamentoDe(c.filamentoId))} de ${fmtData
    e parcelamento marcado 💰 (valor total, no dia da compra). Entram na mesma fila dos filamentos (prioridade 2, do mais antigo). */
 const contasDoGui=()=>[
   ...D.despesas.filter(d=>d.doGui&&!d.vendaId&&+d.valor>0).map(d=>({key:"d:"+d.id,data:d.data,nome:d.descricao?`${d.descricao} (${d.categoria})`:d.categoria,valor:+d.valor,conta:true})),
+  ...(D.insumoMovs||[]).filter(m=>m.tipo==="compra"&&+m.valor>0).map(m=>({key:"im:"+m.id,data:m.data,nome:insumoDe(m.insumoId)?.nome||"(material apagado)",valor:+m.valor,conta:true,insQ:+m.qtd})),
   ...D.parcelamentos.filter(pc=>pc.doGui&&!pc.material&&+pc.total>0).map(pc=>({key:"pcc:"+pc.id,data:pc.data||pc.inicio+"-01",nome:`${pc.descricao} (${pc.parcelas}x)`,valor:+pc.total,conta:true,parcelado:true}))];
 function fluxo(extra){ // extra: venda ainda no formulário (prévia), no lugar da gravada com o mesmo id
   if(!extra&&_fluxo)return _fluxo;
@@ -1527,7 +1564,7 @@ window.editarVenda=id=>{const v=D.vendas.find(x=>x.id===id);
   edV.set(v.itens);orcEmVenda=null;$("#vOrc").hidden=true;fV.recebido.checked=v.recebido!==false;
   cobradoManual=true;$("#vTitulo").textContent="Editando venda de "+v.cliente;calcVenda();scrollTo({top:0,behavior:"smooth"})};
 window.apagar=async(col,id)=>{
-  let msg={estoque:"Apagar esta movimentação do estoque?",vendas:"Apagar esta venda?",despesas:"Apagar esta despesa?",orcamentos:"Apagar este orçamento?",clientes:"Apagar este cliente do cadastro? As vendas e orçamentos continuam com o nome dele.",parcelamentos:"Apagar este parcelamento e todas as marcações de pago?",retiradas:"Apagar esta saída de dinheiro?",reembolsos:"Apagar este pagamento ao Gui? As compras voltam a mostrar esse valor como falta."}[col]||"Apagar?";
+  let msg={estoque:"Apagar esta movimentação do estoque?",vendas:"Apagar esta venda?",despesas:"Apagar esta despesa?",orcamentos:"Apagar este orçamento?",clientes:"Apagar este cliente do cadastro? As vendas e orçamentos continuam com o nome dele.",parcelamentos:"Apagar este parcelamento e todas as marcações de pago?",retiradas:"Apagar esta saída de dinheiro?",insumoMovs:"Apagar esta movimentação?",reembolsos:"Apagar este pagamento ao Gui? As compras voltam a mostrar esse valor como falta."}[col]||"Apagar?";
   if(col==="produtos"){const n=D.vendas.filter(v=>(v.itens||[]).some(x=>x.produtoId===id)).length;
     msg=n?`Este produto aparece em ${n} venda(s). As vendas continuam com o nome e o custo gravados. Apagar o produto do catálogo?`:"Apagar este produto?"}
   // despesa que se repete: apagar a mais recente da série para a repetição (senão ela voltaria no próximo acesso)
@@ -1587,7 +1624,7 @@ fO.onsubmit=e=>{e.preventDefault();
   const vp=voltaProd; // veio da Produção (✏️ Editar): volta para lá
   // ...ant mantém o que não está no formulário (etapa, ordem, sinal, data de aprovação)
   const o={...(ant||{}),id:fO.id.value||novoId("o"),data:fO.data.value,prazo:fO.prazo.value,cliente:cli.nome,clienteId:cli.id,validade:Math.max(1,Math.round(+fO.validade.value||7)),
-    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{})})),
+    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(insDoItem(x).length?{ins:insDoItem(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{})})),
     frete:r2(fO.frete.value),valor:r2(fO.valor.value),custo,obs:fO.obs.value.trim(),status:ant?.status||"aberto",vendaId:ant?.vendaId||null};
   const i=D.orcamentos.findIndex(x=>x.id===o.id);i>=0?D.orcamentos[i]=o:D.orcamentos.push(o);
   filtroOrc=o.status;salvar();limparOrc();
@@ -2056,7 +2093,7 @@ function renderGui(){
   const L=C.slice().sort((a,b)=>(b.resto>0.004)-(a.resto>0.004)||b.data.localeCompare(a.data));
   $("#guiLista").innerHTML=L.length?L.map(c=>{const p_=c.valor?Math.min(100,(c.valor-c.resto)/c.valor*100):100;
     return`<div class="gitem"><div class="t"><b>${esc(c.nome||nomeFil(filamentoDe(c.filamentoId)))}</b><b>${brl(c.valor)}</b></div>
-      <div class="sub2">${fmtData(c.data)} · ${c.conta?"📄 conta":"🧵 filamento "+fmtG(c.g)}${c.parcelado?" · parcelado":""}</div>
+      <div class="sub2">${fmtData(c.data)} · ${c.insQ?"🔩 "+fmtUn(c.insQ):c.conta?"📄 conta":"🧵 filamento "+fmtG(c.g)}${c.parcelado?" · parcelado":""}</div>
       <div class="gbar"><i style="width:${p_.toFixed(0)}%"></i></div>
       <div>${c.resto>0.004?`<b class="taxa">Falta voltar ${brl(c.resto)}</b>${c.valor-c.resto>0.004?` <span class="muted">· já voltou ${brl(c.valor-c.resto)}</span>`:""}`:'<span class="tag ok">✓ voltou tudo</span>'}</div>
       ${c.pagos.length?`<div class="orig">De onde veio: ${c.pagos.map(x=>`${x.fonte==="venda"?`venda de ${esc(x.cliente)}`:esc(x.fonte)} (${fmtData(x.data)}) ${brl(x.v)}`).join(" · ")}</div>`:""}</div>`}).join("")
@@ -2206,6 +2243,18 @@ function estoques(){
   return e;
 }
 const minimoG=()=>D.config.estoqueMinimoG??200;
+/* Outros materiais por unidade (1.24.0): D.insumos [{id,nome,precoUn}], D.insumoMovs [{id,data,insumoId,tipo,qtd,valor}].
+   Produto: insumos [{insumoId,qtd}] de 1 peça (o custo soma em "extras"). Item de venda guarda ins [{i,q}] por unidade vendida.
+   Estoque = compras + inicial − perdas − Σ vendas. Compra com valor: precoUn = valor ÷ qtd e entra no que o Gui pagou do bolso. */
+const insumoDe=id=>(D.insumos||[]).find(x=>x.id===id);
+const insDeProduto=p=>p?(p.insumos||[]).filter(x=>x.insumoId&&+x.qtd>0).map(x=>({i:x.insumoId,q:+x.qtd})):[];
+const insDoItem=x=>x.ins||(x.produtoId?insDeProduto(D.produtos.find(p=>p.id===x.produtoId)):[]);
+const custoInsumos=p=>soma(p.insumos||[],x=>(+insumoDe(x.insumoId)?.precoUn||0)*(+x.qtd||0));
+function estInsumos(){const e={};(D.insumos||[]).forEach(x=>e[x.id]={entrou:0,perdas:0,usado:0});
+  (D.insumoMovs||[]).forEach(m=>{const a=e[m.insumoId];if(a)m.tipo==="perda"?a.perdas+=+m.qtd:a.entrou+=+m.qtd});
+  D.vendas.forEach(v=>(v.itens||[]).forEach(x=>insDoItem(x).forEach(m=>{if(e[m.i])e[m.i].usado+=m.q*(+x.qtd||0)})));
+  for(const k in e){const a=e[k];a.saldo=r2(a.entrou-a.perdas-a.usado);a.registrado=!!(a.entrou||a.perdas)}return e}
+const fmtUn=q=>`${num(q,0)} un`;
 /* Lotes de filamento (1.13.0). Cada compra (à vista ou parcelada) e o estoque inicial é um lote, com o preço do kg dele.
    Perdas e vendas (em ordem de data) gastam sempre o lote mais antigo primeiro. Orçamento e venda calculam o filamento pelos lotes:
    sobraram 200 g a R$ 120/kg e entrou 1 kg a R$ 100/kg → peça de 300 g = 200 g × R$ 0,12 + 100 g × R$ 0,10 = R$ 34.
@@ -2272,10 +2321,28 @@ $("#btnListaCompras").onclick=()=>{
     <div class="row"><button class="btn" id="lcCopiar">Copiar</button><a class="btn sec2" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(txt)}">📲 Enviar no WhatsApp</a></div>`
     :`<p>Nenhum filamento abaixo de ${fmtG(minimoG())}. 👍</p>`));
   $("#lcCopiar")?.addEventListener("click",()=>navigator.clipboard?.writeText(txt).then(()=>status("lista copiada"),()=>status("não foi possível copiar",true)))};
+$("#cfgAddIns").onclick=()=>{D.insumos.push({id:novoId("u"),nome:"Novo material",precoUn:0});salvar();render()};
+$("#fIns").tipo.onchange=()=>document.querySelectorAll("#fIns .soCompraI").forEach(el=>el.style.display=$("#fIns").tipo.value==="compra"?"":"none");
+$("#fIns").onsubmit=e=>{e.preventDefault();const f=e.target,q=Math.round(+f.qtd.value||0);
+  if(!f.insumoId.value)return avisar("Cadastre o material primeiro (＋ Novo material por unidade).");if(!(q>0))return avisar("Coloque a quantidade.");
+  const m={id:novoId("e"),data:f.data.value||hoje(),insumoId:f.insumoId.value,tipo:f.tipo.value,qtd:q,valor:f.tipo.value==="compra"?r2(f.valor.value):0};
+  D.insumoMovs.push(m);const x=insumoDe(m.insumoId);if(m.tipo==="compra"&&m.valor>0&&x)x.precoUn=r2(m.valor/q*1e4)/1e4; // preço da última compra
+  salvar();f.valor.value=0;render();status(`${TIPO_EST[m.tipo].toLowerCase()} de ${fmtUn(q)} de ${x?.nome||""} registrada`+(m.tipo==="compra"&&m.valor>0?` · ${brl(x.precoUn)} por unidade`:""))};
 $("#cfgMinimo").onchange=e=>{D.config.estoqueMinimoG=Math.max(0,Math.round(+e.target.value||0));salvar();render()};
 function renderEstoque(){
   _E=estoques();
   $("#tFilCfg").innerHTML=tabelaCfg("filamentos",["Em estoque",estCel]);
+  // materiais por unidade (1.24.0)
+  {const EI=estInsumos();
+   $("#tInsCfg").innerHTML=D.insumos.length?tabelaCfg("insumos",["Em estoque",x=>{const a=EI[x.id];if(!a||(!a.registrado&&!a.usado))return'<span class="muted">sem registro</span>';
+     return`<b class="${a.saldo<=0?"taxa":""}">${fmtUn(a.saldo)}</b>${a.saldo<=0?' <span class="tag aberto">acabou</span>':""}<br><span class="muted">vendas usaram ${fmtUn(a.usado)}</span>`}]):'<tr><td class="muted">Nenhum material por unidade ainda. Toque em ＋ para cadastrar (ex.: Argola de chaveiro).</td></tr>';
+   const sel=$("#insSel"),ant=sel.value;sel.innerHTML=D.insumos.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join("")||'<option value="">(cadastre acima)</option>';
+   if(D.insumos.some(x=>x.id===ant))sel.value=ant;if(!$("#fIns").data.value)$("#fIns").data.value=hoje();
+   const M=D.insumoMovs.slice().sort((a,b)=>b.data.localeCompare(a.data));
+   $("#tInsMov").innerHTML=M.length?`<tr><th>Data</th><th>Material</th><th>O que foi</th><th class="n">Quantidade</th><th class="n">Valor</th><th></th></tr>`+
+     M.map(m=>`<tr><td>${fmtData(m.data)}</td><td>${esc(insumoDe(m.insumoId)?.nome||"(apagado)")}</td><td>${TIPO_EST[m.tipo]||m.tipo}</td>
+       <td class="n ${m.tipo==="perda"?"taxa":"lucro"}">${m.tipo==="perda"?"−":"+"}${fmtUn(m.qtd)}</td><td class="n">${m.valor?brl(m.valor):"–"}</td>
+       <td><button class="btn sm del" onclick="apagar('insumoMovs','${m.id}')">✕</button></td></tr>`).join(""):""}
   const sel=$("#estFil"),ant=sel.value;
   sel.innerHTML=D.filamentos.map(f=>`<option value="${f.id}">${esc(nomeFil(f))} · ${brl(f.precoKg)}/kg</option>`).join("")||'<option value="">(cadastre um material)</option>';
   if(D.filamentos.some(f=>f.id===ant))sel.value=ant;
@@ -2295,6 +2362,7 @@ function renderEstoque(){
 
 const COLS={
   impressoras:[["nome","Nome","text"],["preparoMin","Aquecer e calibrar (min)","number"],["potenciaW","Potência (W)","number"],["valor","Valor pago (R$)","number"],["vidaUtilH","Vida útil (h)","number"],["manutHora","Manutenção (R$/h)","number"]],
+  insumos:[["nome","Nome","text"],["precoUn","Preço por unidade (R$)","number"]],
   filamentos:[["nome","Nome / cor","text"],["marca","Marca","text"],["material","Material","text"],["precoKg","Preço por kg (R$)","number"]]};
 function tabelaCfg(col,extra){
   const C=COLS[col];
@@ -2302,7 +2370,7 @@ function tabelaCfg(col,extra){
     D[col].map((x,i)=>`<tr>${C.map(([k,,t])=>`<td><input data-t="${col}" data-i="${i}" data-k="${k}" type="${t}" ${t==="number"?'step="any" min="0" style="text-align:right;min-width:90px"':'style="min-width:140px"'} value="${esc(x[k]??"")}"></td>`).join("")}
       ${extra?`<td class="n">${extra[1](x)}</td>`:""}<td class="n muted">${usos(col,x.id)} produtos</td><td><button class="btn sm del" onclick="apagarCfg('${col}','${x.id}')">✕</button></td></tr>`).join("");
 }
-const usos=(col,id)=>D.produtos.filter(p=>col==="impressoras"?p.impressoraId===id:(p.filamentos||[]).some(f=>f.filamentoId===id)).length;
+const usos=(col,id)=>D.produtos.filter(p=>col==="impressoras"?p.impressoraId===id:col==="insumos"?(p.insumos||[]).some(x=>x.insumoId===id):(p.filamentos||[]).some(f=>f.filamentoId===id)).length;
 const editaCfg=e=>{const el=e.target,col=el.dataset.t;if(!col)return;
   const x=D[col][el.dataset.i];x[el.dataset.k]=el.type==="number"?(+el.value||0):el.value.trim();salvar();
   setTimeout(render,250)};
@@ -2367,6 +2435,11 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.24.0",data:"2026-11-15",titulo:"Outros materiais por unidade (chaveiro, ímã…)",itens:[
+    {novo:"Em Estoque há o cadastro de outros materiais contados por unidade, como argola de chaveiro, ímã ou embalagem, com compras, estoque e perdas.",
+     uso:"Estoque › 🔩 Outros materiais › ＋ Novo material por unidade › registre a compra (quantidade e valor)."},
+    {novo:"No produto, além dos filamentos (gramas), você coloca quantas unidades de cada material a peça usa. A venda desconta os gramas e as unidades, e o custo entra no preço.",
+     uso:"Produtos › 🔩 Outros materiais de 1 peça › ＋ Material por unidade."}]},
   {v:"1.23.3",data:"2026-11-12",titulo:"Trabalho manual soma no tempo",itens:[
     {novo:"O tempo do trabalho manual agora soma no tempo total, no produto e no orçamento (manual × quantidade).",
      uso:"Produtos: impressão (confira com o fatiador) + ✋ manual = tempo total. Orçamentos: preparo 1 vez + quantidade × (modelo + manual)."}]},
