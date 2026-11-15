@@ -63,7 +63,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
               "comprador": "Gui" /* compra o material e paga a luz */, "socios": "Gui, Luan, Caique" /* vazio = pessoas do parcelamento da impressora */,
               "guardarPct": 40, "reinvestirPct": 30, "sociosPct": 30, "minReinvestir": 400 /* valor de 4 filamentos (1.17.0) */ },   // dividasPct saiu na 1.13.0
   "insumos": [ { "id" /* u… */, "nome", "marca", "precoUn" /* custo de 1 un */, "precoVenda" /* venda de 1 un (1.30.0, só informativo) */ } ],   // materiais por unidade: chaveiro, ímã, embalagem (1.24.0)
-  "insumoMovs": [ { "id", "data", "insumoId", "tipo": "compra" | "inicial" | "perda", "qtd", "valor" } ],
+  "insumoMovs": [ { "id", "data", "insumoId", "tipo": "compra" | "inicial" | "perda", "qtd", "valor", "pagoPor" /* "gui" | "empresa" (1.31.0) */ } ],
   "reembolsos": [ { "id", "data", "valor", "fonte", "obs" } ],   // pagamento ao Gui de outra fonte (abate as compras de filamento)
   "retiradas": [ { "id", "data", "caixa": "guardar" | "reinvestir" | "socio:Nome", "valor", "obs" } ],   // saídas das caixinhas (1.16.0)
   "backups": [ { "id" /* arquivo no Drive */, "data" } ], "ultimoBackup": "AAAA-MM-DD",   // cópia semanal (1.16.0); config.backupPasta se precisou criar pasta  // arredondar: nao | 1 | 90 | 5
@@ -233,7 +233,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-15, versão 1.30.0)
+## Estado atual (2026-11-15, versão 1.31.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -288,6 +288,9 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 2026-11-15: “Ferramentas / acessórios” separada no dados.json: Alicate → Ferramentas; Tomada inteligente, Tag NFC, Placa de Impressão, Ima → Acessórios (cópia em `backup/`).
 - 1.29.0: categoria da despesa é `<select>` fixo (`CATS_DESP`: Acessórios, Ferramentas, Manutenção / peças da impressora + antigas usadas + Filamento); Acessórios = tipo `unidade` (material, valor total, qtd → `insumoMovs`); “＋ Cadastrar material novo…” cria o insumo ali.
 - 1.30.0: despesa Acessórios com Material antes do valor; Estoque › Materiais mostra custo e preço de venda por unidade (`insumos.precoVenda`) com lucro; cartões do estoque mostram os dois.
+- 1.31.0: Lançar despesa pergunta “Quem pagou?” (`pagou`: gui/empresa; conta → `doGui`; material → `pagoPor` em estoque/insumoMovs/parcelamento).
+  Material da empresa (`comprasEmpresa`) não entra no bolso do Gui e sai do 🔁 Reinvestir (caixinha e saldo da regra dos 4 filamentos). Lista de Despesas mostra as compras de material do mês (não somam).
+  Compras antigas sem `pagoPor` contam como do Gui.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -342,3 +345,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.28.0 | 2026-11-15 | Lançar despesa: categorias suas primeiro, Filamento e Material por unidade no fim; material por unidade com valor total e quantidade em unidades (vai para o estoque e calcula o preço de 1 unidade); Ferramentas e Acessórios separados |
 | 1.29.0 | 2026-11-15 | Categoria da despesa vira lista fixa sem digitar (Acessórios, Ferramentas, Manutenção, Filamento); Acessórios pede material, valor total e unidades; cadastrar material novo na própria despesa |
 | 1.30.0 | 2026-11-15 | Despesa de Acessórios: material antes do valor e da quantidade; Estoque mostra o preço de 1 unidade e o preço de venda ao lado (com lucro por unidade) |
+| 1.31.0 | 2026-11-15 | Lançar despesa: “Quem pagou?” (Gui, do próprio dinheiro, ou Empresa); material pago pela empresa sai do Reinvestir e não entra no bolso do Gui; compras de material aparecem na lista de Despesas do mês |

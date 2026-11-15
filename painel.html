@@ -495,6 +495,9 @@ nav .ct{display:none}
       <label data-se="pago" style="flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="pago" checked style="min-height:0;width:20px;height:20px"> Já está pago</label>
       <label data-se="repete" style="flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="repete" style="min-height:0;width:20px;height:20px"> 🔁 Repetir todo mês</label>
       <label data-se="gui" style="grid-column:1/-1;flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="doGui" style="min-height:0;width:20px;height:20px"> <span>💰 <span class="nmComp">Gui</span> pagou do próprio dinheiro <span class="muted">(as vendas devolvem para ele, na prioridade 2, junto com os filamentos)</span></span></label>
+      <div class="chips" id="dQuem" style="grid-column:1/-1"><input type="hidden" name="pagou"><span class="rot">Quem pagou?</span>
+        <button type="button" class="chip" data-pagou="gui">💰 <span class="nmComp">Gui</span>, do próprio dinheiro</button>
+        <button type="button" class="chip" data-pagou="empresa">🏢 Empresa</button></div>
       <div class="calc" id="dCalc" style="grid-column:1/-1" hidden></div>
       <div class="row" style="grid-column:1/-1"><button class="btn" type="submit" id="dSalvar">Salvar</button><button class="btn sec2" type="button" id="dCancelar">Limpar</button></div>
     </form>
@@ -758,7 +761,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.30.0";
+const VERSAO="1.31.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1468,15 +1471,16 @@ const nomeCompra=c=>`${c.nome||nomeFil(filamentoDe(c.filamentoId))} de ${fmtData
    e parcelamento marcado 💰 (valor total, no dia da compra). Entram na mesma fila dos filamentos (prioridade 2, do mais antigo). */
 const contasDoGui=()=>[
   ...D.despesas.filter(d=>d.doGui&&!d.vendaId&&+d.valor>0).map(d=>({key:"d:"+d.id,data:d.data,nome:d.descricao?`${d.descricao} (${d.categoria})`:d.categoria,valor:+d.valor,conta:true})),
-  ...(D.insumoMovs||[]).filter(m=>m.tipo==="compra"&&+m.valor>0).map(m=>({key:"im:"+m.id,data:m.data,nome:insumoDe(m.insumoId)?.nome||"(material apagado)",valor:+m.valor,conta:true,insQ:+m.qtd})),
+  ...(D.insumoMovs||[]).filter(m=>m.tipo==="compra"&&+m.valor>0&&m.pagoPor!=="empresa").map(m=>({key:"im:"+m.id,data:m.data,nome:insumoDe(m.insumoId)?.nome||"(material apagado)",valor:+m.valor,conta:true,insQ:+m.qtd})),
   ...D.parcelamentos.filter(pc=>pc.doGui&&!pc.material&&+pc.total>0).map(pc=>({key:"pcc:"+pc.id,data:pc.data||pc.inicio+"-01",nome:`${pc.descricao} (${pc.parcelas}x)`,valor:+pc.total,conta:true,parcelado:true}))];
 function fluxo(extra){ // extra: venda ainda no formulário (prévia), no lugar da gravada com o mesmo id
   if(!extra&&_fluxo)return _fluxo;
-  const compras=movsEstoque().filter(m=>(m.tipo==="compra"||m.tipo==="parcelada")&&+m.valor>0)
+  const compras=movsEstoque().filter(m=>(m.tipo==="compra"||m.tipo==="parcelada")&&+m.valor>0&&m.pagoPor!=="empresa")
     .map(m=>({key:m.id||"pc:"+m.pcId,data:m.data,filamentoId:m.filamentoId,g:+m.g,valor:+m.valor,parcelado:!m.id}))
     .concat(contasDoGui()).map(c=>({...c,resto:c.valor,pagos:[]})).sort((a,b)=>a.data.localeCompare(b.data));
   const V=extra?[...D.vendas.filter(v=>v.id!==extra.id),extra]:D.vendas;
   const ev=[...(D.reembolsos||[]).map(x=>({r:1,data:x.data,x})),...(D.retiradas||[]).filter(x=>x.caixa==="reinvestir").map(x=>({r:2,data:x.data,x})),
+    ...comprasEmpresa().map(x=>({r:2,data:x.data,x})),
     ...V.map(x=>({r:0,data:x.data,x}))].sort((a,b)=>a.data.localeCompare(b.data)||b.r-a.r);
   // Regra dos 4 filamentos (1.17.0): os sócios só recebem quando o Reinvestir tem pelo menos D.config.minReinvestir;
   // até lá, a parte deles completa o Reinvestir (só o que falta; o que passar vai para os sócios).
@@ -1848,8 +1852,10 @@ const catsDespAntiga=()=>[...[...new Set([...D.despesas.filter(d=>!d.vendaId).ma
 function ajustaDesp(){
   if(!fD.id.value)fD.tipo.value=ehFilCat(fD.categoria.value)?"filamento":(ehUnCat(fD.categoria.value)||fD.categoria.value==="Acessórios")?"unidade":"conta";
   const t=fD.tipo.value, parc=fD.forma.value==="parcelado", ed=!!fD.id.value;
+  fD.doGui.checked=fD.pagou.value==="gui"; // "Quem pagou?" (1.31.0) substitui a caixinha 💰
   const gui=t==="conta"&&fD.doGui.checked;
-  const vis={desc:t==="conta",fil:t==="filamento",ins:t==="unidade",parc:parc&&t!=="unidade",pess:parc&&t==="conta"&&!gui,pago:!parc&&t==="conta"&&!gui,repete:!parc&&t==="conta",gui:t==="conta"};
+  fD.querySelectorAll("[data-pagou]").forEach(b=>b.classList.toggle("on",b.dataset.pagou===fD.pagou.value));
+  const vis={desc:t==="conta",fil:t==="filamento",ins:t==="unidade",parc:parc&&t!=="unidade",pess:parc&&t==="conta"&&!gui,pago:!parc&&t==="conta"&&!gui,repete:!parc&&t==="conta",gui:false};
   fD.querySelectorAll(".nmComp").forEach(e=>e.textContent=comprador());
   // pago do bolso do Gui: diz o que foi comprado (aparece em Resumo › O que Gui pagou); não precisa de "Já está pago": as vendas pagam
   $("#dDescRot").textContent=gui?"O que comprou (material, peça…)":"Descrição";fD.descricao.placeholder=gui?"ex.: tomada inteligente, saquinhos":"ex.: DAS de novembro";
@@ -1864,14 +1870,16 @@ function ajustaDesp(){
   if(gui&&v)L.push(`💰 ${esc(comprador())} pagou do bolso: as vendas devolvem ${brl(v)} para ele (prioridade 2, depois da energia)`+
     (parc?` · fica só no nome dele, sem marcar parcela`:""));
   if(t==="unidade"){const x=insumoDe(fD.insumoId.value),q=Math.round(+fD.qtdUn.value||0);
-    if(x&&q)L.push(`🔩 +${fmtUn(q)} de ${esc(x.nome)} no Estoque`+(v?` · <b>${brl(v/q)}</b> por unidade (hoje ${brl(x.precoUn)})`:"")+` · entra no que ${esc(comprador())} pagou do bolso`)}
+    if(x&&q)L.push(`🔩 +${fmtUn(q)} de ${esc(x.nome)} no Estoque`+(v?` · <b>${brl(v/q)}</b> por unidade (hoje ${brl(x.precoUn)})`:""))}
+  if(t!=="conta"&&fD.pagou.value)L.push(fD.pagou.value==="gui"?`💰 Entra no que ${esc(comprador())} pagou do bolso: as vendas devolvem`:"🏢 Pago pela empresa: sai da caixinha 🔁 Reinvestir");
   if(t==="filamento"&&f&&g){L.push(`🧵 +${fmtG(g)} de ${esc(nomeFil(f))} no Estoque`+(v?` · preço do kg: ${regraPrecoKg(f,v,g).txt}`:""))}
   $("#dCalc").innerHTML=L.join("<br>");$("#dCalc").hidden=!L.length;
   $("#dSalvar").textContent=ed?"Salvar alterações":"Salvar";
 }
-function limparDesp(){fD.reset();fD.id.value="";fD.tipo.value="conta";fD.forma.value="avista"; // campos escondidos não voltam com reset()
+function limparDesp(){fD.reset();fD.id.value="";fD.tipo.value="conta";fD.forma.value="avista";fD.pagou.value=""; // campos escondidos não voltam com reset()
   fD.data.value=hoje();fD.inicio.value="";fD.pessoas.value=D.parcelamentos.at(-1)?.pessoas.join(", ")||"";ajustaDesp()}
-fD.addEventListener("click",e=>{const b=e.target.closest("[data-tipo],[data-forma]");if(!b)return;
+fD.addEventListener("click",e=>{const q=e.target.closest("[data-pagou]");if(q){fD.pagou.value=q.dataset.pagou;ajustaDesp();return}
+  const b=e.target.closest("[data-tipo],[data-forma]");if(!b)return;
   if(b.dataset.tipo)fD.tipo.value=b.dataset.tipo;else fD.forma.value=b.dataset.forma;ajustaDesp()});
 fD.addEventListener("input",ajustaDesp);fD.addEventListener("change",ajustaDesp);
 // ＋ Cadastrar material novo… (Acessórios): pede o nome e já escolhe o material (por unidade)
@@ -1889,12 +1897,14 @@ fD.onsubmit=e=>{e.preventDefault();
   const n=Math.min(10,+fD.parcelas.value||2), inicio=fD.inicio.value||data.slice(0,7);
   const pessoas=fD.pessoas.value.split(",").map(x=>x.trim()).filter(Boolean);if(!pessoas.length)pessoas.push("Eu");
   let msg;
+  if(!fD.pagou.value)return avisar(`Diga quem pagou: ${comprador()}, do próprio dinheiro, ou a empresa.`);
+  const pagoPor=fD.pagou.value; // "gui" (as vendas devolvem) ou "empresa" (material: sai do 🔁 Reinvestir)
   if(t==="conta"&&fD.doGui.checked&&!fD.descricao.value.trim()){fD.descricao.focus();return avisar(`Escreva o que ${comprador()} comprou (ex.: tomada inteligente). Isso aparece em Resumo › O que ${comprador()} pagou do próprio dinheiro.`)}
   if(t==="unidade"){ // material por unidade: compra no estoque dele, preço de 1 unidade = valor ÷ quantidade
     const x=insumoDe(fD.insumoId.value), q=Math.round(+fD.qtdUn.value||0);
     if(!x)return avisar("Cadastre o material primeiro: Estoque › ＋ Novo material › Por unidade.");
     if(!(q>0))return avisar("Coloque a quantidade em unidades.");
-    D.insumoMovs.push({id:novoId("e"),data,insumoId:x.id,tipo:"compra",qtd:q,valor});x.precoUn=r2(valor/q*1e4)/1e4;
+    D.insumoMovs.push({id:novoId("e"),data,insumoId:x.id,tipo:"compra",qtd:q,valor,pagoPor});x.precoUn=r2(valor/q*1e4)/1e4;
     salvar();limparDesp();renderDesp();status(`+${fmtUn(q)} de ${x.nome} no Estoque · ${brl(x.precoUn)} por unidade`);return;
   }
   if(t==="filamento"){
@@ -1902,8 +1912,8 @@ fD.onsubmit=e=>{e.preventDefault();
     if(!f)return avisar("Cadastre o filamento primeiro (aba Estoque › Materiais).");
     if(!(g>0))return avisar("Coloque a quantidade em gramas.");
     const rg=regraPrecoKg(f,valor,g); // texto calculado antes de a compra entrar no estoque
-    if(parc)D.parcelamentos.push({id:novoId("pc"),data,descricao:`${/^filamento/i.test(f.nome)?"":"Filamento "}${nomeFilTxt(f)}`,total:valor,parcelas:n,inicio,pessoas:[comprador()],pagos:{},material:f.id,materialG:g});
-    else D.estoque.push({id:novoId("e"),data,filamentoId:f.id,tipo:"compra",g,valor});
+    if(parc)D.parcelamentos.push({id:novoId("pc"),data,descricao:`${/^filamento/i.test(f.nome)?"":"Filamento "}${nomeFilTxt(f)}`,total:valor,parcelas:n,inicio,pessoas:[comprador()],pagos:{},material:f.id,materialG:g,pagoPor});
+    else D.estoque.push({id:novoId("e"),data,filamentoId:f.id,tipo:"compra",g,valor,pagoPor});
     msg=`+${fmtG(g)} de ${nomeFil(f)} no Estoque · ${rg.txt.replace(/<\/?b>/g,"")}${parc?` · ${n}x em Parcelamentos`:""}`;
   }else if(parc){
     const desc=fD.descricao.value.trim()||fD.categoria.value;
@@ -1920,7 +1930,7 @@ fD.onsubmit=e=>{e.preventDefault();
 $("#dCancelar").onclick=limparDesp;
 window.editarDesp=id=>{const d=D.despesas.find(x=>x.id===id);limparDesp();fD.tipo.value="conta";fD.forma.value="avista";
   if(d.categoria&&![...$("#dCat").options].some(o=>o.value===d.categoria))$("#dCat").add(new Option(d.categoria,d.categoria));
-  for(const k of ["id","data","categoria","descricao","valor"])fD[k].value=d[k]??"";fD.pago.checked=d.pago!==false;fD.repete.checked=!!d.repete;fD.doGui.checked=!!d.doGui;ajustaDesp();scrollTo({top:0,behavior:"smooth"})};
+  for(const k of ["id","data","categoria","descricao","valor"])fD[k].value=d[k]??"";fD.pago.checked=d.pago!==false;fD.repete.checked=!!d.repete;fD.doGui.checked=!!d.doGui;fD.pagou.value=d.doGui?"gui":"empresa";ajustaDesp();scrollTo({top:0,behavior:"smooth"})};
 function renderDesp(){
   {const sc=$("#dCat"),ac=sc.value;sc.innerHTML='<option value="">— escolha —</option>'+catsDesp().map(c=>`<option value="${esc(c)}">${c==="Filamento"?"🧵 ":c==="Acessórios"?"🔩 ":""}${esc(c)}</option>`).join("");
    if([...sc.options].some(o=>o.value===ac))sc.value=ac}
@@ -1935,11 +1945,20 @@ function renderDesp(){
     L.map(d=>`<tr><td>${fmtData(d.data)}</td><td>${esc(d.categoria)}${d.vendaId?' <span class="tag">da venda</span>':""}${d.repete?' <span title="Repete todo mês">🔁</span>':""}${d.doGui?` <span class="tag" title="Pago do bolso: as vendas devolvem">💰 ${esc(comprador())}</span>`:""}</td><td style="white-space:normal">${esc(d.descricao)}</td><td class="n">${brl(d.valor)}${d.vendaId||d.doGui?"":d.pago===false?' <span class="tag aberto">a pagar</span>':' <span class="tag ok">pago</span>'}</td><td>${d.vendaId
       ?`<button class="btn sm sec2" onclick="verVendaDesp('${d.vendaId}')" title="Esses valores vêm da venda: edite ou apague a venda">Ver venda</button>`
       :`<button class="btn sm sec2" onclick="editarDesp('${d.id}')">Editar</button> <button class="btn sm del" onclick="apagar('despesas','${d.id}')">✕</button>`}</td></tr>`).join("")+
-    `<tr><th colspan="3">Total do mês</th><th class="n">${brl(soma(L,d=>d.valor))}</th><th></th></tr>`;
+    `<tr><th colspan="3">Total do mês</th><th class="n">${brl(soma(L,d=>d.valor))}</th><th></th></tr>`+
+    // compras de material do mês (1.31.0): aparecem aqui, mas vão para o Estoque (o custo entra pelas vendas)
+    (()=>{const M=[...movsEstoque().filter(m=>(m.tipo==="compra"||m.tipo==="parcelada")&&m.data.startsWith(mes)).map(m=>({...m,txt:`${fmtG(m.g)} de ${nomeFil(filamentoDe(m.filamentoId))}`,cat:"🧵 Filamento",col:"estoque"})),
+        ...(D.insumoMovs||[]).filter(m=>m.tipo==="compra"&&m.data.startsWith(mes)).map(m=>({...m,txt:`${fmtUn(m.qtd)} de ${insumoDe(m.insumoId)?.nome||"(apagado)"}`,cat:"🔩 Acessórios",col:"insumoMovs"}))].sort((a,b)=>a.data.localeCompare(b.data));
+      if(!M.length)return"";const cp=esc(comprador());
+      return`<tr><td colspan="5" style="padding-top:14px;font-weight:700">Compras de material (vão para o Estoque)</td></tr>`+
+        M.map(m=>`<tr><td>${fmtData(m.data)}</td><td>${m.cat} ${m.pagoPor==="empresa"?'<span class="tag" title="Saiu do Reinvestir">🏢 Empresa</span>':`<span class="tag" title="Pago do bolso: as vendas devolvem">💰 ${cp}</span>`}${m.tipo==="parcelada"?' <span class="tag">parcelado</span>':""}</td>
+          <td style="white-space:normal">${esc(m.txt)}</td><td class="n">${m.valor?brl(m.valor):"–"}</td>
+          <td>${m.id?`<button class="btn sm sec2" onclick="abrirEstoque()" title="Corrigir em Estoque › Movimentações">Estoque</button> <button class="btn sm del" onclick="apagar('${m.col}','${m.id}')">✕</button>`:'<span class="muted">em Parcelamentos</span>'}</td></tr>`).join("")+
+        `<tr><th colspan="3">Total de compras de material</th><th class="n">${brl(soma(M,m=>m.valor))}</th><th></th></tr>`})();
   const prod=soma(L.filter(d=>d.vendaId),d=>d.valor);
   const fil=movsEstoque().filter(m=>m.tipo!=="perda"&&m.tipo!=="inicial"&&m.valor&&m.data.startsWith(mes));
   $("#dObs").innerHTML=[prod?`Gastos de produção das vendas: <b>${brl(prod)}</b> (já descontados no lucro de cada venda) · Outras despesas: <b>${brl(soma(L.filter(d=>!d.vendaId),d=>d.valor))}</b>`:"",
-    fil.length?`🧵 Compras de filamento no mês: <b>${brl(soma(fil,m=>m.valor))}</b> (${fil.map(m=>`${fmtG(m.g)} ${esc(nomeFil(filamentoDe(m.filamentoId)))}`).join(", ")}). Ficam no Estoque e não contam como despesa. <a href="#" onclick="abrirEstoque();return false">Ver Estoque</a>`:""].filter(Boolean).join("<br>");
+    fil.length?"As compras de material ficam no Estoque e não somam como despesa: o custo delas entra no lucro de cada venda.":""].filter(Boolean).join("<br>");
 }
 $("#dMes").oninput=renderDesp;
 
@@ -2126,7 +2145,7 @@ const repassarTodos=async()=>{const F=fluxo(),L=D.vendas.filter(v=>!v.repassado&
 function renderCaixas(){
   const F=fluxo(), S=socios(), parte={}, ent={guardar:0,reinvestir:0,manut:0};
   Object.values(F.porVenda).forEach(d=>{ent.guardar+=d.guardar;ent.reinvestir+=d.reinvestir;ent.manut+=d.manut||0;d.S.forEach(n=>parte[n]=(parte[n]||0)+d.socios/d.S.length)});
-  const R=D.retiradas||[], saiu=k=>soma(R.filter(x=>x.caixa===k),x=>x.valor);
+  const R=D.retiradas||[], saiu=k=>soma(R.filter(x=>x.caixa===k),x=>x.valor)+(k==="reinvestir"?soma(comprasEmpresa(),x=>x.valor):0); // material da empresa sai do Reinvestir
   const saiuG=saiu("guardar")+soma((D.reembolsos||[]).filter(x=>/^caixa/i.test(x.fonte||"")),x=>F.outras[x.id]||0);
   const lin=(n,e,s_)=>`<tr><td>${n}</td><td class="n">${brl(e)}</td><td class="n">${brl(s_)}</td><td class="n"><b class="${e-s_<-0.004?"taxa":"lucro"}">${brl(e-s_)}</b></td></tr>`;
   $("#tCaixas").innerHTML=`<tr><th>Caixinha</th><th class="n">Entrou</th><th class="n">Saiu</th><th class="n">Tem</th></tr>`+
@@ -2252,7 +2271,10 @@ $("#fCfg").addEventListener("change",e=>{if(e.detail?.target)e=e.detail;const k=
 const matDeProduto=p=>p?(p.filamentos||[]).filter(f=>f.filamentoId&&+f.g>0).map(f=>({f:f.filamentoId,g:r2(p.porPeca?+f.g:(+f.g)/Math.max(1,Math.round(+p.unidades||1)))})):[];
 const matDoItem=x=>x.mat||(x.produtoId?matDeProduto(D.produtos.find(p=>p.id===x.produtoId)):[]);
 // movimentações do estoque + compras de filamento parceladas (Despesas › Parcelamentos), que entram no mês da 1ª parcela
-const movsEstoque=()=>[...D.estoque,...D.parcelamentos.filter(pc=>pc.material&&+pc.materialG>0).map(pc=>({id:null,pcId:pc.id,data:pc.data||pc.inicio+"-01",filamentoId:pc.material,tipo:"parcelada",g:+pc.materialG,valor:pc.total}))];
+const movsEstoque=()=>[...D.estoque,...D.parcelamentos.filter(pc=>pc.material&&+pc.materialG>0).map(pc=>({id:null,pcId:pc.id,data:pc.data||pc.inicio+"-01",filamentoId:pc.material,tipo:"parcelada",g:+pc.materialG,valor:pc.total,pagoPor:pc.pagoPor}))];
+// compras de material pagas pela empresa (1.31.0): saem do 🔁 Reinvestir e não entram no que o Gui pagou do bolso
+const comprasEmpresa=()=>[...movsEstoque().filter(m=>(m.tipo==="compra"||m.tipo==="parcelada")&&m.pagoPor==="empresa"&&+m.valor>0),
+  ...(D.insumoMovs||[]).filter(m=>m.tipo==="compra"&&m.pagoPor==="empresa"&&+m.valor>0)].map(m=>({data:m.data,valor:+m.valor}));
 function estoques(){
   const e={};D.filamentos.forEach(f=>e[f.id]={entrou:0,perdas:0,usado:0});
   movsEstoque().forEach(m=>{const a=e[m.filamentoId];if(a)m.tipo==="perda"?a.perdas+=m.g:a.entrou+=m.g});
@@ -2337,8 +2359,9 @@ fE.onsubmit=e=>{e.preventDefault();
     if(Math.abs(dif)<0.01)return avisar("O estoque já está com essa quantidade.");
     tipo=dif<0?"perda":"inicial";qtd=Math.abs(dif);obs="acerto de estoque"}
   else if(!(qtd>0))return avisar("Coloque a quantidade.");
+  const velho=ed&&[...D.estoque,...D.insumoMovs].find(m=>m.id===ed);
   if(ed){D.estoque=D.estoque.filter(m=>m.id!==ed);D.insumoMovs=D.insumoMovs.filter(m=>m.id!==ed)} // corrigir = trocar o lançamento
-  const base={id:ed||novoId("e"),data:fE.data.value||hoje(),tipo,valor:tipo==="compra"?r2(fE.valor.value):0,...(obs?{obs}:{})};
+  const base={id:ed||novoId("e"),data:fE.data.value||hoje(),tipo,valor:tipo==="compra"?r2(fE.valor.value):0,...(obs?{obs}:{}),...(velho?.pagoPor?{pagoPor:velho.pagoPor}:{})};
   let txt;
   if(x){const m={...base,insumoId:id,qtd};D.insumoMovs.push(m);if(m.tipo==="compra"&&m.valor>0)x.precoUn=r2(m.valor/qtd*1e4)/1e4;txt=`${fmtUn(qtd)} de ${x.nome}`}
   else{const m={...base,filamentoId:id,g:qtd};if(m.tipo==="inicial")m.kg=+f.precoKg||0;D.estoque.push(m);txt=`${fmtG(qtd)} de ${nomeFilTxt(f)}`}
@@ -2479,6 +2502,11 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.31.0",data:"2026-11-15",titulo:"Quem pagou a despesa",itens:[
+    {novo:"Toda despesa pergunta quem pagou: 💰 Gui, do próprio dinheiro (as vendas devolvem para ele) ou 🏢 Empresa. Compra de material paga pela empresa sai da caixinha 🔁 Reinvestir.",
+     uso:"Despesas › Lançar despesa › Quem pagou? › toque em um dos dois."},
+    {novo:"As compras de filamento e de acessórios (como o NFC) agora aparecem na lista de Despesas do mês, separadas, com quem pagou. Elas vão para o Estoque e não somam como despesa.",
+     uso:"Despesas › lista do mês › Compras de material."}]},
   {v:"1.30.0",data:"2026-11-15",titulo:"Material primeiro e preço de venda",itens:[
     {novo:"Em Lançar despesa › Acessórios, o Material vem primeiro, depois o valor total e a quantidade.",
      uso:"Despesas › Categoria Acessórios."},
