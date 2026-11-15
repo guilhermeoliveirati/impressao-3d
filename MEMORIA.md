@@ -233,7 +233,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-15, versão 1.28.0)
+## Estado atual (2026-11-15, versão 1.29.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -286,6 +286,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.27.0: ✏️ corrigir movimentação do estoque (`editarMov`: o form `fE` troca o lançamento mantendo o id) e “Acertar: contei e tenho…” (lança a diferença com `obs`).
 - 1.28.0: Lançar despesa: categorias do usuário primeiro, “Filamento” e “Material por unidade” (`CAT_UN`, `ehUnCat`, tipo `unidade`) no fim; material por unidade = valor total + qtd → `insumoMovs` compra (só à vista).
 - 2026-11-15: “Ferramentas / acessórios” separada no dados.json: Alicate → Ferramentas; Tomada inteligente, Tag NFC, Placa de Impressão, Ima → Acessórios (cópia em `backup/`).
+- 1.29.0: categoria da despesa é `<select>` fixo (`CATS_DESP`: Acessórios, Ferramentas, Manutenção / peças da impressora + antigas usadas + Filamento); Acessórios = tipo `unidade` (material, valor total, qtd → `insumoMovs`); “＋ Cadastrar material novo…” cria o insumo ali.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -338,3 +339,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.26.0 | 2026-11-15 | Materiais num lugar só: uma tabela em Estoque (por grama ou por unidade, escolhido ao cadastrar), um formulário de compra/baixa e uma lista de movimentações; no produto, uma lista só de materiais de 1 peça (g ou un) |
 | 1.27.0 | 2026-11-15 | Estoque: ✏️ corrigir cada movimentação (material, tipo, quantidade, valor, data) e “Acertar: contei e tenho…”, que lança a diferença como perda ou estoque que já tinha |
 | 1.28.0 | 2026-11-15 | Lançar despesa: categorias suas primeiro, Filamento e Material por unidade no fim; material por unidade com valor total e quantidade em unidades (vai para o estoque e calcula o preço de 1 unidade); Ferramentas e Acessórios separados |
+| 1.29.0 | 2026-11-15 | Categoria da despesa vira lista fixa sem digitar (Acessórios, Ferramentas, Manutenção, Filamento); Acessórios pede material, valor total e unidades; cadastrar material novo na própria despesa |

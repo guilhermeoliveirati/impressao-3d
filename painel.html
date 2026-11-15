@@ -479,7 +479,7 @@ nav .ct{display:none}
     <form class="f" id="fDesp" autocomplete="off">
       <input type="hidden" name="id"><input type="hidden" name="tipo" value="conta"><input type="hidden" name="forma" value="avista">
       <label>Data<input name="data" type="date" required></label>
-      <label>Categoria<input name="categoria" list="dlCatDesp" placeholder="escolha ou digite uma nova" autocomplete="off"></label><datalist id="dlCatDesp"></datalist>
+      <label>Categoria<select name="categoria" id="dCat"></select></label>
       <label data-se="fil">Filamento<select name="filamentoId" id="dFil"></select></label>
       <label data-se="desc"><span id="dDescRot">Descrição</span><input name="descricao" placeholder="ex.: DAS de novembro"></label>
       <label>Valor total (R$)<input name="valor" type="number" step="0.01" min="0" required></label>
@@ -758,7 +758,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.28.0";
+const VERSAO="1.29.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1839,10 +1839,14 @@ const ehFilCat=c=>/^\s*(🧵\s*)?filamentos?\s*$/i.test(c||"");
 const CAT_UN="Material por unidade";
 const ehUnCat=c=>/^\s*(🔩\s*)?material(is)? por unidade\s*$/i.test(c||"");
 // 1.20.1: a lista mostra só as categorias que você já usou (e Filamento), não as padrão
-// 1.28.0: suas categorias primeiro (em ordem alfabética); Filamento e Material por unidade ficam no fim da lista
-const catsDesp=()=>[...[...new Set([...D.despesas.filter(d=>!d.vendaId).map(d=>d.categoria),...D.parcelamentos.filter(pc=>!pc.material).map(pc=>pc.categoria)].filter(c=>c&&!ehFilCat(c)&&!ehUnCat(c)))].sort((a,b)=>a.localeCompare(b,"pt-BR")),"Filamento",CAT_UN];
+/* 1.29.0: categoria é escolhida numa lista fixa (sem digitar nem criar sem querer):
+   Acessórios (material por unidade: material, valor total e quantidade), Ferramentas, Manutenção / peças da impressora (conta), Filamento.
+   Categorias antigas que já existem nos dados continuam na lista para editar o que foi lançado. */
+const CATS_DESP=["Acessórios","Ferramentas","Manutenção / peças da impressora"];
+const catsDesp=()=>[...CATS_DESP,...[...new Set([...D.despesas.filter(d=>!d.vendaId).map(d=>d.categoria),...D.parcelamentos.filter(pc=>!pc.material).map(pc=>pc.categoria)].filter(c=>c&&!CATS_DESP.includes(c)&&!ehFilCat(c)&&!ehUnCat(c)))].sort((a,b)=>a.localeCompare(b,"pt-BR")),"Filamento"];
+const catsDespAntiga=()=>[...[...new Set([...D.despesas.filter(d=>!d.vendaId).map(d=>d.categoria),...D.parcelamentos.filter(pc=>!pc.material).map(pc=>pc.categoria)].filter(c=>c&&!ehFilCat(c)&&!ehUnCat(c)))].sort((a,b)=>a.localeCompare(b,"pt-BR")),"Filamento",CAT_UN];
 function ajustaDesp(){
-  if(!fD.id.value)fD.tipo.value=ehFilCat(fD.categoria.value)?"filamento":ehUnCat(fD.categoria.value)?"unidade":"conta";
+  if(!fD.id.value)fD.tipo.value=ehFilCat(fD.categoria.value)?"filamento":(ehUnCat(fD.categoria.value)||fD.categoria.value==="Acessórios")?"unidade":"conta";
   const t=fD.tipo.value, parc=fD.forma.value==="parcelado", ed=!!fD.id.value;
   const gui=t==="conta"&&fD.doGui.checked;
   const vis={desc:t==="conta",fil:t==="filamento",ins:t==="unidade",parc:parc&&t!=="unidade",pess:parc&&t==="conta"&&!gui,pago:!parc&&t==="conta"&&!gui,repete:!parc&&t==="conta",gui:t==="conta"};
@@ -1870,8 +1874,16 @@ function limparDesp(){fD.reset();fD.id.value="";fD.tipo.value="conta";fD.forma.v
 fD.addEventListener("click",e=>{const b=e.target.closest("[data-tipo],[data-forma]");if(!b)return;
   if(b.dataset.tipo)fD.tipo.value=b.dataset.tipo;else fD.forma.value=b.dataset.forma;ajustaDesp()});
 fD.addEventListener("input",ajustaDesp);fD.addEventListener("change",ajustaDesp);
+// ＋ Cadastrar material novo… (Acessórios): pede o nome e já escolhe o material (por unidade)
+$("#dIns").addEventListener("change",e=>{if(e.target.value!=="__novo")return;e.target.value=D.insumos[0]?.id||"";
+  abrirModal(`<h2>🔩 Material novo</h2><p class="muted">Material contado por unidade (ex.: argola de chaveiro, ímã, tag NFC).</p>
+    <label style="display:flex;flex-direction:column;gap:4px">Nome<input id="novoInsNome" placeholder="ex.: Argola de chaveiro"></label>
+    <div class="row" style="margin-top:10px"><button class="btn" id="novoInsOk">Cadastrar</button></div>`);
+  setTimeout(()=>$("#novoInsNome").focus(),50);
+  $("#novoInsOk").onclick=()=>{const n=$("#novoInsNome").value.trim();if(!n)return;
+    const x={id:novoId("u"),nome:n,precoUn:0};D.insumos.push(x);$("#modal").hidden=true;salvar();renderDesp();$("#dIns").value=x.id;ajustaDesp();status(`material “${n}” cadastrado`)}});
 fD.onsubmit=e=>{e.preventDefault();
-  fD.categoria.value=fD.categoria.value.trim()||"Outros";ajustaDesp(); // sem categoria: Outros; nome novo vira categoria da lista
+  if(!fD.categoria.value)return avisar("Escolha a categoria.");ajustaDesp();
   const t=fD.tipo.value, parc=fD.forma.value==="parcelado", valor=r2(fD.valor.value), data=fD.data.value;
   if(!(valor>0))return avisar("Coloque o valor.");
   const n=Math.min(10,+fD.parcelas.value||2), inicio=fD.inicio.value||data.slice(0,7);
@@ -1907,11 +1919,13 @@ fD.onsubmit=e=>{e.preventDefault();
 };
 $("#dCancelar").onclick=limparDesp;
 window.editarDesp=id=>{const d=D.despesas.find(x=>x.id===id);limparDesp();fD.tipo.value="conta";fD.forma.value="avista";
+  if(d.categoria&&![...$("#dCat").options].some(o=>o.value===d.categoria))$("#dCat").add(new Option(d.categoria,d.categoria));
   for(const k of ["id","data","categoria","descricao","valor"])fD[k].value=d[k]??"";fD.pago.checked=d.pago!==false;fD.repete.checked=!!d.repete;fD.doGui.checked=!!d.doGui;ajustaDesp();scrollTo({top:0,behavior:"smooth"})};
 function renderDesp(){
-  $("#dlCatDesp").innerHTML=catsDesp().map(c=>`<option value="${esc(c)}">`).join("");
+  {const sc=$("#dCat"),ac=sc.value;sc.innerHTML='<option value="">— escolha —</option>'+catsDesp().map(c=>`<option value="${esc(c)}">${c==="Filamento"?"🧵 ":c==="Acessórios"?"🔩 ":""}${esc(c)}</option>`).join("");
+   if([...sc.options].some(o=>o.value===ac))sc.value=ac}
   renderParcelas();
-  {const si=$("#dIns"),ai=si.value;si.innerHTML=(D.insumos||[]).map(x=>`<option value="${x.id}">🔩 ${esc(x.nome)} · ${brl(x.precoUn)}/un</option>`).join("")||'<option value="">(cadastre em Estoque › Novo material › Por unidade)</option>';
+  {const si=$("#dIns"),ai=si.value;si.innerHTML=(D.insumos||[]).map(x=>`<option value="${x.id}">🔩 ${esc(x.nome)} · ${brl(x.precoUn)}/un</option>`).join("")+'<option value="__novo">＋ Cadastrar material novo…</option>';
    if((D.insumos||[]).some(x=>x.id===ai))si.value=ai}
   {const sel=$("#dFil"),ant=sel.value;sel.innerHTML=D.filamentos.map(f=>`<option value="${f.id}">${esc(nomeFil(f))} · ${brl(f.precoKg)}/kg</option>`).join("")||'<option value="">(cadastre em Estoque › Materiais)</option>';
    if(D.filamentos.some(f=>f.id===ant))sel.value=ant;
@@ -2463,6 +2477,11 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.29.0",data:"2026-11-15",titulo:"Categoria da despesa em lista",itens:[
+    {novo:"A categoria da despesa agora é escolhida numa lista, sem digitar: Acessórios, Ferramentas, Manutenção / peças da impressora e Filamento.",
+     uso:"Despesas › Lançar despesa › Categoria › toque e escolha."},
+    {novo:"Acessórios pede o material, o valor total e a quantidade em unidades (entra no estoque). Material que ainda não existe se cadastra ali mesmo.",
+     uso:"Categoria Acessórios › Material › ＋ Cadastrar material novo…"}]},
   {v:"1.28.0",data:"2026-11-15",titulo:"Despesa de material por unidade",itens:[
     {novo:"Na lista de categorias da despesa, as suas vêm primeiro e “Filamento” e “Material por unidade” ficam no fim.",
      uso:"Despesas › Categoria."},
