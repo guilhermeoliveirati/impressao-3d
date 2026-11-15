@@ -773,7 +773,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.24.0";
+const VERSAO="1.25.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1028,7 +1028,19 @@ document.addEventListener("click",e=>{if(!e.target.closest("#maisMenu,#maisBtn")
 const impressoraDe=id=>D.impressoras.find(i=>i.id===id);
 const filamentoDe=id=>D.filamentos.find(f=>f.id===id);
 // nome do filamento com a marca (1.12.0): "PLA Branco · Voolt"
-const nomeFil=f=>f?f.nome+(f.marca?" · "+f.marca:""):"(apagado)";
+const nomeFilTxt=f=>f?f.nome+(f.marca?" · "+f.marca:""):"(apagado)";
+/* Cor do filamento (1.25.0): f.cor (escolhida em Estoque › Materiais) ou adivinhada pelo nome. Aparece como bolinha (emoji de cor mais parecido),
+   que funciona também dentro das listas de escolha e no texto do WhatsApp. */
+const CORES_NOME=[[/branc|white|natural|transl|transp/,"#f8fafc"],[/pret|black/,"#111827"],[/vermelh|red/,"#dc2626"],[/azul|blue/,"#2563eb"],[/verde|green/,"#16a34a"],
+  [/amarel|yellow/,"#facc15"],[/laranj|orange/,"#f97316"],[/roxo|lil[aá]s|violet|purple/,"#9333ea"],[/rosa|pink/,"#ec4899"],[/cinza|prata|gray|grey|silver/,"#9ca3af"],
+  [/marrom|caf[eé]|brown|madeira|wood/,"#92400e"],[/dourad|ouro|gold/,"#d4a017"],[/pele|nude|bege|creme|skin/,"#f1c27d"]];
+const corDe=f=>f?.cor||(CORES_NOME.find(([r])=>r.test((f?.nome||"").toLowerCase()))||[0,"#9ca3af"])[1];
+const BOLINHAS=[["⚪",[248,250,252]],["⚫",[17,24,39]],["🔴",[220,38,38]],["🔵",[37,99,235]],["🟢",[22,163,74]],["🟡",[250,204,21]],["🟠",[249,115,22]],["🟣",[147,51,234]],["🟤",[146,64,14]]];
+function bolinha(hex){const h=String(hex||"").replace("#","");if(h.length!==6)return"⚪";const c=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16));
+  if(Math.max(...c)-Math.min(...c)<40)return(c[0]+c[1]+c[2])/3>110?"⚪":"⚫"; // cinzas: claro ou escuro
+  if(c[0]>200&&c[1]>150&&c[2]>90&&c[2]<200)return"🟠"; // pele / bege
+  return BOLINHAS.reduce((m,b)=>{const d=b[1].reduce((s,v,i)=>s+(v-c[i])**2,0);return d<m.d?{e:b[0],d}:m},{e:"⚪",d:1e9}).e}
+const nomeFil=f=>f?bolinha(corDe(f))+" "+nomeFilTxt(f):"(apagado)";
 // produto com outro filamento no lugar do primeiro (orçamento/venda: mesma peça em outra marca ou cor)
 const prodComFil=(p,fid)=>({...p,filamentos:(p.filamentos||[]).map((f,i)=>i===0?{...f,filamentoId:fid}:f)});
 const custoHoraImp=i=>i?((+i.potenciaW||0)/1000*D.config.energiaKwh)+((+i.valor||0)/Math.max(1,+i.vidaUtilH||1))+(+i.manutHora||0):0;
@@ -1888,7 +1900,7 @@ fD.onsubmit=e=>{e.preventDefault();
     if(!f)return avisar("Cadastre o filamento primeiro (aba Estoque › Materiais).");
     if(!(g>0))return avisar("Coloque a quantidade em gramas.");
     const rg=regraPrecoKg(f,valor,g); // texto calculado antes de a compra entrar no estoque
-    if(parc)D.parcelamentos.push({id:novoId("pc"),data,descricao:`${/^filamento/i.test(f.nome)?"":"Filamento "}${nomeFil(f)}`,total:valor,parcelas:n,inicio,pessoas:[comprador()],pagos:{},material:f.id,materialG:g});
+    if(parc)D.parcelamentos.push({id:novoId("pc"),data,descricao:`${/^filamento/i.test(f.nome)?"":"Filamento "}${nomeFilTxt(f)}`,total:valor,parcelas:n,inicio,pessoas:[comprador()],pagos:{},material:f.id,materialG:g});
     else D.estoque.push({id:novoId("e"),data,filamentoId:f.id,tipo:"compra",g,valor});
     msg=`+${fmtG(g)} de ${nomeFil(f)} no Estoque · ${rg.txt.replace(/<\/?b>/g,"")}${parc?` · ${n}x em Parcelamentos`:""}`;
   }else if(parc){
@@ -2363,11 +2375,11 @@ function renderEstoque(){
 const COLS={
   impressoras:[["nome","Nome","text"],["preparoMin","Aquecer e calibrar (min)","number"],["potenciaW","Potência (W)","number"],["valor","Valor pago (R$)","number"],["vidaUtilH","Vida útil (h)","number"],["manutHora","Manutenção (R$/h)","number"]],
   insumos:[["nome","Nome","text"],["precoUn","Preço por unidade (R$)","number"]],
-  filamentos:[["nome","Nome / cor","text"],["marca","Marca","text"],["material","Material","text"],["precoKg","Preço por kg (R$)","number"]]};
+  filamentos:[["cor","Cor","color"],["nome","Nome / cor","text"],["marca","Marca","text"],["material","Material","text"],["precoKg","Preço por kg (R$)","number"]]};
 function tabelaCfg(col,extra){
   const C=COLS[col];
   return`<tr>${C.map(c=>`<th>${c[1]}</th>`).join("")}${extra?`<th class="n">${extra[0]}</th>`:""}<th class="n">Usado em</th><th></th></tr>`+
-    D[col].map((x,i)=>`<tr>${C.map(([k,,t])=>`<td><input data-t="${col}" data-i="${i}" data-k="${k}" type="${t}" ${t==="number"?'step="any" min="0" style="text-align:right;min-width:90px"':'style="min-width:140px"'} value="${esc(x[k]??"")}"></td>`).join("")}
+    D[col].map((x,i)=>`<tr>${C.map(([k,,t])=>`<td><input data-t="${col}" data-i="${i}" data-k="${k}" type="${t}" ${t==="number"?'step="any" min="0" style="text-align:right;min-width:90px"':t==="color"?'style="width:48px;min-width:48px;padding:2px;min-height:40px" title="Cor do filamento"':'style="min-width:140px"'} value="${esc(k==="cor"?corDe(x):(x[k]??""))}"></td>`).join("")}
       ${extra?`<td class="n">${extra[1](x)}</td>`:""}<td class="n muted">${usos(col,x.id)} produtos</td><td><button class="btn sm del" onclick="apagarCfg('${col}','${x.id}')">✕</button></td></tr>`).join("");
 }
 const usos=(col,id)=>D.produtos.filter(p=>col==="impressoras"?p.impressoraId===id:col==="insumos"?(p.insumos||[]).some(x=>x.insumoId===id):(p.filamentos||[]).some(f=>f.filamentoId===id)).length;
@@ -2435,6 +2447,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.25.0",data:"2026-11-15",titulo:"Bolinha com a cor do filamento",itens:[
+    {novo:"Cada filamento aparece com uma bolinha da cor dele (⚪ ⚫ 🔴 🔵 …) nas listas, no estoque, nos produtos e no orçamento. A cor vem do nome (Branco, Preto, Vermelho…).",
+     uso:"Para trocar a cor, Estoque › Materiais (filamentos) › toque no quadradinho de cor da linha."}]},
   {v:"1.24.0",data:"2026-11-15",titulo:"Outros materiais por unidade (chaveiro, ímã…)",itens:[
     {novo:"Em Estoque há o cadastro de outros materiais contados por unidade, como argola de chaveiro, ímã ou embalagem, com compras, estoque e perdas.",
      uso:"Estoque › 🔩 Outros materiais › ＋ Novo material por unidade › registre a compra (quantidade e valor)."},

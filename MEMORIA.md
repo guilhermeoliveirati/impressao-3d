@@ -68,7 +68,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
   "retiradas": [ { "id", "data", "caixa": "guardar" | "reinvestir" | "socio:Nome", "valor", "obs" } ],   // saídas das caixinhas (1.16.0)
   "backups": [ { "id" /* arquivo no Drive */, "data" } ], "ultimoBackup": "AAAA-MM-DD",   // cópia semanal (1.16.0); config.backupPasta se precisou criar pasta  // arredondar: nao | 1 | 90 | 5
   "impressoras": [ { "id", "nome", "preparoMin" /* aquecer e calibrar, 1x por impressão */, "potenciaW", "valor", "vidaUtilH", "manutHora" } ],
-  "filamentos":  [ { "id", "nome" /* cor */, "marca", "material", "precoKg" } ],   // cada marca + cor é um filamento
+  "filamentos":  [ { "id", "nome" /* cor */, "marca", "material", "precoKg", "cor" /* #hex; sem = pelo nome (1.25.0) */ } ],   // cada marca + cor é um filamento
   "proximoCliente": 3,                // próximo código de cliente (#001, #002…)
   "clientes": [ { "id", "codigo", "nome", "telefone" /* só números */ } ],
   "parcelamentos": [ { "id", "descricao", "total", "parcelas", "inicio": "AAAA-MM", "pessoas": ["Eu", …], "pagos": { "AAAA-MM": [true, false, …] },
@@ -233,7 +233,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-15, versão 1.24.0)
+## Estado atual (2026-11-15, versão 1.25.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -277,6 +277,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.23.3: trabalho manual soma no tempo total (`c.hMao`): produto = impressão + manual; orçamento/Produção = preparo 1 vez + qtd × (modelo + manual ÷ peças por impressão).
 - 1.24.0: materiais por unidade (`insumos`, `insumoMovs`, `estInsumos`, `insDoItem`): cadastro e compras em Estoque; produto com `insumos` (custo soma em extras);
   venda grava `ins` e desconta; compra com valor atualiza `precoUn` e entra no que o Gui pagou do bolso (`contasDoGui`, `insQ`).
+- 1.25.0: bolinha de cor no filamento: `nomeFil` = emoji mais parecido (`bolinha(corDe(f))`) + nome; `nomeFilTxt` sem emoji para gravar; coluna Cor (color) em Estoque › Materiais.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -325,3 +326,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.23.2 | 2026-11-12 | Produtos: saem os campos “Detalhes para o cliente” e “Observação” (valores antigos continuam gravados) |
 | 1.23.3 | 2026-11-12 | Trabalho manual soma no tempo total do produto e do orçamento/Produção (quantidade × manual de 1 peça) |
 | 1.24.0 | 2026-11-15 | Outros materiais por unidade (chaveiro, ímã, embalagem): cadastro, compras, estoque e perdas em Estoque; produto diz quantas unidades usa por peça (custo entra em extras); venda desconta as unidades; compra entra no que o Gui pagou do bolso |
+| 1.25.0 | 2026-11-15 | Bolinha com a cor do filamento (⚪ ⚫ 🔴 🔵…) em todas as listas, cartões e textos; cor adivinhada pelo nome ou escolhida em Estoque › Materiais |
