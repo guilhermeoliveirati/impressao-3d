@@ -433,13 +433,10 @@ nav .ct{display:none}
         <label title="Quantas peças saem de uma impressão (mesa cheia)">Peças por impressão<input name="unidades" type="number" step="1" min="1" value="1"></label>
         <label title="Preparar o arquivo, tirar da mesa, lixar, pintar, montar… (tempo total da impressão). Aceita 30s, 5m, 1h30m ou só minutos">✋ Trabalho manual<input name="maoMin" placeholder="ex.: 45s, 5m, 1h30m" autocomplete="off"></label>
         <div style="grid-column:1/-1">
-          <h3 style="margin-top:4px">Filamento de 1 peça</h3>
+          <h3 style="margin-top:4px">🧵 Materiais de 1 peça</h3>
           <div id="pFil"></div>
-          <button type="button" class="btn sm sec2" id="pAddFil">＋ Outra cor / filamento</button>
-          <h3 style="margin-top:12px">🔩 Outros materiais de 1 peça</h3>
-          <div id="pIns"></div>
-          <button type="button" class="btn sm sec2" id="pAddIns">＋ Material por unidade (chaveiro, ímã…)</button>
-          <p class="muted" style="margin:6px 0 0">Copie os tempos do fatiador como ele mostra (Bambu Studio, Orca…): “Tempo de impressão do modelo” (da mesa inteira) e “Preparar e tempo de lapso de tempo” (ex.: 6m17s + 38s). O painel soma e mostra o tempo total para você conferir. Os gramas são de 1 peça.</p>
+          <button type="button" class="btn sm sec2" id="pAddFil">＋ Outro material</button>
+          <p class="muted" style="margin:6px 0 0">Copie os tempos do fatiador como ele mostra (Bambu Studio, Orca…): “Tempo de impressão do modelo” (da mesa inteira) e “Preparar e tempo de lapso de tempo” (ex.: 6m17s + 38s). O painel soma e mostra o tempo total para você conferir. Os materiais são de 1 peça: filamento em gramas, os outros em unidades.</p>
         </div>
         <label title="Embalagem, argola, ímã, parafuso, adesivo… valor por peça">Extras por peça (R$)<input name="extras" type="number" step="0.01" min="0" value="0"></label>
         <label>Perda / falhas (%)<input name="falhaPct" type="number" step="1" min="0" placeholder="padrão"></label>
@@ -560,14 +557,14 @@ nav .ct{display:none}
     </div>
     <div class="estres" id="estResumo"></div>
     <div class="row" style="margin-top:8px"><button class="btn sm sec2" id="btnListaCompras">🛒 Lista de compras</button></div>
-    <p class="muted">Estoque = compras + estoque que já tinha − perdas − o que as vendas usaram. Cada venda desconta sozinha os gramas dos produtos vendidos
+    <p class="muted">Estoque = compras + estoque que já tinha − perdas − o que as vendas usaram. Cada venda desconta sozinha os gramas e as unidades dos produtos vendidos
       (pelos materiais cadastrados no produto ou na peça sob medida). Editar ou apagar uma venda devolve os gramas. Orçamento não mexe no estoque.</p>
   </div>
   <div class="card"><h2>Registrar compra ou baixa</h2>
     <form class="f" id="fEst" autocomplete="off">
       <label>Material<select name="filamentoId" id="estFil"></select></label>
-      <label>O que foi<select name="tipo"><option value="compra">Compra de rolo</option><option value="inicial">Estoque que já tenho</option><option value="perda">Perda / teste / falha</option></select></label>
-      <label>Quantidade (g)<input name="g" type="number" min="1" step="1" value="1000" required></label>
+      <label>O que foi<select name="tipo"><option value="compra">Compra</option><option value="inicial">Estoque que já tenho</option><option value="perda">Perda / teste / falha</option></select></label>
+      <label><span id="estQtdRot">Quantidade (g)</span><input name="g" type="number" min="1" step="1" value="1000" required></label>
       <label class="soCompra">Valor pago (R$)<input name="valor" type="number" min="0" step="0.01" value="0"></label>
       <label>Data<input name="data" type="date" required></label>
       <p class="muted soCompra" style="grid-column:1/-1;margin:0">Cada compra vira um rolo (lote): o painel gasta primeiro o que sobrou do anterior, com o preço dele, e depois o novo.</p>
@@ -575,29 +572,15 @@ nav .ct{display:none}
     </form>
     <p class="muted">A compra de material não entra em Despesas: o custo dele já sai do lucro de cada venda.</p>
   </div>
-  <div class="card"><h2>Materiais (filamentos)</h2>
-    <div class="scroll"><table class="cfgtab" id="tFilCfg"></table></div>
-    <button class="btn sm sec2" id="cfgAddFil" style="margin-top:8px">＋ Novo material</button>
-    <p class="muted"><b>Marca</b>: cada marca e cor é uma linha, porque o preço muda (ex.: “PLA Branco” da Voolt e “PLA Branco” da 3D Fila são dois materiais). No orçamento você escolhe qual vai usar em cada peça.<br><b>Preço por kg</b>: com compras registradas ele é automático, o do rolo em uso (sobra do anterior primeiro). Sem compra, vale o que você digitar.<br>Preço do rolo convertido para 1 kg, com frete. Rolo de 500 g por R$ 60 = R$ 120 o kg. Ao mudar um preço, o custo de todos os produtos que usam esse material é recalculado (vendas já salvas não mudam).</p>
+  <div class="card"><h2>🧵 Materiais</h2>
+    <p class="muted" style="margin-top:0">Tudo num lugar só: filamentos (medidos <b>por grama</b>) e outros materiais como argola de chaveiro, ímã ou embalagem (medidos <b>por unidade</b>). Ao cadastrar, você escolhe a medida; o custo é calculado por ela.</p>
+    <div class="scroll"><table class="cfgtab" id="tMatCfg"></table></div>
+    <button class="btn sm sec2" id="cfgAddMat" style="margin-top:8px">＋ Novo material</button>
+    <p class="muted"><b>Por grama</b>: preço do kg (rolo de 500 g por R$ 60 = R$ 120 o kg); com compras registradas ele é automático, o do rolo em uso. Cada marca e cor é uma linha.<br>
+      <b>Por unidade</b>: preço de 1 unidade; a compra atualiza sozinha (valor ÷ quantidade). Ao mudar um preço, o custo dos produtos que usam o material é recalculado (vendas já salvas não mudam).</p>
   </div>
   <div class="card"><h2>Movimentações</h2>
     <div class="scroll" style="max-height:320px"><table id="tEst"></table></div>
-  </div>
-  <div class="card"><h2>🔩 Outros materiais (por unidade)</h2>
-    <p class="muted" style="margin-top:0">Argola de chaveiro, ímã, parafuso, embalagem… Coloque no produto quantas unidades cada peça usa: a venda desconta do estoque e o custo entra no preço.</p>
-    <div class="scroll"><table class="cfgtab" id="tInsCfg"></table></div>
-    <button class="btn sm sec2" id="cfgAddIns" style="margin-top:8px">＋ Novo material por unidade</button>
-    <h3>Registrar compra ou baixa</h3>
-    <form class="f" id="fIns" autocomplete="off">
-      <label>Material<select name="insumoId" id="insSel"></select></label>
-      <label>O que foi<select name="tipo"><option value="compra">Compra</option><option value="inicial">Estoque que já tenho</option><option value="perda">Perda / quebrou</option></select></label>
-      <label>Quantidade (unidades)<input name="qtd" type="number" min="1" step="1" value="100" required></label>
-      <label class="soCompraI">Valor pago (R$)<input name="valor" type="number" min="0" step="0.01" value="0"></label>
-      <label>Data<input name="data" type="date" required></label>
-      <div class="row" style="grid-column:1/-1"><button class="btn" type="submit">Registrar</button></div>
-    </form>
-    <p class="muted">A compra atualiza o preço por unidade (valor ÷ quantidade) e entra no que o <span class="nmComp">Gui</span> pagou do bolso: as vendas devolvem.</p>
-    <div class="scroll" style="max-height:260px"><table id="tInsMov"></table></div>
   </div>
 </section>
 
@@ -773,7 +756,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.25.0";
+const VERSAO="1.26.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1188,34 +1171,25 @@ function chart(id,type,data,opts={}){
 
 /* ---------- produtos (calculadora de custo e preço) ---------- */
 const fP=$("#fProd");
+/* Materiais de 1 peça (1.26.0): uma lista só. Cada linha é {id, q}: filamento (q em gramas) ou material por unidade (q em unidades).
+   Ao gravar, separa em produto.filamentos [{filamentoId,g}] e produto.insumos [{insumoId,qtd}] (formato do dados.json igual). */
 let prodFil=[];
+const medidaDe=id=>filamentoDe(id)?"g":insumoDe(id)?"un":"";
+const opcoesMat=sel=>(D.filamentos.length?`<optgroup label="Por grama (filamentos)">${D.filamentos.map(x=>`<option value="${x.id}"${x.id===sel?" selected":""}>${esc(nomeFil(x))} · ${brl(precoKgDe(x.id))}/kg${estTxt(x.id)}</option>`).join("")}</optgroup>`:"")+
+  ((D.insumos||[]).length?`<optgroup label="Por unidade">${D.insumos.map(x=>`<option value="${x.id}"${x.id===sel?" selected":""}>🔩 ${esc(x.nome)} · ${brl(x.precoUn)}/un</option>`).join("")}</optgroup>`:"");
 function rowsFil(){
-  if(!D.filamentos.length){$("#pFil").innerHTML='<p class="muted">Cadastre os filamentos em Config primeiro.</p>';return}
-  $("#pFil").innerHTML=prodFil.map((f,i)=>`<div class="linha">
-    <select data-i="${i}" data-k="filamentoId">${filamentoDe(f.filamentoId)?"":`<option value="" selected>⚠️ escolha o filamento${f.filamentoId?" (o anterior foi apagado)":""}</option>`}${D.filamentos.map(x=>`<option value="${x.id}"${x.id===f.filamentoId?" selected":""}>${esc(nomeFil(x))} · ${brl(x.precoKg)}/kg${estTxt(x.id)}</option>`).join("")}</select>
-    <input data-i="${i}" data-k="g" type="number" step="0.1" min="0" value="${f.g||0}" style="width:100px" aria-label="gramas"><span class="muted">g</span>
-    ${prodFil.length>1?`<button type="button" class="btn sm del" data-rm="${i}" title="Tirar este filamento">✕</button>`:""}</div>`).join("");
+  if(!D.filamentos.length&&!(D.insumos||[]).length){$("#pFil").innerHTML='<p class="muted">Cadastre os materiais em Estoque › Materiais primeiro.</p>';return}
+  $("#pFil").innerHTML=prodFil.map((x,i)=>{const md=medidaDe(x.id);return`<div class="linha">
+    <select data-i="${i}" data-k="id">${md?"":`<option value="" selected>⚠️ escolha o material${x.id?" (o anterior foi apagado)":""}</option>`}${opcoesMat(x.id)}</select>
+    <input data-i="${i}" data-k="q" type="number" step="${md==="un"?1:0.1}" min="0" value="${x.q||0}" style="width:100px" aria-label="quantidade"><span class="muted">${md||"g"}</span>
+    ${prodFil.length>1?`<button type="button" class="btn sm del" data-rm="${i}" title="Tirar este material">✕</button>`:""}</div>`}).join("");
 }
-const atualizaFil=e=>{const el=e.target;if(el.dataset.k==null)return;const f=prodFil[el.dataset.i];
-  f[el.dataset.k]=el.dataset.k==="g"?(+el.value||0):el.value;calcProduto()};
+const atualizaFil=e=>{const el=e.target;if(el.dataset.k==null)return;const x=prodFil[el.dataset.i];
+  if(el.dataset.k==="q")x.q=+el.value||0;else{const antes=medidaDe(x.id);x.id=el.value;if(e.type==="change"&&medidaDe(x.id)!==antes)rowsFil()}calcProduto()};
 $("#pFil").addEventListener("input",atualizaFil);
 $("#pFil").addEventListener("change",atualizaFil);
 $("#pFil").addEventListener("click",e=>{const i=e.target.dataset?.rm;if(i==null)return;prodFil.splice(+i,1);rowsFil();calcProduto()});
-$("#pAddFil").onclick=()=>{prodFil.push({filamentoId:D.filamentos[0]?.id||"",g:0});rowsFil();calcProduto()};
-// materiais por unidade do produto (1.24.0)
-let prodIns=[];
-function rowsIns(){
-  if(!(D.insumos||[]).length){$("#pIns").innerHTML='<p class="muted" style="margin:0 0 6px">Cadastre em Estoque › 🔩 Outros materiais.</p>';$("#pAddIns").hidden=true;return}
-  $("#pAddIns").hidden=false;
-  $("#pIns").innerHTML=prodIns.map((x,i)=>`<div class="linha">
-    <select data-i="${i}" data-k="insumoId">${insumoDe(x.insumoId)?"":'<option value="" selected>— escolha —</option>'}${D.insumos.map(y=>`<option value="${y.id}"${y.id===x.insumoId?" selected":""}>${esc(y.nome)} · ${brl(y.precoUn)}/un</option>`).join("")}</select>
-    <input data-i="${i}" data-k="qtd" type="number" step="1" min="0" value="${x.qtd||0}" style="width:90px" aria-label="unidades"><span class="muted">un</span>
-    <button type="button" class="btn sm del" data-rm="${i}" title="Tirar este material">✕</button></div>`).join("");
-}
-const atualizaIns=e=>{const el=e.target;if(el.dataset.k==null)return;const x=prodIns[el.dataset.i];x[el.dataset.k]=el.dataset.k==="qtd"?(+el.value||0):el.value;calcProduto()};
-$("#pIns").addEventListener("input",atualizaIns);$("#pIns").addEventListener("change",atualizaIns);
-$("#pIns").addEventListener("click",e=>{const i=e.target.dataset?.rm;if(i==null)return;prodIns.splice(+i,1);rowsIns();calcProduto()});
-$("#pAddIns").onclick=()=>{prodIns.push({insumoId:D.insumos[0]?.id||"",qtd:1});rowsIns();calcProduto()};
+$("#pAddFil").onclick=()=>{prodFil.push({id:"",q:0});rowsFil();calcProduto()};
 const vazioNull=v=>v===""||v==null?null:+v;
 /* Tempo de impressão: um campo só, em horas ou em minutos (o dados.json continua com "horas" e "minutos"). */
 /* Tempos do fatiador (1.22.0): aceita "8m9s", "1h20m", "6m17s + 38s", "8:09" (min:s), "1:08:09" (h:min:s) ou só número (minutos).
@@ -1234,8 +1208,8 @@ function lerProduto(){
     horas:0,minutos:r2((lerMin(fP.tempoModelo.value)||0)/Math.max(1,Math.round(+fP.unidades.value||1))*1e4)/1e4,preparoMin:lerMin(fP.preparo.value),porPeca:true,unidades:Math.max(1,Math.round(+fP.unidades.value||1)),maoMin:r2((lerMin(fP.maoMin.value)||0)*1e4)/1e4,
     extras:r2(fP.extras.value),falhaPct:vazioNull(fP.falhaPct.value),margemPct:vazioNull(fP.margemPct.value),
     precoVenda:fP.precoVenda.value===""?null:r2(fP.precoVenda.value),
-    filamentos:prodFil.filter(f=>f.filamentoId&&f.g>0).map(f=>({filamentoId:f.filamentoId,g:r2(f.g)})),
-    insumos:prodIns.filter(x=>x.insumoId&&+x.qtd>0).map(x=>({insumoId:x.insumoId,qtd:+x.qtd})),obs:D.produtos.find(x=>x.id===fP.id.value)?.obs||"",
+    filamentos:prodFil.filter(x=>filamentoDe(x.id)&&x.q>0).map(x=>({filamentoId:x.id,g:r2(x.q)})),
+    insumos:prodFil.filter(x=>insumoDe(x.id)&&x.q>0).map(x=>({insumoId:x.id,qtd:+x.q})),obs:D.produtos.find(x=>x.id===fP.id.value)?.obs||"",
     tamanho:fP.tamanho.value.trim(),espessura:fP.espessura.value.trim(),detalhes:D.produtos.find(x=>x.id===fP.id.value)?.detalhes||"",...(prodFoto?{foto:prodFoto}:{})};
 }
 // Preço necessário em cada forma de pagamento para receber o mesmo valor do Pix.
@@ -1290,15 +1264,15 @@ window.enviarProd=async id=>{const p=D.produtos.find(x=>x.id===id);if(!p)return;
     if(navigator.canShare({files:[f]})){await navigator.share({files:[f],text:txt});return}}catch(e){if(e.name==="AbortError")return}}
   window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank")};
 function limparProduto(){
-  fP.reset();fP.id.value="";prodFoto=null;mostrarFoto();prodIns=[];rowsIns();
+  fP.reset();fP.id.value="";prodFoto=null;mostrarFoto();
   $("#pImp").innerHTML=D.impressoras.map(i=>`<option value="${i.id}">${esc(i.nome)}</option>`).join("")||'<option value="">(cadastre em Config)</option>';
-  prodFil=[{filamentoId:D.filamentos[0]?.id||"",g:0}];
+  prodFil=[{id:D.filamentos[0]?.id||"",q:0}];
   $("#pTitulo").textContent="🧮 Novo produto";rowsFil();calcProduto();
 }
 $("#pCancelar").onclick=limparProduto;
 fP.onsubmit=async e=>{e.preventDefault();
   // filamento apagado ou não escolhido: a lista mostra "⚠️ escolha o filamento" (antes parecia escolhido e o produto ficava sem filamento)
-  if(prodFil.some(f=>+f.g>0&&!filamentoDe(f.filamentoId)))return avisar("Escolha o filamento do produto: o que estava nele foi apagado.");
+  if(prodFil.some(x=>+x.q>0&&!medidaDe(x.id)))return avisar("Escolha o material de cada linha: algum foi apagado ou não foi escolhido.");
   const p=lerProduto();p.id=p.id||novoId("p");
   if(D.produtos.some(x=>x.id!==p.id&&norm(x.nome)===norm(p.nome))&&!await confirmar(`Já existe um produto chamado "${p.nome}". Salvar outro com o mesmo nome?`))return;
   const i=D.produtos.findIndex(x=>x.id===p.id);i>=0?D.produtos[i]=p:D.produtos.push(p);
@@ -1318,8 +1292,9 @@ function carregarProduto(p,copia){
   {const un=Math.max(1,Math.round(+q.unidades||1)),mod=((+q.horas||0)*60+(+q.minutos||0))*un;fP.tempoModelo.value=mod?fmtHMS(mod):"";
    fP.preparo.value=p.preparoMin!=null?fmtHMS(p.preparoMin):""}
   if(copia){fP.id.value="";fP.nome.value=p.nome+" (cópia)"}
-  prodFil=q.filamentos?.length?q.filamentos.map(f=>({...f})):[{filamentoId:D.filamentos[0]?.id||"",g:0}];
-  prodFoto=p.foto||null;mostrarFoto();prodIns=(p.insumos||[]).map(x=>({...x}));rowsIns();
+  prodFil=[...(q.filamentos||[]).map(f=>({id:f.filamentoId,q:+f.g})),...(p.insumos||[]).map(x=>({id:x.insumoId,q:+x.qtd}))];
+  if(!prodFil.length)prodFil=[{id:D.filamentos[0]?.id||"",q:0}];
+  prodFoto=p.foto||null;mostrarFoto();
   $("#pTitulo").textContent=copia?"🧮 Novo produto (cópia)":"✏️ Editando "+p.nome;
   rowsFil();calcProduto();scrollTo({top:0,behavior:"smooth"});
 }
@@ -1462,7 +1437,7 @@ fV.onsubmit=async e=>{e.preventDefault();
   if(lucro<0&&!await confirmar(`Esta venda não paga todos os custos (material, energia, manutenção, taxa): faltam ${brl(-lucro)}.\nSalvar mesmo assim?`,"Salvar mesmo assim",true))return;
   const ant=D.vendas.find(x=>x.id===fV.id.value);
   const v={id:fV.id.value||novoId("v"),data:fV.data.value,cliente:nomeProprio(fV.cliente.value),clienteId:garantirCliente(fV.cliente.value).id,
-    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(insDoItem(x).length?{ins:insDoItem(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{}),...(x.partes?{partes:x.partes}:{})})),
+    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(insGravar(x).length?{ins:insGravar(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{}),...(x.partes?{partes:x.partes}:{})})),
     frete:r2(fV.frete.value),cobrado:r2(fV.cobrado.value),metodo:fV.metodo.value,custo,taxa,lucro,recebido:fV.recebido.checked,repassado:!!ant?.repassado,obs:ant?.obs||""};
   const i=D.vendas.findIndex(x=>x.id===v.id); i>=0?D.vendas[i]=v:D.vendas.push(v);
   D.vendas.sort((a,b)=>a.data.localeCompare(b.data));
@@ -1636,7 +1611,7 @@ fO.onsubmit=e=>{e.preventDefault();
   const vp=voltaProd; // veio da Produção (✏️ Editar): volta para lá
   // ...ant mantém o que não está no formulário (etapa, ordem, sinal, data de aprovação)
   const o={...(ant||{}),id:fO.id.value||novoId("o"),data:fO.data.value,prazo:fO.prazo.value,cliente:cli.nome,clienteId:cli.id,validade:Math.max(1,Math.round(+fO.validade.value||7)),
-    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(insDoItem(x).length?{ins:insDoItem(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{})})),
+    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(insGravar(x).length?{ins:insGravar(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{})})),
     frete:r2(fO.frete.value),valor:r2(fO.valor.value),custo,obs:fO.obs.value.trim(),status:ant?.status||"aberto",vendaId:ant?.vendaId||null};
   const i=D.orcamentos.findIndex(x=>x.id===o.id);i>=0?D.orcamentos[i]=o:D.orcamentos.push(o);
   filtroOrc=o.status;salvar();limparOrc();
@@ -2260,7 +2235,9 @@ const minimoG=()=>D.config.estoqueMinimoG??200;
    Estoque = compras + inicial − perdas − Σ vendas. Compra com valor: precoUn = valor ÷ qtd e entra no que o Gui pagou do bolso. */
 const insumoDe=id=>(D.insumos||[]).find(x=>x.id===id);
 const insDeProduto=p=>p?(p.insumos||[]).filter(x=>x.insumoId&&+x.qtd>0).map(x=>({i:x.insumoId,q:+x.qtd})):[];
-const insDoItem=x=>x.ins||(x.produtoId?insDeProduto(D.produtos.find(p=>p.id===x.produtoId)):[]);
+// estoque: só o que a venda gravou (venda antiga não desconta material que o produto ganhou depois); ao salvar, insGravar usa o produto
+const insDoItem=x=>x.ins||[];
+const insGravar=x=>x.ins||(x.produtoId?insDeProduto(D.produtos.find(p=>p.id===x.produtoId)):[]);
 const custoInsumos=p=>soma(p.insumos||[],x=>(+insumoDe(x.insumoId)?.precoUn||0)*(+x.qtd||0));
 function estInsumos(){const e={};(D.insumos||[]).forEach(x=>e[x.id]={entrou:0,perdas:0,usado:0});
   (D.insumoMovs||[]).forEach(m=>{const a=e[m.insumoId];if(a)m.tipo==="perda"?a.perdas+=+m.qtd:a.entrou+=+m.qtd});
@@ -2313,9 +2290,17 @@ const estCel=f=>{const a=_E[f.id];if(!a||(!a.registrado&&!a.usado))return'<span 
 const fE=$("#fEst");
 const TIPO_EST={compra:"Compra",inicial:"Estoque que já tinha",perda:"Perda / teste",parcelada:"Compra parcelada"};
 fE.tipo.onchange=()=>document.querySelectorAll("#fEst .soCompra").forEach(el=>el.style.display=fE.tipo.value==="compra"?"":"none");
+// material escolhido: a quantidade é em gramas ou em unidades (1.26.0)
+fE.filamentoId.onchange=()=>{const un=!!insumoDe(fE.filamentoId.value);$("#estQtdRot").textContent=un?"Quantidade (unidades)":"Quantidade (g)";fE.g.value=un?100:1000;
+  document.querySelector("#fEst p.soCompra").textContent=un?"A compra atualiza o preço de 1 unidade (valor ÷ quantidade).":"Cada compra vira um rolo (lote): o painel gasta primeiro o que sobrou do anterior, com o preço dele, e depois o novo."};
 fE.onsubmit=e=>{e.preventDefault();
-  const g=r2(fE.g.value);if(!(g>0))return avisar("Coloque a quantidade em gramas.");
   if(!fE.filamentoId.value)return avisar("Cadastre o material primeiro (＋ Novo material).");
+  // material por unidade: vai para D.insumoMovs e a compra atualiza o preço de 1 unidade
+  {const x=insumoDe(fE.filamentoId.value);if(x){const q=Math.round(+fE.g.value||0);if(!(q>0))return avisar("Coloque a quantidade.");
+    const m={id:novoId("e"),data:fE.data.value||hoje(),insumoId:x.id,tipo:fE.tipo.value,qtd:q,valor:fE.tipo.value==="compra"?r2(fE.valor.value):0};
+    D.insumoMovs.push(m);if(m.tipo==="compra"&&m.valor>0)x.precoUn=r2(m.valor/q*1e4)/1e4;
+    salvar();fE.valor.value=0;render();status(`${TIPO_EST[m.tipo].toLowerCase()} de ${fmtUn(q)} de ${x.nome} registrada`+(m.tipo==="compra"&&m.valor>0?` · ${brl(x.precoUn)} por unidade`:""));return}}
+  const g=r2(fE.g.value);if(!(g>0))return avisar("Coloque a quantidade em gramas.");
   const m={id:novoId("e"),data:fE.data.value,filamentoId:fE.filamentoId.value,tipo:fE.tipo.value,g,valor:fE.tipo.value==="compra"?r2(fE.valor.value):0};
   const f=filamentoDe(m.filamentoId), rg=m.tipo==="compra"&&m.valor>0&&f?regraPrecoKg(f,m.valor,g):null; // antes de somar a compra ao estoque
   if(m.tipo==="inicial"&&f)m.kg=+f.precoKg||0; // estoque que já tinha: guarda o preço do kg de hoje
@@ -2333,48 +2318,48 @@ $("#btnListaCompras").onclick=()=>{
     <div class="row"><button class="btn" id="lcCopiar">Copiar</button><a class="btn sec2" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(txt)}">📲 Enviar no WhatsApp</a></div>`
     :`<p>Nenhum filamento abaixo de ${fmtG(minimoG())}. 👍</p>`));
   $("#lcCopiar")?.addEventListener("click",()=>navigator.clipboard?.writeText(txt).then(()=>status("lista copiada"),()=>status("não foi possível copiar",true)))};
-$("#cfgAddIns").onclick=()=>{D.insumos.push({id:novoId("u"),nome:"Novo material",precoUn:0});salvar();render()};
-$("#fIns").tipo.onchange=()=>document.querySelectorAll("#fIns .soCompraI").forEach(el=>el.style.display=$("#fIns").tipo.value==="compra"?"":"none");
-$("#fIns").onsubmit=e=>{e.preventDefault();const f=e.target,q=Math.round(+f.qtd.value||0);
-  if(!f.insumoId.value)return avisar("Cadastre o material primeiro (＋ Novo material por unidade).");if(!(q>0))return avisar("Coloque a quantidade.");
-  const m={id:novoId("e"),data:f.data.value||hoje(),insumoId:f.insumoId.value,tipo:f.tipo.value,qtd:q,valor:f.tipo.value==="compra"?r2(f.valor.value):0};
-  D.insumoMovs.push(m);const x=insumoDe(m.insumoId);if(m.tipo==="compra"&&m.valor>0&&x)x.precoUn=r2(m.valor/q*1e4)/1e4; // preço da última compra
-  salvar();f.valor.value=0;render();status(`${TIPO_EST[m.tipo].toLowerCase()} de ${fmtUn(q)} de ${x?.nome||""} registrada`+(m.tipo==="compra"&&m.valor>0?` · ${brl(x.precoUn)} por unidade`:""))};
+// ＋ Novo material: pergunta se é medido por grama (filamento) ou por unidade (1.26.0)
+$("#cfgAddMat").onclick=()=>abrirModal(`<h2>＋ Novo material</h2><p>Como esse material é medido?</p>
+  <div class="row"><button class="btn" onclick="novoMat('g')">🧵 Por grama<br><small>filamento</small></button><button class="btn sec2" onclick="novoMat('un')">🔩 Por unidade<br><small>argola, ímã, embalagem…</small></button></div>`);
+window.novoMat=m=>{$("#modal").hidden=true;
+  if(m==="un")D.insumos.push({id:novoId("u"),nome:"Novo material",precoUn:0});else D.filamentos.push({id:novoId("f"),nome:"Novo filamento",marca:"",material:"PLA",precoKg:110});
+  salvar();render();setTimeout(()=>{const L=[...document.querySelectorAll('#tMatCfg input[data-k="nome"]')];const el=L.find(i=>i.value.startsWith("Novo"));if(el){el.focus();el.select()}},300);
+  status("material novo: escreva o nome e o preço na tabela")};
 $("#cfgMinimo").onchange=e=>{D.config.estoqueMinimoG=Math.max(0,Math.round(+e.target.value||0));salvar();render()};
 function renderEstoque(){
   _E=estoques();
-  $("#tFilCfg").innerHTML=tabelaCfg("filamentos",["Em estoque",estCel]);
-  // materiais por unidade (1.24.0)
-  {const EI=estInsumos();
-   $("#tInsCfg").innerHTML=D.insumos.length?tabelaCfg("insumos",["Em estoque",x=>{const a=EI[x.id];if(!a||(!a.registrado&&!a.usado))return'<span class="muted">sem registro</span>';
-     return`<b class="${a.saldo<=0?"taxa":""}">${fmtUn(a.saldo)}</b>${a.saldo<=0?' <span class="tag aberto">acabou</span>':""}<br><span class="muted">vendas usaram ${fmtUn(a.usado)}</span>`}]):'<tr><td class="muted">Nenhum material por unidade ainda. Toque em ＋ para cadastrar (ex.: Argola de chaveiro).</td></tr>';
-   const sel=$("#insSel"),ant=sel.value;sel.innerHTML=D.insumos.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join("")||'<option value="">(cadastre acima)</option>';
-   if(D.insumos.some(x=>x.id===ant))sel.value=ant;if(!$("#fIns").data.value)$("#fIns").data.value=hoje();
-   const M=D.insumoMovs.slice().sort((a,b)=>b.data.localeCompare(a.data));
-   $("#tInsMov").innerHTML=M.length?`<tr><th>Data</th><th>Material</th><th>O que foi</th><th class="n">Quantidade</th><th class="n">Valor</th><th></th></tr>`+
-     M.map(m=>`<tr><td>${fmtData(m.data)}</td><td>${esc(insumoDe(m.insumoId)?.nome||"(apagado)")}</td><td>${TIPO_EST[m.tipo]||m.tipo}</td>
-       <td class="n ${m.tipo==="perda"?"taxa":"lucro"}">${m.tipo==="perda"?"−":"+"}${fmtUn(m.qtd)}</td><td class="n">${m.valor?brl(m.valor):"–"}</td>
-       <td><button class="btn sm del" onclick="apagar('insumoMovs','${m.id}')">✕</button></td></tr>`).join(""):""}
+  // tabela única de materiais (1.26.0): filamentos (por grama) e materiais por unidade
+  {const EI=estInsumos(), inp=(col,i,k,t,v,w)=>`<input data-t="${col}" data-i="${i}" data-k="${k}" type="${t}" ${t==="number"?`step="any" min="0" style="text-align:right;width:${w||90}px"`:t==="color"?'style="width:44px;min-width:44px;padding:2px;min-height:40px" title="Cor"':`style="min-width:${w||130}px"`} value="${esc(v??"")}">`;
+   const estUn=x=>{const a=EI[x.id];if(!a||(!a.registrado&&!a.usado))return'<span class="muted">sem registro</span>';
+     return`<b class="${a.saldo<=0?"taxa":""}">${fmtUn(a.saldo)}</b>${a.saldo<=0?' <span class="tag aberto">acabou</span>':""}<br><span class="muted">vendas usaram ${fmtUn(a.usado)}</span>`};
+   $("#tMatCfg").innerHTML=`<tr><th>Cor</th><th>Nome</th><th>Marca</th><th>Tipo</th><th>Medida</th><th class="n">Preço</th><th class="n">Em estoque</th><th class="n">Usado em</th><th></th></tr>`+
+     D.filamentos.map((x,i)=>`<tr><td>${inp("filamentos",i,"cor","color",corDe(x))}</td><td>${inp("filamentos",i,"nome","text",x.nome)}</td><td>${inp("filamentos",i,"marca","text",x.marca,100)}</td>
+       <td>${inp("filamentos",i,"material","text",x.material,70)}</td><td><span class="tag">por grama</span></td><td class="n">${inp("filamentos",i,"precoKg","number",x.precoKg)}<br><span class="muted">R$/kg</span></td>
+       <td class="n">${estCel(x)}</td><td class="n muted">${usos("filamentos",x.id)} produtos</td><td><button class="btn sm del" onclick="apagarCfg('filamentos','${x.id}')">✕</button></td></tr>`).join("")+
+     (D.insumos||[]).map((x,i)=>`<tr><td style="text-align:center">🔩</td><td>${inp("insumos",i,"nome","text",x.nome)}</td><td>${inp("insumos",i,"marca","text",x.marca,100)}</td>
+       <td></td><td><span class="tag">por unidade</span></td><td class="n">${inp("insumos",i,"precoUn","number",x.precoUn)}<br><span class="muted">R$/un</span></td>
+       <td class="n">${estUn(x)}</td><td class="n muted">${usos("insumos",x.id)} produtos</td><td><button class="btn sm del" onclick="apagarCfg('insumos','${x.id}')">✕</button></td></tr>`).join("")}
   const sel=$("#estFil"),ant=sel.value;
-  sel.innerHTML=D.filamentos.map(f=>`<option value="${f.id}">${esc(nomeFil(f))} · ${brl(f.precoKg)}/kg</option>`).join("")||'<option value="">(cadastre um material)</option>';
-  if(D.filamentos.some(f=>f.id===ant))sel.value=ant;
+  sel.innerHTML=opcoesMat(ant)||'<option value="">(cadastre um material)</option>';
+  if([...sel.options].some(o=>o.value===ant))sel.value=ant;
   if(!fE.data.value)fE.data.value=hoje();
   $("#cfgMinimo").value=minimoG();
   // resumo em cartões (no celular a tabela fica larga): saldo e barra até 1 kg
   $("#estResumo").innerHTML=D.filamentos.map(f=>{const a=_E[f.id],reg=a&&(a.registrado||a.usado),baixo=reg&&a.saldo<minimoG();
     return`<div class="m${baixo?" baixo":""}"><small>${esc(nomeFil(f))}</small><b class="${baixo?"taxa":""}">${reg?fmtG(a.saldo):"–"}</b>
-      <small>${reg?(baixo?"⚠️ acabando":"em estoque"):"sem registro"}</small>${reg?`<div class="barra"><i style="width:${Math.max(0,Math.min(100,a.saldo/10)).toFixed(0)}%"></i></div>`:""}</div>`}).join("");
-  const L=movsEstoque().sort((a,b)=>b.data.localeCompare(a.data));
+      <small>${reg?(baixo?"⚠️ acabando":"em estoque"):"sem registro"}</small>${reg?`<div class="barra"><i style="width:${Math.max(0,Math.min(100,a.saldo/10)).toFixed(0)}%"></i></div>`:""}</div>`}).join("")+
+    (()=>{const EI=estInsumos();return(D.insumos||[]).map(x=>{const a=EI[x.id],reg=a&&(a.registrado||a.usado),baixo=reg&&a.saldo<=0;
+      return`<div class="m${baixo?" baixo":""}"><small>🔩 ${esc(x.nome)}</small><b class="${baixo?"taxa":""}">${reg?fmtUn(a.saldo):"–"}</b><small>${reg?(baixo?"⚠️ acabou":"em estoque"):"sem registro"}</small></div>`}).join("")})();
+  const L=[...movsEstoque(),...(D.insumoMovs||[]).map(m=>({...m,un:true}))].sort((a,b)=>b.data.localeCompare(a.data));
   $("#tEst").innerHTML=L.length?`<tr><th>Data</th><th>Material</th><th>O que foi</th><th class="n">Quantidade</th><th class="n">Valor</th><th></th></tr>`+
-    L.map(m=>`<tr><td>${fmtData(m.data)}</td><td>${esc(nomeFil(filamentoDe(m.filamentoId)))}</td><td>${TIPO_EST[m.tipo]||m.tipo}</td>
-      <td class="n ${m.tipo==="perda"?"taxa":"lucro"}">${m.tipo==="perda"?"−":"+"}${fmtG(m.g)}</td><td class="n">${m.valor?brl(m.valor):"–"}</td>
-      <td>${m.id?`<button class="btn sm del" onclick="apagar('estoque','${m.id}')">✕</button>`:`<span class="muted" title="Mude em Despesas › Parcelamentos">parcelamento</span>`}</td></tr>`).join("")
+    L.map(m=>`<tr><td>${fmtData(m.data)}</td><td>${m.un?"🔩 "+esc(insumoDe(m.insumoId)?.nome||"(apagado)"):esc(nomeFil(filamentoDe(m.filamentoId)))}</td><td>${TIPO_EST[m.tipo]||m.tipo}</td>
+      <td class="n ${m.tipo==="perda"?"taxa":"lucro"}">${m.tipo==="perda"?"−":"+"}${m.un?fmtUn(m.qtd):fmtG(m.g)}</td><td class="n">${m.valor?brl(m.valor):"–"}</td>
+      <td>${m.id?`<button class="btn sm del" onclick="apagar('${m.un?"insumoMovs":"estoque"}','${m.id}')">✕</button>`:`<span class="muted" title="Mude em Despesas › Parcelamentos">parcelamento</span>`}</td></tr>`).join("")
     :'<tr><td class="muted">Nada registrado ainda. Comece registrando o que você já tem em casa ("Estoque que já tenho").</td></tr>';
 }
 
 const COLS={
   impressoras:[["nome","Nome","text"],["preparoMin","Aquecer e calibrar (min)","number"],["potenciaW","Potência (W)","number"],["valor","Valor pago (R$)","number"],["vidaUtilH","Vida útil (h)","number"],["manutHora","Manutenção (R$/h)","number"]],
-  insumos:[["nome","Nome","text"],["precoUn","Preço por unidade (R$)","number"]],
   filamentos:[["cor","Cor","color"],["nome","Nome / cor","text"],["marca","Marca","text"],["material","Material","text"],["precoKg","Preço por kg (R$)","number"]]};
 function tabelaCfg(col,extra){
   const C=COLS[col];
@@ -2391,7 +2376,7 @@ window.apagarCfg=async(col,id)=>{const n=usos(col,id),x=D[col].find(y=>y.id===id
   if(!await confirmar(n?`"${x?.nome}" está em ${n} produto(s); o custo deles vai ficar sem essa parte. Apagar mesmo assim?`:`Apagar "${x?.nome}"?`,"Apagar",true))return;
   D[col]=D[col].filter(x=>x.id!==id);salvar();render()};
 $("#cfgAddImp").onclick=()=>{D.impressoras.push({id:novoId("i"),nome:"Impressora "+(D.impressoras.length+1),potenciaW:120,valor:2500,vidaUtilH:4000,manutHora:0.3,preparoMin:7});salvar();renderConfig()};
-$("#cfgAddFil").onclick=()=>{D.filamentos.push({id:novoId("f"),nome:"Novo material",marca:"",material:"PLA",precoKg:110});salvar();render()};
+
 function renderConfig(){
   document.querySelectorAll("#fCfg [data-c],#fCfg2 [data-c]").forEach(el=>el.value=D.config[el.dataset.c]??"");
   $('#fCfg2 [data-c="socios"]').placeholder=socios().join(", ");
@@ -2447,6 +2432,11 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.26.0",data:"2026-11-15",titulo:"Materiais num lugar só",itens:[
+    {novo:"Filamentos e outros materiais (argola, ímã, embalagem…) agora ficam numa tabela só, em Estoque › Materiais. Ao cadastrar, você escolhe se é medido por grama ou por unidade, e o custo é calculado por essa medida.",
+     uso:"Estoque › ＋ Novo material › 🧵 Por grama ou 🔩 Por unidade. A compra e a baixa usam o mesmo formulário: a quantidade vira gramas ou unidades conforme o material."},
+    {novo:"No produto, os materiais de 1 peça ficam numa lista só: escolha o material e a quantidade (g ou un aparece sozinho).",
+     uso:"Produtos › 🧵 Materiais de 1 peça › ＋ Outro material."}]},
   {v:"1.25.0",data:"2026-11-15",titulo:"Bolinha com a cor do filamento",itens:[
     {novo:"Cada filamento aparece com uma bolinha da cor dele (⚪ ⚫ 🔴 🔵 …) nas listas, no estoque, nos produtos e no orçamento. A cor vem do nome (Branco, Preto, Vermelho…).",
      uso:"Para trocar a cor, Estoque › Materiais (filamentos) › toque no quadradinho de cor da linha."}]},
@@ -2677,7 +2667,7 @@ const PASSOS=[
     <li><b>Energia</b>: o preço do kWh da sua conta de luz.</li>
     <li><b>Mão de obra</b>: quanto vale uma hora do seu trabalho.</li>
     <li><b>Impressoras</b>: potência, quanto pagou e vida útil.</li>
-    <li>Na aba <b>Estoque</b>: cada filamento (cor e <b>marca</b>) com o preço do kg e quanto você tem (registre o estoque e as compras).</li>
+    <li>Na aba <b>Estoque</b>: cada material, por grama (filamento, com cor e <b>marca</b>) ou por unidade (argola, ímã…), com o preço e quanto você tem.</li>
     <li><b>Divisão do dinheiro</b>: quem compra o material, os sócios e os % para guardar, reinvestir e sócios.</li></ol>`},
   {ico:"🧊",titulo:"2. Cadastre seus produtos",aba:"produtos",texto:`<p>Na aba <b>Produtos</b>, para cada peça:</p><ol>
     <li>Digite o <b>nome</b> e escolha a impressora.</li>

@@ -233,7 +233,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-15, versão 1.25.0)
+## Estado atual (2026-11-15, versão 1.26.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -278,6 +278,8 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.24.0: materiais por unidade (`insumos`, `insumoMovs`, `estInsumos`, `insDoItem`): cadastro e compras em Estoque; produto com `insumos` (custo soma em extras);
   venda grava `ins` e desconta; compra com valor atualiza `precoUn` e entra no que o Gui pagou do bolso (`contasDoGui`, `insQ`).
 - 1.25.0: bolinha de cor no filamento: `nomeFil` = emoji mais parecido (`bolinha(corDe(f))`) + nome; `nomeFilTxt` sem emoji para gravar; coluna Cor (color) em Estoque › Materiais.
+- 1.26.0: materiais num lugar só na tela (dados continuam em `filamentos` = por grama e `insumos` = por unidade): tabela única `#tMatCfg`, ＋ Novo material pergunta a medida (`novoMat`),
+  um formulário de compra/baixa (`fE` decide pelo `insumoDe`), movimentações juntas; produto com uma lista `prodFil` [{id,q}] (`medidaDe`, `opcoesMat` com optgroups).
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -327,3 +329,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.23.3 | 2026-11-12 | Trabalho manual soma no tempo total do produto e do orçamento/Produção (quantidade × manual de 1 peça) |
 | 1.24.0 | 2026-11-15 | Outros materiais por unidade (chaveiro, ímã, embalagem): cadastro, compras, estoque e perdas em Estoque; produto diz quantas unidades usa por peça (custo entra em extras); venda desconta as unidades; compra entra no que o Gui pagou do bolso |
 | 1.25.0 | 2026-11-15 | Bolinha com a cor do filamento (⚪ ⚫ 🔴 🔵…) em todas as listas, cartões e textos; cor adivinhada pelo nome ou escolhida em Estoque › Materiais |
+| 1.26.0 | 2026-11-15 | Materiais num lugar só: uma tabela em Estoque (por grama ou por unidade, escolhido ao cadastrar), um formulário de compra/baixa e uma lista de movimentações; no produto, uma lista só de materiais de 1 peça (g ou un) |
