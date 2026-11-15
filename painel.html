@@ -484,6 +484,8 @@ nav .ct{display:none}
       <label data-se="desc"><span id="dDescRot">Descrição</span><input name="descricao" placeholder="ex.: DAS de novembro"></label>
       <label>Valor total (R$)<input name="valor" type="number" step="0.01" min="0" required></label>
       <label data-se="fil">Quantidade (g)<input name="g" type="number" step="1" min="0" value="1000"></label>
+      <label data-se="ins">Material<select name="insumoId" id="dIns"></select></label>
+      <label data-se="ins">Quantidade (unidades)<input name="qtdUn" type="number" step="1" min="0" value="100"></label>
       <div class="chips" id="dForma" style="grid-column:1/-1"><span class="rot">Como pagou?</span>
         <button type="button" class="chip" data-forma="avista">À vista</button>
         <button type="button" class="chip" data-forma="parcelado">Parcelado</button></div>
@@ -756,7 +758,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.27.0";
+const VERSAO="1.28.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1833,18 +1835,22 @@ const fD=$("#fDesp");
 /* Categoria (1.20.0): lista (datalist) com Filamento, as categorias padrão e as que você já usou; digitar um nome novo cria a categoria
    (ela aparece na lista das próximas vezes). Categoria "Filamento" abre os campos do filamento (estoque); as outras são conta ou compra. */
 const ehFilCat=c=>/^\s*(🧵\s*)?filamentos?\s*$/i.test(c||"");
+// 1.28.0: categoria "Material por unidade" (chaveiro, ímã…): valor total + quantidade em unidades → estoque do material
+const CAT_UN="Material por unidade";
+const ehUnCat=c=>/^\s*(🔩\s*)?material(is)? por unidade\s*$/i.test(c||"");
 // 1.20.1: a lista mostra só as categorias que você já usou (e Filamento), não as padrão
-const catsDesp=()=>["Filamento",...new Set([...D.despesas.filter(d=>!d.vendaId).map(d=>d.categoria),...D.parcelamentos.filter(pc=>!pc.material).map(pc=>pc.categoria)].filter(c=>c&&!ehFilCat(c)))];
+// 1.28.0: suas categorias primeiro (em ordem alfabética); Filamento e Material por unidade ficam no fim da lista
+const catsDesp=()=>[...[...new Set([...D.despesas.filter(d=>!d.vendaId).map(d=>d.categoria),...D.parcelamentos.filter(pc=>!pc.material).map(pc=>pc.categoria)].filter(c=>c&&!ehFilCat(c)&&!ehUnCat(c)))].sort((a,b)=>a.localeCompare(b,"pt-BR")),"Filamento",CAT_UN];
 function ajustaDesp(){
-  if(!fD.id.value)fD.tipo.value=ehFilCat(fD.categoria.value)?"filamento":"conta";
+  if(!fD.id.value)fD.tipo.value=ehFilCat(fD.categoria.value)?"filamento":ehUnCat(fD.categoria.value)?"unidade":"conta";
   const t=fD.tipo.value, parc=fD.forma.value==="parcelado", ed=!!fD.id.value;
   const gui=t==="conta"&&fD.doGui.checked;
-  const vis={desc:t==="conta",fil:t==="filamento",parc,pess:parc&&t==="conta"&&!gui,pago:!parc&&t==="conta"&&!gui,repete:!parc&&t==="conta",gui:t==="conta"};
+  const vis={desc:t==="conta",fil:t==="filamento",ins:t==="unidade",parc:parc&&t!=="unidade",pess:parc&&t==="conta"&&!gui,pago:!parc&&t==="conta"&&!gui,repete:!parc&&t==="conta",gui:t==="conta"};
   fD.querySelectorAll(".nmComp").forEach(e=>e.textContent=comprador());
   // pago do bolso do Gui: diz o que foi comprado (aparece em Resumo › O que Gui pagou); não precisa de "Já está pago": as vendas pagam
   $("#dDescRot").textContent=gui?"O que comprou (material, peça…)":"Descrição";fD.descricao.placeholder=gui?"ex.: tomada inteligente, saquinhos":"ex.: DAS de novembro";
   fD.querySelectorAll("[data-se]").forEach(el=>el.hidden=!vis[el.dataset.se]);
-  $("#dForma").hidden=ed; // editando uma despesa já lançada: só os campos dela
+  $("#dForma").hidden=ed||t==="unidade"; // editando: só os campos dela; material por unidade: só à vista
   fD.querySelectorAll("[data-forma]").forEach(b=>b.classList.toggle("on",b.dataset.forma===fD.forma.value));
   if(!fD.inicio.value)fD.inicio.value=(fD.data.value||hoje()).slice(0,7);
   const v=+fD.valor.value||0, n=+fD.parcelas.value||2, ps=fD.pessoas.value.split(",").map(x=>x.trim()).filter(Boolean), g=+fD.g.value||0, f=filamentoDe(fD.filamentoId.value);
@@ -1853,6 +1859,8 @@ function ajustaDesp(){
   else if(parc&&v)L.push(`Parcela <b>${brl(v/n)}</b>${ps.length>1?` · cada pessoa paga <b>${brl(v/n/ps.length)}</b>`:""} · ${n}x, de ${nomeMes(fD.inicio.value)} a ${nomeMes(mesMais(fD.inicio.value,n-1))}`);
   if(gui&&v)L.push(`💰 ${esc(comprador())} pagou do bolso: as vendas devolvem ${brl(v)} para ele (prioridade 2, depois da energia)`+
     (parc?` · fica só no nome dele, sem marcar parcela`:""));
+  if(t==="unidade"){const x=insumoDe(fD.insumoId.value),q=Math.round(+fD.qtdUn.value||0);
+    if(x&&q)L.push(`🔩 +${fmtUn(q)} de ${esc(x.nome)} no Estoque`+(v?` · <b>${brl(v/q)}</b> por unidade (hoje ${brl(x.precoUn)})`:"")+` · entra no que ${esc(comprador())} pagou do bolso`)}
   if(t==="filamento"&&f&&g){L.push(`🧵 +${fmtG(g)} de ${esc(nomeFil(f))} no Estoque`+(v?` · preço do kg: ${regraPrecoKg(f,v,g).txt}`:""))}
   $("#dCalc").innerHTML=L.join("<br>");$("#dCalc").hidden=!L.length;
   $("#dSalvar").textContent=ed?"Salvar alterações":"Salvar";
@@ -1870,6 +1878,13 @@ fD.onsubmit=e=>{e.preventDefault();
   const pessoas=fD.pessoas.value.split(",").map(x=>x.trim()).filter(Boolean);if(!pessoas.length)pessoas.push("Eu");
   let msg;
   if(t==="conta"&&fD.doGui.checked&&!fD.descricao.value.trim()){fD.descricao.focus();return avisar(`Escreva o que ${comprador()} comprou (ex.: tomada inteligente). Isso aparece em Resumo › O que ${comprador()} pagou do próprio dinheiro.`)}
+  if(t==="unidade"){ // material por unidade: compra no estoque dele, preço de 1 unidade = valor ÷ quantidade
+    const x=insumoDe(fD.insumoId.value), q=Math.round(+fD.qtdUn.value||0);
+    if(!x)return avisar("Cadastre o material primeiro: Estoque › ＋ Novo material › Por unidade.");
+    if(!(q>0))return avisar("Coloque a quantidade em unidades.");
+    D.insumoMovs.push({id:novoId("e"),data,insumoId:x.id,tipo:"compra",qtd:q,valor});x.precoUn=r2(valor/q*1e4)/1e4;
+    salvar();limparDesp();renderDesp();status(`+${fmtUn(q)} de ${x.nome} no Estoque · ${brl(x.precoUn)} por unidade`);return;
+  }
   if(t==="filamento"){
     const f=filamentoDe(fD.filamentoId.value), g=r2(fD.g.value);
     if(!f)return avisar("Cadastre o filamento primeiro (aba Estoque › Materiais).");
@@ -1896,6 +1911,8 @@ window.editarDesp=id=>{const d=D.despesas.find(x=>x.id===id);limparDesp();fD.tip
 function renderDesp(){
   $("#dlCatDesp").innerHTML=catsDesp().map(c=>`<option value="${esc(c)}">`).join("");
   renderParcelas();
+  {const si=$("#dIns"),ai=si.value;si.innerHTML=(D.insumos||[]).map(x=>`<option value="${x.id}">🔩 ${esc(x.nome)} · ${brl(x.precoUn)}/un</option>`).join("")||'<option value="">(cadastre em Estoque › Novo material › Por unidade)</option>';
+   if((D.insumos||[]).some(x=>x.id===ai))si.value=ai}
   {const sel=$("#dFil"),ant=sel.value;sel.innerHTML=D.filamentos.map(f=>`<option value="${f.id}">${esc(nomeFil(f))} · ${brl(f.precoKg)}/kg</option>`).join("")||'<option value="">(cadastre em Estoque › Materiais)</option>';
    if(D.filamentos.some(f=>f.id===ant))sel.value=ant;
    if(!fD.id.value&&!fD.pessoas.value)fD.pessoas.value=D.parcelamentos.at(-1)?.pessoas.join(", ")||"";ajustaDesp()}
@@ -2446,6 +2463,13 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.28.0",data:"2026-11-15",titulo:"Despesa de material por unidade",itens:[
+    {novo:"Na lista de categorias da despesa, as suas vêm primeiro e “Filamento” e “Material por unidade” ficam no fim.",
+     uso:"Despesas › Categoria."},
+    {novo:"Categoria “Material por unidade” (chaveiro, ímã…): informe o valor total e a quantidade em unidades (ex.: R$ 100 e 100 unidades). Entra no estoque e o preço de 1 unidade é calculado. Filamento continua com valor e gramas.",
+     uso:"Despesas › Categoria › Material por unidade › escolha o material, valor e quantidade."},
+    {novo:"“Ferramentas / acessórios” virou duas categorias: Ferramentas e Acessórios.",
+     uso:"Suas despesas já foram separadas: o alicate em Ferramentas e o resto em Acessórios."}]},
   {v:"1.27.0",data:"2026-11-15",titulo:"Corrigir o estoque",itens:[
     {novo:"Cada movimentação do estoque tem ✏️ para corrigir (material, tipo, quantidade, valor, data), além do ✕ para apagar.",
      uso:"Estoque › Movimentações › ✏️ › corrija › Salvar correção."},
