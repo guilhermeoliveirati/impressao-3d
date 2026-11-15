@@ -481,10 +481,10 @@ nav .ct{display:none}
       <label>Data<input name="data" type="date" required></label>
       <label>Categoria<select name="categoria" id="dCat"></select></label>
       <label data-se="fil">Filamento<select name="filamentoId" id="dFil"></select></label>
+      <label data-se="ins">Material<select name="insumoId" id="dIns"></select></label>
       <label data-se="desc"><span id="dDescRot">Descrição</span><input name="descricao" placeholder="ex.: DAS de novembro"></label>
       <label>Valor total (R$)<input name="valor" type="number" step="0.01" min="0" required></label>
       <label data-se="fil">Quantidade (g)<input name="g" type="number" step="1" min="0" value="1000"></label>
-      <label data-se="ins">Material<select name="insumoId" id="dIns"></select></label>
       <label data-se="ins">Quantidade (unidades)<input name="qtdUn" type="number" step="1" min="0" value="100"></label>
       <div class="chips" id="dForma" style="grid-column:1/-1"><span class="rot">Como pagou?</span>
         <button type="button" class="chip" data-forma="avista">À vista</button>
@@ -579,7 +579,7 @@ nav .ct{display:none}
     <div class="scroll"><table class="cfgtab" id="tMatCfg"></table></div>
     <button class="btn sm sec2" id="cfgAddMat" style="margin-top:8px">＋ Novo material</button>
     <p class="muted"><b>Por grama</b>: preço do kg (rolo de 500 g por R$ 60 = R$ 120 o kg); com compras registradas ele é automático, o do rolo em uso. Cada marca e cor é uma linha.<br>
-      <b>Por unidade</b>: preço de 1 unidade; a compra atualiza sozinha (valor ÷ quantidade). Ao mudar um preço, o custo dos produtos que usam o material é recalculado (vendas já salvas não mudam).</p>
+      <b>Por unidade</b>: preço de 1 unidade (custo); a compra atualiza sozinha (valor ÷ quantidade). Ao lado, o <b>preço de venda</b> de 1 unidade, se você vende o material avulso, com o lucro por unidade. Ao mudar um preço, o custo dos produtos que usam o material é recalculado (vendas já salvas não mudam).</p>
   </div>
   <div class="card"><h2>Movimentações</h2>
     <div class="scroll" style="max-height:320px"><table id="tEst"></table></div>
@@ -758,7 +758,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.29.0";
+const VERSAO="1.30.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -2377,12 +2377,13 @@ function renderEstoque(){
   {const EI=estInsumos(), inp=(col,i,k,t,v,w)=>`<input data-t="${col}" data-i="${i}" data-k="${k}" type="${t}" ${t==="number"?`step="any" min="0" style="text-align:right;width:${w||90}px"`:t==="color"?'style="width:44px;min-width:44px;padding:2px;min-height:40px" title="Cor"':`style="min-width:${w||130}px"`} value="${esc(v??"")}">`;
    const estUn=x=>{const a=EI[x.id];if(!a||(!a.registrado&&!a.usado))return'<span class="muted">sem registro</span>';
      return`<b class="${a.saldo<=0?"taxa":""}">${fmtUn(a.saldo)}</b>${a.saldo<=0?' <span class="tag aberto">acabou</span>':""}<br><span class="muted">vendas usaram ${fmtUn(a.usado)}</span>`};
-   $("#tMatCfg").innerHTML=`<tr><th>Cor</th><th>Nome</th><th>Marca</th><th>Tipo</th><th>Medida</th><th class="n">Preço</th><th class="n">Em estoque</th><th class="n">Usado em</th><th></th></tr>`+
+   $("#tMatCfg").innerHTML=`<tr><th>Cor</th><th>Nome</th><th>Marca</th><th>Tipo</th><th>Medida</th><th class="n">Preço (custo)</th><th class="n">Preço de venda</th><th class="n">Em estoque</th><th class="n">Usado em</th><th></th></tr>`+
      D.filamentos.map((x,i)=>`<tr><td>${inp("filamentos",i,"cor","color",corDe(x))}</td><td>${inp("filamentos",i,"nome","text",x.nome)}</td><td>${inp("filamentos",i,"marca","text",x.marca,100)}</td>
-       <td>${inp("filamentos",i,"material","text",x.material,70)}</td><td><span class="tag">por grama</span></td><td class="n">${inp("filamentos",i,"precoKg","number",x.precoKg)}<br><span class="muted">R$/kg</span></td>
+       <td>${inp("filamentos",i,"material","text",x.material,70)}</td><td><span class="tag">por grama</span></td><td class="n">${inp("filamentos",i,"precoKg","number",x.precoKg)}<br><span class="muted">R$/kg</span></td><td class="n muted">–</td>
        <td class="n">${estCel(x)}</td><td class="n muted">${usos("filamentos",x.id)} produtos</td><td><button class="btn sm del" onclick="apagarCfg('filamentos','${x.id}')">✕</button></td></tr>`).join("")+
      (D.insumos||[]).map((x,i)=>`<tr><td style="text-align:center">🔩</td><td>${inp("insumos",i,"nome","text",x.nome)}</td><td>${inp("insumos",i,"marca","text",x.marca,100)}</td>
        <td></td><td><span class="tag">por unidade</span></td><td class="n">${inp("insumos",i,"precoUn","number",x.precoUn)}<br><span class="muted">R$/un</span></td>
+       <td class="n">${inp("insumos",i,"precoVenda","number",x.precoVenda)}<br><span class="muted">${+x.precoVenda?`R$/un · lucro <b class="${x.precoVenda-x.precoUn<0?"taxa":"lucro"}">${brl(x.precoVenda-x.precoUn)}</b>`:"R$/un"}</span></td>
        <td class="n">${estUn(x)}</td><td class="n muted">${usos("insumos",x.id)} produtos</td><td><button class="btn sm del" onclick="apagarCfg('insumos','${x.id}')">✕</button></td></tr>`).join("")}
   const sel=$("#estFil"),ant=sel.value;
   sel.innerHTML=opcoesMat(ant)||'<option value="">(cadastre um material)</option>';
@@ -2394,7 +2395,8 @@ function renderEstoque(){
     return`<div class="m${baixo?" baixo":""}"><small>${esc(nomeFil(f))}</small><b class="${baixo?"taxa":""}">${reg?fmtG(a.saldo):"–"}</b>
       <small>${reg?(baixo?"⚠️ acabando":"em estoque"):"sem registro"}</small>${reg?`<div class="barra"><i style="width:${Math.max(0,Math.min(100,a.saldo/10)).toFixed(0)}%"></i></div>`:""}</div>`}).join("")+
     (()=>{const EI=estInsumos();return(D.insumos||[]).map(x=>{const a=EI[x.id],reg=a&&(a.registrado||a.usado),baixo=reg&&a.saldo<=0;
-      return`<div class="m${baixo?" baixo":""}"><small>🔩 ${esc(x.nome)}</small><b class="${baixo?"taxa":""}">${reg?fmtUn(a.saldo):"–"}</b><small>${reg?(baixo?"⚠️ acabou":"em estoque"):"sem registro"}</small></div>`}).join("")})();
+      return`<div class="m${baixo?" baixo":""}"><small>🔩 ${esc(x.nome)}</small><b class="${baixo?"taxa":""}">${reg?fmtUn(a.saldo):"–"}</b><small>${reg?(baixo?"⚠️ acabou":"em estoque"):"sem registro"}</small>
+      <small>${brl(x.precoUn)}/un${+x.precoVenda?` · venda ${brl(x.precoVenda)}`:""}</small></div>`}).join("")})();
   const L=[...movsEstoque(),...(D.insumoMovs||[]).map(m=>({...m,un:true}))].sort((a,b)=>b.data.localeCompare(a.data));
   $("#tEst").innerHTML=L.length?`<tr><th>Data</th><th>Material</th><th>O que foi</th><th class="n">Quantidade</th><th class="n">Valor</th><th></th></tr>`+
     L.map(m=>`<tr><td>${fmtData(m.data)}</td><td>${m.un?"🔩 "+esc(insumoDe(m.insumoId)?.nome||"(apagado)"):esc(nomeFil(filamentoDe(m.filamentoId)))}</td><td>${TIPO_EST[m.tipo]||m.tipo}${m.obs?` <span class="muted">(${esc(m.obs)})</span>`:""}</td>
@@ -2477,6 +2479,11 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.30.0",data:"2026-11-15",titulo:"Material primeiro e preço de venda",itens:[
+    {novo:"Em Lançar despesa › Acessórios, o Material vem primeiro, depois o valor total e a quantidade.",
+     uso:"Despesas › Categoria Acessórios."},
+    {novo:"Em Estoque, cada material por unidade mostra o preço de 1 unidade (custo) e, ao lado, o preço de venda que você definir, com o lucro por unidade.",
+     uso:"Estoque › Materiais › coluna Preço de venda."}]},
   {v:"1.29.0",data:"2026-11-15",titulo:"Categoria da despesa em lista",itens:[
     {novo:"A categoria da despesa agora é escolhida numa lista, sem digitar: Acessórios, Ferramentas, Manutenção / peças da impressora e Filamento.",
      uso:"Despesas › Lançar despesa › Categoria › toque e escolha."},
