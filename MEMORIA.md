@@ -280,6 +280,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.25.0: bolinha de cor no filamento: `nomeFil` = emoji mais parecido (`bolinha(corDe(f))`) + nome; `nomeFilTxt` sem emoji para gravar; coluna Cor (color) em Estoque › Materiais.
 - 1.26.0: materiais num lugar só na tela (dados continuam em `filamentos` = por grama e `insumos` = por unidade): tabela única `#tMatCfg`, ＋ Novo material pergunta a medida (`novoMat`),
   um formulário de compra/baixa (`fE` decide pelo `insumoDe`), movimentações juntas; produto com uma lista `prodFil` [{id,q}] (`medidaDe`, `opcoesMat` com optgroups).
+  Estoque das unidades conta só o `ins` gravado na venda (`insDoItem`): venda antiga não desconta material que o produto ganhou depois; `insGravar` usa o produto ao salvar a venda.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
