@@ -82,7 +82,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
   "produtos": [ { "id", "nome", "categoria", "impressoraId", "horas", "minutos", "unidades", "maoMin", "extras",
                   "falhaPct": null, "margemPct": null, "precoVenda": null,   // null = usa o padrão de Config / o preço sugerido
                   "porPeca": true,   // desde 1.7.0: horas/minutos e filamentos.g são de 1 peça (sem: da impressão inteira)
-                  "filamentos": [ { "filamentoId", "g" } ], "insumos": [ { "insumoId", "qtd" /* de 1 peça */ } ], "obs", "preparoMin" /* preparar + timelapse do fatiador, min; null = da impressora (1.22.0) */,
+                  "filamentos": [ { "filamentoId", "g" /* de 1 peça; a tela mostra da mesa (1.35.0) */ } ], "insumos": [ { "insumoId", "qtd" /* de 1 peça */ } ], "obs", "preparoMin" /* preparar + timelapse do fatiador, min; null = da impressora (1.22.0) */,
                   "foto" /* data URL JPEG até 600 px (1.18.0) */, "tamanho", "espessura", "detalhes" /* para o cliente */ } ],
   "vendas": [ { "id", "data", "cliente", "itens": [ { "produtoId"|null, "nome", "qtd", "preco", "custo" } ],
                 "frete", "cobrado", "metodo", "custo", "taxa", "lucro", "obs", "clienteId",
@@ -240,7 +240,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-16, versão 1.34.0)
+## Estado atual (2026-11-17, versão 1.35.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -302,6 +302,8 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.32.0: Parcelamentos mostra só os não-Gui (`!doGuiPc`, a impressora); lista de Despesas traz compras de material e parcelados 💰 com Editar (`editarMovAqui`, `editarParc` em janela) e ✕, e situação automática pelas vendas (`statusDev` pela chave da fila do `fluxo`).
 - 1.33.0: produto sem o campo Impressora na tela (`#pImp` escondido; salva/usa a primeira de Config, `custoProduto` cai na primeira se faltar); Preparar + timelapse antes do Tempo do modelo.
 - 1.34.0: dinheiro da venda com custo de impressão primeiro e o líquido devolvendo o bolso do Gui; ✕ Cancelar edição no produto; peças prontas em estoque (cliente 📦 Estoque da empresa); orçamento sem escolha de filamento.
+- 1.35.0: Produtos: materiais digitados da mesa inteira (`prodFil` = mesa; `lerProduto` ÷ `unForm()`, `carregarProduto` × peças; o dados.json continua com 1 peça); com mais de 1 peça, tabela Mesa × 1 peça (gastos, custo, venda, lucro) e linha da mesa no catálogo.
+- 2026-11-17: Mini Jesus 25 (p136) tinha os gramas da mesa como se fossem de 1 peça (213,2 g × 25 = 5.330 g): divididos por 25 no dados.json; cópia em `backup/`.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -360,3 +362,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.32.0 | 2026-11-15 | Parcelamentos só com a impressora; compras e parcelados do Gui na lista de despesas com Editar e ✕; situação paga automática pelas vendas (✓ pago pelas vendas / falta R$ X / a pagar pelas vendas) |
 | 1.33.0 | 2026-11-15 | Produtos: sai o campo Impressora (sempre a Bambu Lab A1, a primeira de Config); Preparar + timelapse antes do Tempo do modelo |
 | 1.34.0 | 2026-11-16 | Venda: custo de impressão (energia, mão de obra, desgaste) sai primeiro e o valor líquido devolve o bolso do Gui; ✕ Cancelar edição em Produtos; peças prontas em estoque (acerto no produto, cliente 📦 Estoque da empresa, Guardar no estoque na Produção, venda tira das prontas); orçamento sem escolher filamento |
+| 1.35.0 | 2026-11-17 | Produtos: materiais da mesa inteira (como o fatiador; o painel divide pelas peças); tabela da mesa e de 1 peça com gastos, custo, venda e lucro; catálogo mostra a mesa |
