@@ -382,6 +382,7 @@ nav .ct{display:none}
       <label style="display:none">Pagamento<select name="metodo" id="selMetodo"></select></label>
       <div class="chips" id="vChips" style="grid-column:1/-1"></div>
       <label style="grid-column:1/-1;flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="recebido" checked style="min-height:0;width:20px;height:20px"> Já recebi tudo do cliente <span class="muted">(desmarque se ele ainda vai pagar)</span></label>
+      <label id="vEstLinha" hidden style="grid-column:1/-1;flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="usaEst" checked style="min-height:0;width:20px;height:20px"> 📦 Tirar das peças prontas do estoque <span class="muted" id="vEstTxt"></span></label>
       <div class="calc" id="vDest" style="grid-column:1/-1"></div>
       <div id="vInfoLinha" style="grid-column:1/-1;display:flex;gap:8px;align-items:center;cursor:pointer;color:var(--acc);font-weight:600">
         <button type="button" class="info" id="vInfoBtn" aria-expanded="false">i</button><span>Como o lucro é calculado</span>
@@ -422,7 +423,8 @@ nav .ct{display:none}
   <div class="infobox voltaOrc" hidden><span>📝 Você veio do <b>orçamento</b>. Ao salvar, o painel volta para ele com o produto já escolhido.</span><button type="button" class="btn sm sec2" onclick="voltarOrc()">‹ Voltar ao orçamento</button></div>
   <div class="lado">
     <div class="card">
-      <h2 id="pTitulo">🧮 Novo produto</h2>
+      <div class="row" style="justify-content:space-between;align-items:center"><h2 id="pTitulo" style="margin:0">🧮 Novo produto</h2>
+        <button type="button" class="btn sm sec2" id="pCancelarTopo" hidden>✕ Cancelar edição</button></div>
       <form class="f" id="fProd" autocomplete="off">
         <input type="hidden" name="id">
         <label style="grid-column:span 2">Nome do produto<input name="nome" required placeholder="ex.: Chaveiro personalizado"></label>
@@ -432,6 +434,7 @@ nav .ct{display:none}
         <label title="Do fatiador: “Tempo de impressão do modelo” da mesa inteira (todas as peças da impressão)">⏱️ Tempo do modelo (fatiador)<input name="tempoModelo" placeholder="ex.: 8m9s ou 1h20m" autocomplete="off"></label>
         <label title="Quantas peças saem de uma impressão (mesa cheia)">Peças por impressão<input name="unidades" type="number" step="1" min="1" value="1"></label>
         <label title="Preparar o arquivo, tirar da mesa, lixar, pintar, montar… (tempo total da impressão). Aceita 30s, 5m, 1h30m ou só minutos">✋ Trabalho manual<input name="maoMin" placeholder="ex.: 45s, 5m, 1h30m" autocomplete="off"></label>
+        <label title="Peças deste produto já impressas e guardadas. Se contar um número diferente, digite e salve: o painel lança o acerto. As vendas tiram daqui.">📦 Peças prontas em estoque<input name="pecasEst" type="number" step="1" min="0" placeholder="0"></label>
         <div style="grid-column:1/-1">
           <h3 style="margin-top:4px">🧵 Materiais de 1 peça</h3>
           <div id="pFil"></div>
@@ -618,8 +621,8 @@ nav .ct{display:none}
   </div>
   <div class="card" style="max-width:560px">
     <h2>💰 Para onde foi o dinheiro das vendas</h2>
-    <p class="muted" style="margin-top:0">Cada venda paga nesta ordem: 1º energia, 2º o que o <span class="nmComp">Gui</span> pagou do bolso, 3º mão de obra (tudo para o Gui),
-      4º desgaste e manutenção (caixinha 🔧 Manutenção). O que sobra vai para a empresa (guardar e reinvestir) e para os sócios. Os % ficam em Config.</p>
+    <p class="muted" style="margin-top:0">Cada venda separa primeiro o custo de impressão: 1º energia e 2º mão de obra (para o <span class="nmComp">Gui</span>), 3º desgaste e manutenção (caixinha 🔧 Manutenção).
+      O valor líquido 4º devolve o que o Gui comprou do bolso (materiais e filamentos). O que sobra vai para a empresa (guardar e reinvestir) e para os sócios. Os % ficam em Config.</p>
     <table id="tDest" class="resumo"></table>
     <h3>Vendas do mês</h3>
     <div class="scroll"><table id="tDestV"></table></div>
@@ -684,8 +687,8 @@ nav .ct{display:none}
       <label>🧵 Valor de 4 filamentos (R$)<input data-c="minReinvestir" type="number" step="10" min="0"></label>
     </form>
     <p class="muted" id="cfgDivInfo"></p>
-    <p class="muted">Cada venda paga primeiro quem compra o material e paga a luz: 1º a <b>energia</b>, 2º <b>os filamentos que ele comprou</b>
-      e as despesas que ele pagou do bolso (💰 em Despesas), do mais antigo, até devolver tudo, 3º a <b>mão de obra</b>. O que sobra é dividido nesses %: guardar e reinvestir ficam na empresa, e a parte dos sócios é dividida entre eles.
+    <p class="muted">Cada venda separa primeiro o custo de impressão: 1º a <b>energia</b> e 2º a <b>mão de obra</b> (para quem compra o material e paga a luz), 3º o <b>desgaste e manutenção</b> (caixinha 🔧).
+      O valor líquido 4º devolve <b>os filamentos e materiais que ele comprou</b> e as despesas que ele pagou do bolso (💰 em Despesas), do mais antigo, até devolver tudo. O que sobra é dividido nesses %: guardar e reinvestir ficam na empresa, e a parte dos sócios é dividida entre eles.
       O <b>desgaste e manutenção</b> de cada peça vai para a caixinha 🔧 Manutenção da impressora, separada do reinvestir.
       A impressora os sócios pagam por fora (Despesas › Parcelamentos).<br>
       <b>Regra dos 4 filamentos</b>: os sócios só recebem quando o 🔁 Reinvestir tiver o valor de 4 filamentos. Até lá, a parte deles completa o Reinvestir (0 = sem a regra).</p>
@@ -761,7 +764,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.33.0";
+const VERSAO="1.34.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -971,7 +974,8 @@ function normalizar(){
   D.reembolsos??=[]; // pagamentos ao Gui de outra fonte (não das vendas)
   D.insumos??=[];     // outros materiais contados por unidade: chaveiro, ímã, embalagem… (1.24.0)
   D.insumoMovs??=[];  // compras, estoque inicial e perdas desses materiais
-  D.retiradas??=[];  // saídas das caixinhas: guardar, reinvestir ou pagamento a um sócio (1.16.0)
+  D.retiradas??=[];
+  D.pecasMovs??=[];  // acertos das peças prontas em estoque (1.34.0)  // saídas das caixinhas: guardar, reinvestir ou pagamento a um sócio (1.16.0)
   D.backups??=[];    // cópias semanais no Google Drive: [{id, data}] (1.16.0)
   (D.filamentos||[]).forEach(f=>f.marca??="");
   for(const k of ["impressoras","filamentos","produtos","clientes","orcamentos","vendas","despesas","parcelamentos","estoque"])D[k]??=[];
@@ -983,7 +987,7 @@ function normalizar(){
   gerarRecorrentes(); // contas que se repetem todo mês
   D.parcelamentos.forEach(pc=>{if(pc.parcelas>10)pc.parcelas=10}); // parcelamento vai até 10x (1.11.0) // aquecer e calibrar antes de cada impressão (Bambu A1: ~7 min)
   // clientes que só existiam pelo nome em vendas/orçamentos entram no cadastro (sem telefone)
-  [...D.vendas,...D.orcamentos].sort((a,b)=>a.data.localeCompare(b.data)).forEach(x=>{if(x.cliente&&!clientePorNome(x.cliente))novoCliente(x.cliente)});
+  [...D.vendas,...D.orcamentos].sort((a,b)=>a.data.localeCompare(b.data)).forEach(x=>{if(x.cliente&&x.clienteId!=="estoque"&&!clientePorNome(x.cliente))novoCliente(x.cliente)});
 }
 
 /* ---------- navegação ---------- */
@@ -1273,8 +1277,11 @@ function limparProduto(){
   $("#pImp").innerHTML=D.impressoras.map(i=>`<option value="${i.id}">${esc(i.nome)}</option>`).join("")||'<option value="">(cadastre em Config)</option>';
   prodFil=[{id:D.filamentos[0]?.id||"",q:0}];
   $("#pTitulo").textContent="🧮 Novo produto";rowsFil();calcProduto();
+  $("#pCancelar").textContent="Limpar";$("#pCancelarTopo").hidden=true;
 }
-$("#pCancelar").onclick=limparProduto;
+// 1.34.0: tocou em Editar sem querer → ✕ Cancelar edição (em cima e embaixo) volta ao formulário vazio sem gravar nada
+const cancelarProd=()=>{const ed=!!fP.id.value;limparProduto();if(ed){status("edição cancelada: nada foi alterado");$("#pLista").scrollIntoView({behavior:"smooth"})}};
+$("#pCancelar").onclick=cancelarProd;$("#pCancelarTopo").onclick=cancelarProd;
 fP.onsubmit=async e=>{e.preventDefault();
   // filamento apagado ou não escolhido: a lista mostra "⚠️ escolha o filamento" (antes parecia escolhido e o produto ficava sem filamento)
   if(prodFil.some(x=>+x.q>0&&!medidaDe(x.id)))return avisar("Escolha o material de cada linha: algum foi apagado ou não foi escolhido.");
@@ -1282,6 +1289,9 @@ fP.onsubmit=async e=>{e.preventDefault();
   if(D.produtos.some(x=>x.id!==p.id&&norm(x.nome)===norm(p.nome))&&!await confirmar(`Já existe um produto chamado "${p.nome}". Salvar outro com o mesmo nome?`))return;
   const i=D.produtos.findIndex(x=>x.id===p.id);i>=0?D.produtos[i]=p:D.produtos.push(p);
   D.produtos.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+  // peças prontas (1.34.0): o número digitado vira um acerto (a diferença para o que o painel calcula)
+  {const alvo=fP.pecasEst.value===""?null:Math.max(0,Math.round(+fP.pecasEst.value||0)),tem=pecasProntas()[p.id]||0;
+   if(alvo!=null&&alvo!==tem)D.pecasMovs.push({id:novoId("pe"),data:hoje(),produtoId:p.id,qtd:alvo-tem,obs:`contei e tenho ${alvo}`})}
   salvar();limparProduto();renderProdutos();status(`produto "${p.nome}" salvo`);
   if(retorno?.tipo==="produto"){const l=retorno.linha;voltarOrc();edO.colocar(l,p);status(`"${p.nome}" cadastrado e colocado no orçamento: confira a quantidade`)}
 };
@@ -1302,6 +1312,8 @@ function carregarProduto(p,copia){
   if(!prodFil.length)prodFil=[{id:D.filamentos[0]?.id||"",q:0}];
   prodFoto=p.foto||null;mostrarFoto();
   $("#pTitulo").textContent=copia?"🧮 Novo produto (cópia)":"✏️ Editando "+p.nome;
+  $("#pCancelar").textContent=copia?"Limpar":"✕ Cancelar edição";$("#pCancelarTopo").hidden=!!copia;
+  fP.pecasEst.value=copia?"":Math.max(0,pecasProntas()[p.id]||0)||"";
   rowsFil();calcProduto();scrollTo({top:0,behavior:"smooth"});
 }
 window.editarProd=id=>carregarProduto(D.produtos.find(x=>x.id===id));
@@ -1310,11 +1322,11 @@ function renderProdutos(){
   if(!fP.nome.value&&!fP.id.value)limparProduto();else{rowsFil();calcProduto()}
   $("#dlCats").innerHTML=[...new Set(D.produtos.map(p=>p.categoria).filter(Boolean))].sort().map(c=>`<option value="${esc(c)}">`).join("");
   const vend={};D.vendas.forEach(v=>(v.itens||[]).forEach(x=>{if(x.produtoId)vend[x.produtoId]=(vend[x.produtoId]||0)+x.qtd}));
-  const q=norm($("#pBusca").value);
+  const q=norm($("#pBusca").value), PE=pecasProntas();
   const L=D.produtos.filter(p=>!q||norm(p.nome+" "+p.categoria).includes(q));
   $("#pLista").innerHTML=L.length?L.map(p=>{const c=custoProduto(p),pr=precoDe(p),l=pr-c.unit;return`<div class="pcard">
     ${p.foto?`<img class="foto" src="${p.foto}" alt="${esc(p.nome)}" onclick="verFoto('${p.id}')" loading="lazy">`:""}
-    <div class="l1"><b>${esc(p.nome)}</b>${p.categoria?`<span class="tag">${esc(p.categoria)}</span>`:""}${(p.filamentos||[]).some(f=>!filamentoDe(f.filamentoId))?'<span class="tag aberto" title="O filamento deste produto foi apagado: o custo do filamento está saindo R$ 0">⚠️ filamento apagado: toque em Editar e escolha de novo</span>':""}</div>
+    <div class="l1"><b>${esc(p.nome)}</b>${p.categoria?`<span class="tag">${esc(p.categoria)}</span>`:""}${PE[p.id]>0?`<span class="tag ok" title="Peças prontas em estoque">📦 ${num(PE[p.id],0)} prontas</span>`:""}${(p.filamentos||[]).some(f=>!filamentoDe(f.filamentoId))?'<span class="tag aberto" title="O filamento deste produto foi apagado: o custo do filamento está saindo R$ 0">⚠️ filamento apagado: toque em Editar e escolha de novo</span>':""}</div>
     <div class="l3">${fmtTempo(c.horas)} · ${num(c.gramas)} g${(p.insumos||[]).filter(x=>insumoDe(x.insumoId)).map(x=>` · ${num(x.qtd,0)} ${esc(insumoDe(x.insumoId).nome)}`).join("")}${c.un>1?` · ${c.un} por impressão`:""}</div>
     <div class="nums"><div><small>Custo</small><b>${brl(c.unit)}</b></div><div><small>Preço${p.precoVenda==null?" sug.":""}</small><b>${brl(pr)}</b></div><div><small>Lucro</small><b class="${l>=0?"lucro":"taxa"}">${brl(l)}</b></div></div>
     ${detalhesProd(p)?`<div class="det">${esc(detalhesProd(p))}</div>`:""}
@@ -1354,7 +1366,7 @@ function editorItens(box,aoMudar,catalogo=false){
     <label class="nm">Produto<select data-k="prod">${opcoesProd(x)}</select></label>
     <label>Qtd<input data-k="qtd" type="number" min="1" step="1" value="${x.qtd}"></label>
     <label title="Vem da aba Produtos; mude se quiser dar desconto">Preço un. (R$)<input data-k="preco" type="number" min="0" step="0.01" value="${x.preco}"></label>
-    <button type="button" class="btn sm del" data-rm="${i}" title="Tirar item" ${itens.length<2?"disabled style='opacity:.4'":""}>✕</button>${filItem(x)}</div>`;
+    <button type="button" class="btn sm del" data-rm="${i}" title="Tirar item" ${itens.length<2?"disabled style='opacity:.4'":""}>✕</button><small class="muted fifo" style="grid-column:1/-1">${fifoItem(x)}</small></div>`; // 1.34.0: sem escolher filamento: vem do produto
   const rowsItens=()=>{box.innerHTML=itens.map((x,i)=>catalogo?linhaCat(x,i):`<div class="item" data-i="${i}">
     <label class="nm">Produto<input data-k="nome" list="dlProdutos" value="${esc(x.nome)}" placeholder="escolha do catálogo ou digite um item avulso"></label>
     <label>Qtd<input data-k="qtd" type="number" min="1" step="1" value="${x.qtd}"></label>
@@ -1420,6 +1432,8 @@ function calcVenda(){
   $("#vSub").innerHTML=`Itens <b>${brl(sub)}</b> · Custo <b>${brl(custo)}</b> · Lucro <b class="${lucro>=0?"lucro":"taxa"}">${brl(lucro)}</b>`;
   $("#vCalc").innerHTML=`Lucro = cobrado ${brl(cob)} − custo de produção ${brl(custo)} − taxa ${pct(tx)} ${brl(taxa)} = <b>${brl(lucro)}</b>`+
     (cob!==r2(sub+frete)?` · ${cob>sub+frete?"cobrado a mais":"desconto de"} ${brl(Math.abs(cob-sub-frete))}`:"")+` · Você recebe <b>${brl(cob-taxa)}</b>`;
+  {const P=pecasProntas(fV.id.value||"__nova"),T=edV.itens.filter(x=>x.produtoId&&(P[x.produtoId]||0)>0);
+   $("#vEstLinha").hidden=!T.length;$("#vEstTxt").textContent=T.length?`(tem pronto: ${T.map(x=>`${num(P[x.produtoId],0)}× ${x.nome}`).join(", ")}; desmarque se imprimiu agora)`:""}
   const tem=edV.itens.some(x=>x.nome);$("#vDest").hidden=!tem;
   if(tem){const hv={id:fV.id.value||"__nova",data:fV.data.value||hoje(),cliente:fV.cliente.value,itens:edV.itens,cobrado:cob,taxa,custo,lucro};
     $("#vDest").innerHTML=htmlDestinos(fluxo(hv).porVenda[hv.id],lucro)}
@@ -1445,6 +1459,8 @@ fV.onsubmit=async e=>{e.preventDefault();
   const v={id:fV.id.value||novoId("v"),data:fV.data.value,cliente:nomeProprio(fV.cliente.value),clienteId:garantirCliente(fV.cliente.value).id,
     itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(insGravar(x).length?{ins:insGravar(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{}),...(x.partes?{partes:x.partes}:{})})),
     frete:r2(fV.frete.value),cobrado:r2(fV.cobrado.value),metodo:fV.metodo.value,custo,taxa,lucro,recebido:fV.recebido.checked,repassado:!!ant?.repassado,obs:ant?.obs||""};
+  // peças prontas (1.34.0): as unidades que existem no estoque saem dele (item.est); o material só é descontado das que faltaram
+  if(fV.usaEst.checked){const P=pecasProntas(v.id);v.itens.forEach(x=>{const t=x.produtoId?Math.min(x.qtd,Math.max(0,Math.floor(P[x.produtoId]||0))):0;if(t>0){x.est=t;P[x.produtoId]-=t}})}
   const i=D.vendas.findIndex(x=>x.id===v.id); i>=0?D.vendas[i]=v:D.vendas.push(v);
   D.vendas.sort((a,b)=>a.data.localeCompare(b.data));
   $("#vMes").value=v.data.slice(0,7);
@@ -1453,12 +1469,12 @@ fV.onsubmit=async e=>{e.preventDefault();
   despesasDaVenda(v);
   salvar();limparVenda();renderVendas();status("venda salva · gastos de produção lançados em Despesas");
 };
-/* Para onde vai o dinheiro das vendas (1.13.0; ordem da 1.13.1). Em ordem de data, cada venda entrega o que recebeu (cobrado − taxa):
-   1. ⚡ ao Gui (quem compra e paga a luz, Config) a energia desta venda;
-   2. 🧵 ao Gui os filamentos que ele comprou e ainda não voltaram, do mais antigo
-      (só compras até a data da venda, à vista ou parceladas), mesmo que sejam mais que o custo desta venda;
-   3. ao Gui a mão de obra desta venda;
-   4. o que sobra: 🏢 empresa (🐷 guardar e 🔁 reinvestir) e 👥 sócios (dividido entre eles), pelos % de Config.
+/* Para onde vai o dinheiro das vendas (1.13.0; ordem da 1.34.0). Em ordem de data, cada venda entrega o que recebeu (cobrado − taxa):
+   custo de impressão primeiro: 1. ⚡ energia ao Gui (quem compra e paga a luz, Config); 2. ✋ mão de obra ao Gui;
+   3. 🔧 desgaste e manutenção à caixinha Manutenção.
+   Valor líquido = recebido − custo de impressão: 4. 🧵 devolve ao Gui o que ele comprou do bolso (materiais, filamentos e contas 💰)
+      e ainda não voltou, do mais antigo (só compras até a data da venda), mesmo que seja mais que o custo desta venda;
+   5. o que sobra: 🏢 empresa (🐷 guardar e 🔁 reinvestir) e 👥 sócios (dividido entre eles), pelos % de Config.
    Pagamento ao Gui de outra fonte (D.reembolsos: data, valor, fonte, obs) também abate as compras, na data dele.
    Cada compra guarda de onde veio cada pagamento (venda X ou outra fonte). v.repassado = a parte do Gui nesta venda já foi entregue. */
 const comprador=()=>String(D.config.comprador||"Gui").trim()||"Gui";
@@ -1495,15 +1511,17 @@ function fluxo(extra){ // extra: venda ainda no formulário (prévia), no lugar 
     if(e.r===2){saldoR=r2(saldoR-(+e.x.valor||0));continue} // saída do reinvestir (compra feita com ele)
     if(e.r){const p=pagar(+e.x.valor||0,e.data,{fonte:e.x.fonte||"Outra fonte",data:e.x.data});outras[e.x.id]=p.pago;continue}
     const v=e.x, caixa=r2(Math.max(0,(+v.cobrado||0)-(+v.taxa||0))), pt=partesVenda(v);
-    const energia=r2(Math.min(caixa,pt.energia||0)); // prioridade 1: energia
-    const m=pagar(r2(caixa-energia),v.data,{fonte:"venda",cliente:v.cliente,data:v.data,vendaId:v.id}); // prioridade 2: filamentos do Gui
-    let resto=r2(caixa-energia-m.pago);
+    // 1.34.0: primeiro sai o custo de impressão (1º energia e 2º mão de obra ao Gui, 3º desgaste e manutenção à caixinha 🔧);
+    // o valor líquido (recebido − custo de impressão) 4º devolve o que o Gui comprou do bolso (materiais e filamentos), do mais antigo
+    const energia=r2(Math.min(caixa,pt.energia||0));let resto=r2(caixa-energia);
     const mao=r2(Math.min(resto,pt.mao||0));resto=r2(resto-mao);
-    const manut=r2(Math.min(resto,pt.maquina||0));resto=r2(resto-manut); // 4º desgaste e manutenção: caixinha própria, separada do reinvestir (1.21.0)
+    const manut=r2(Math.min(resto,pt.maquina||0));resto=r2(resto-manut);
+    const liquido=resto;
+    const m=pagar(liquido,v.data,{fonte:"venda",cliente:v.cliente,data:v.data,vendaId:v.id});resto=r2(resto-m.pago);
     const guardar=r2(resto*n[0]);let reinvestir=r2(resto*n[1]), soc=r2(resto-guardar-reinvestir);
     saldoR=r2(saldoR+reinvestir);const retido=r2(Math.min(soc,Math.max(0,meta-saldoR)));
     reinvestir=r2(reinvestir+retido);soc=r2(soc-retido);saldoR=r2(saldoR+retido);
-    porVenda[v.id]={retido,saldoR,caixa,material:m.pago,compras:m.usados.map(u=>({nome:nomeCompra(u.c),v:u.v})),energia,mao,gui:r2(m.pago+energia+mao),
+    porVenda[v.id]={retido,saldoR,caixa,liquido,custoImp:r2(energia+mao+manut),material:m.pago,compras:m.usados.map(u=>({nome:nomeCompra(u.c),v:u.v})),energia,mao,gui:r2(m.pago+energia+mao),
       manut,guardar,reinvestir,empresa:r2(guardar+reinvestir),socios:soc,porSocio:r2(soc/S.length),S};
   }
   const r={porVenda,compras,outras};if(!extra)_fluxo=r;return r;
@@ -1511,18 +1529,20 @@ function fluxo(extra){ // extra: venda ainda no formulário (prévia), no lugar 
 function htmlDestinos(d,lucro){
   const n=pctsLucro().n, cp=esc(comprador()), l=(a,b,c="")=>`<span class="${c}">${a}</span><span class="n ${c}">${b}</span>`;
   return`<b>Para onde vai o dinheiro desta venda</b> <span class="muted">(recebe ${brl(d.caixa)})</span><div class="destinos">`+
-    l(`🧵 <b>${cp}</b>`,`<b>${brl(d.gui)}</b>`)+
-    l("1º energia",brl(d.energia),"sub")+
-    (d.material?l(`2º o que ${cp} pagou do bolso <span class="muted">(${d.compras.map(c=>esc(c.nome)).join(", ")})</span>`,brl(d.material),"sub"):
-      l(`2º o que ${cp} pagou do bolso <span class="muted">(${d.caixa-d.energia<=0.004?"não sobrou dinheiro depois da energia":"nada a devolver: tudo já voltou para ele"})</span>`,brl(0),"sub"))+
-    (d.mao?l("3º mão de obra",brl(d.mao),"sub"):"")+
-    l(`🔧 <b>Manutenção da impressora</b> <span class="muted">(4º desgaste e manutenção)</span>`,`<b>${brl(d.manut)}</b>`)+
-    l("🏢 <b>Empresa</b>",`<b>${brl(d.empresa)}</b>`)+
+    l(`<b>Custo de impressão</b> <span class="muted">(sai primeiro)</span>`,`<b>${brl(d.custoImp)}</b>`)+
+    l(`1º ⚡ energia → ${cp}`,brl(d.energia),"sub")+
+    l(`2º ✋ mão de obra → ${cp}`,brl(d.mao),"sub")+
+    l(`3º 🔧 desgaste e manutenção → caixinha Manutenção`,brl(d.manut),"sub")+
+    l(`<b>Valor líquido</b> <span class="muted">(recebido − custo de impressão)</span>`,`<b>${brl(d.liquido)}</b>`)+
+    (d.material?l(`4º 🧵 devolve a ${cp} o que ele comprou do bolso <span class="muted">(${d.compras.map(c=>esc(c.nome)).join(", ")})</span>`,brl(d.material),"sub"):
+      l(`4º 🧵 o que ${cp} comprou do bolso <span class="muted">(${d.liquido<=0.004?"não sobrou valor líquido":"nada a devolver: tudo já voltou para ele"})</span>`,brl(0),"sub"))+
+    l(`5º o que sobra: 🏢 <b>Empresa</b>`,`<b>${brl(d.empresa)}</b>`)+
     l(`🐷 guardar ${num(n[0]*100,0)}%`,brl(d.guardar),"sub")+l(`🔁 reinvestir ${num(n[1]*100,0)}%`,brl(d.reinvestir),"sub")+
     l(`👥 <b>Sócios</b> ${num(n[2]*100,0)}%`,`<b>${brl(d.socios)}</b>`)+
     l(`${d.S.map(esc).join(", ")}: ${brl(d.porSocio)} cada`,"","sub")+
     (d.retido>0.004?l(`🧵 ${brl(d.retido)} da parte dos sócios foi para o Reinvestir: ele precisa ter ${brl(D.config.minReinvestir)} (4 filamentos) antes de dividir`+
       (d.saldoR<(+D.config.minReinvestir||0)-0.004?` · ainda faltam ${brl(D.config.minReinvestir-d.saldoR)}`:" · agora completou ✓"),"","sub"):"")+
+    l(`🧵 <b>Total para ${cp}</b> <span class="muted">(energia + mão de obra + o que voltou do bolso)</span>`,`<b>${brl(d.gui)}</b>`)+
     `</div>`+(lucro<0?`<div class="taxa" style="margin-top:6px">⚠️ Esta venda não paga todos os custos: faltam <b>${brl(-lucro)}</b>.</div>`:"");
 }
 // Recibo da venda pelo WhatsApp (1.16.0): abre a conversa do cliente se ele tiver telefone
@@ -1555,7 +1575,7 @@ function renderVendas(){
 }
 window.editarVenda=id=>{const v=D.vendas.find(x=>x.id===id);
   fV.id.value=v.id;fV.cliente.value=v.cliente;fV.data.value=v.data;fV.cobrado.value=v.cobrado;fV.frete.value=v.frete||0;fV.metodo.value=v.metodo||"Pix";
-  edV.set(v.itens);orcEmVenda=null;$("#vOrc").hidden=true;fV.recebido.checked=v.recebido!==false;
+  edV.set(v.itens);orcEmVenda=null;$("#vOrc").hidden=true;fV.recebido.checked=v.recebido!==false;fV.usaEst.checked=(v.itens||[]).some(x=>+x.est>0);
   cobradoManual=true;$("#vTitulo").textContent="Editando venda de "+v.cliente;calcVenda();scrollTo({top:0,behavior:"smooth"})};
 window.apagar=async(col,id)=>{
   let msg={estoque:"Apagar esta movimentação do estoque?",vendas:"Apagar esta venda?",despesas:"Apagar esta despesa?",orcamentos:"Apagar este orçamento?",clientes:"Apagar este cliente do cadastro? As vendas e orçamentos continuam com o nome dele.",parcelamentos:"Apagar este parcelamento e todas as marcações de pago?",retiradas:"Apagar esta saída de dinheiro?",insumoMovs:"Apagar esta movimentação?",reembolsos:"Apagar este pagamento ao Gui? As compras voltam a mostrar esse valor como falta."}[col]||"Apagar?";
@@ -1587,9 +1607,9 @@ $("#oNovoCli").onclick=()=>irCadastrar("cliente");
 fO.cliente.addEventListener("change",e=>{if(e.target.value==="__novo"){e.target.value="";irCadastrar("cliente")}});
 // Cliente do orçamento: escolhido numa lista do cadastro; "＋ Cadastrar cliente novo…" leva à aba Clientes.
 function opcoesCli(){const sel=fO.cliente,v=sel.value;
-  sel.innerHTML='<option value="">— escolha o cliente —</option>'+D.clientes.slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"))
+  sel.innerHTML='<option value="">— escolha o cliente —</option><option value="estoque">📦 Estoque da empresa (peças para deixar prontas)</option>'+D.clientes.slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"))
     .map(c=>`<option value="${c.id}">${esc(c.nome)} · ${fmtCod(c)}</option>`).join("")+'<option value="__novo">＋ Cadastrar cliente novo…</option>';
-  sel.value=D.clientes.some(c=>c.id===v)?v:""}
+  sel.value=D.clientes.some(c=>c.id===v)||v===CLI_EST?v:""}
 /* Ida e volta para cadastrar: o orçamento fica como está; ao salvar o cliente/produto, o painel volta para ele já com o novo escolhido. */
 let retorno=null; // {tipo:"cliente"|"produto", linha}
 function irCadastrar(tipo,linha=-1){retorno={tipo,linha};
@@ -1610,7 +1630,7 @@ fO.addEventListener("input",e=>{if(e.target.name==="valor")valorManual=true;if(e
 function limparOrc(){voltaProd=false;fO.reset();fO.id.value="";fO.data.value=hoje();valorManual=false;edO.set([]);$("#oTitulo").textContent="📝 Novo orçamento";calcOrc()}
 $("#oCancelar").onclick=limparOrc;
 fO.onsubmit=e=>{e.preventDefault();
-  const cli=D.clientes.find(c=>c.id===fO.cliente.value);
+  const cli=fO.cliente.value===CLI_EST?{id:CLI_EST,nome:NOME_EST}:D.clientes.find(c=>c.id===fO.cliente.value);
   if(!cli)return avisar("Escolha o cliente. Se ele ainda não está cadastrado, toque em ＋ Novo.");
   const L=edO.validos();if(!L.length)return avisar("Escolha pelo menos um produto. Se ele ainda não existe, toque em ＋ Cadastrar produto novo.");
   edO.set(L);const {custo}=calcOrc();
@@ -1626,12 +1646,12 @@ fO.onsubmit=e=>{e.preventDefault();
   renderOrcamentos();status(`orçamento de ${o.cliente} salvo`);
 };
 const venceEm=o=>{const d=new Date(o.data+"T12:00");d.setDate(d.getDate()+(o.validade||7));return d.toLocaleDateString("sv-SE")};
-const ST_ORC={aberto:["Em aberto",""],producao:["Em produção",""],aprovado:["Vendido","ok"],recusado:["Recusado","aberto"]};
+const ST_ORC={aberto:["Em aberto",""],producao:["Em produção",""],aprovado:["Vendido","ok"],estocado:["📦 Guardado no estoque","ok"],recusado:["Recusado","aberto"]};
 function renderOrcamentos(){
   opcoesCli();
   if(!fO.data.value)limparOrc();else edO.redesenhar();
   const qtd=f=>D.orcamentos.filter(o=>f==="todos"||o.status===f).length;
-  $("#oFiltro").innerHTML=[["aberto","Em aberto"],["producao","Em produção"],["aprovado","Vendidos"],["recusado","Recusados"],["todos","Todos"]]
+  $("#oFiltro").innerHTML=[["aberto","Em aberto"],["producao","Em produção"],["aprovado","Vendidos"],["estocado","📦 Para estoque"],["recusado","Recusados"],["todos","Todos"]]
     .map(([k,t])=>`<button type="button" class="chip${filtroOrc===k?" on":""}" data-f="${k}">${t} (${qtd(k)})</button>`).join("");
   const L=D.orcamentos.filter(o=>filtroOrc==="todos"||o.status===filtroOrc).slice().sort((a,b)=>b.data.localeCompare(a.data));
   $("#oLista").innerHTML=L.length?L.map(o=>{const venceu=o.status==="aberto"&&venceEm(o)<hoje(),l=o.valor-(o.custo||0),temVenda=D.vendas.some(v=>v.id===o.vendaId);
@@ -1641,7 +1661,7 @@ function renderOrcamentos(){
     <div class="l3">${esc(descItens(o))}${o.frete?` · frete ${brl(o.frete)}`:""}</div>
     <div class="nums"><div><small>Valor</small><b>${brl(o.valor)}</b></div><div><small>Custo</small><b>${brl(o.custo)}</b></div><div><small>Lucro</small><b class="${l>=0?"lucro":"taxa"}">${brl(l)}</b></div></div>
     ${o.obs?`<div class="l3">${esc(o.obs)}</div>`:""}
-    <div class="acts">${o.status==="aprovado"?(temVenda?`<button class="btn sm sec2" onclick="verVendaOrc('${o.id}')">Ver venda</button>`:""):o.status==="producao"?`<button class="btn sm sec2" onclick="abrirMes('producao')">🏭 Ver na produção</button>`:`<button class="btn sm" onclick="aprovarOrc('${o.id}')">✅ Aprovar</button>`}
+    <div class="acts">${o.status==="estocado"?`<span class="muted">📦 guardado em ${fmtData(o.estocadoEm||o.data)}</span>`:o.status==="aprovado"?(temVenda?`<button class="btn sm sec2" onclick="verVendaOrc('${o.id}')">Ver venda</button>`:""):o.status==="producao"?`<button class="btn sm sec2" onclick="abrirMes('producao')">🏭 Ver na produção</button>`:`<button class="btn sm" onclick="aprovarOrc('${o.id}')">✅ Aprovar</button>`}
       ${o.status==="aberto"?`<button class="btn sm sec2" onclick="recusarOrc('${o.id}')">Recusado</button>`:""}${o.status==="recusado"?`<button class="btn sm sec2" onclick="reabrirOrc('${o.id}')">Reabrir</button>`:""}
       <button class="btn sm sec2" onclick="enviarOrc('${o.id}')">📤 Enviar</button>
       <button class="btn sm sec2" onclick="editarOrc('${o.id}')">Editar</button>
@@ -1650,7 +1670,7 @@ function renderOrcamentos(){
 }
 $("#oFiltro").addEventListener("click",e=>{const f=e.target.dataset?.f;if(f){filtroOrc=f;renderOrcamentos()}});
 window.editarOrc=id=>{const o=D.orcamentos.find(x=>x.id===id);
-  opcoesCli();fO.id.value=o.id;fO.cliente.value=(D.clientes.find(c=>c.id===o.clienteId)||clientePorNome(o.cliente))?.id||"";fO.data.value=o.data;fO.validade.value=o.validade||7;fO.frete.value=o.frete||0;fO.prazo.value=o.prazo||"";fO.valor.value=o.valor;fO.obs.value=o.obs||"";
+  opcoesCli();fO.id.value=o.id;fO.cliente.value=ehEstoqueOrc(o)?CLI_EST:(D.clientes.find(c=>c.id===o.clienteId)||clientePorNome(o.cliente))?.id||"";fO.data.value=o.data;fO.validade.value=o.validade||7;fO.frete.value=o.frete||0;fO.prazo.value=o.prazo||"";fO.valor.value=o.valor;fO.obs.value=o.obs||"";
   edO.set(o.itens);valorManual=true;$("#oTitulo").textContent="✏️ Editando orçamento de "+o.cliente;calcOrc();scrollTo({top:0,behavior:"smooth"})};
 window.recusarOrc=id=>{D.orcamentos.find(x=>x.id===id).status="recusado";salvar();renderOrcamentos()};
 window.reabrirOrc=id=>{D.orcamentos.find(x=>x.id===id).status="aberto";filtroOrc="aberto";salvar();renderOrcamentos()};
@@ -1658,7 +1678,10 @@ window.aprovarOrc=id=>{const o=D.orcamentos.find(x=>x.id===id);
   o.status="producao";o.etapa="fila";o.aprovadoEm=hoje();o.ordem=Math.max(-1,...filaProd().map(x=>x.ordem??-1))+1;salvar();
   document.querySelector("#nav [data-s=producao]").click();status(`pedido de ${o.cliente} entrou na fila de produção`)};
 // Produção concluída: abre Vendas preenchida (a venda nunca é salva sozinha)
-window.concluirProd=id=>{const o=D.orcamentos.find(x=>x.id===id);
+window.concluirProd=async id=>{const o=D.orcamentos.find(x=>x.id===id);
+  // pedido do 📦 Estoque da empresa (1.34.0): não vira venda; as peças entram nas peças prontas e o material sai do estoque hoje
+  if(ehEstoqueOrc(o)){if(!await confirmar(`Guardar no estoque de peças prontas: ${descItens(o)}?\nO material usado sai do estoque de materiais hoje.`,"📦 Guardar"))return;
+    o.status="estocado";o.estocadoEm=hoje();delete o.etapa;salvar();render();status(`${descItens(o)} guardado nas peças prontas`);return}
   if(o.etapa!=="pronto"){o.etapa="pronto";salvar()}
   document.querySelector("#nav [data-s=vendas]").click();
   limparVenda();orcEmVenda=o.id;
@@ -1667,6 +1690,7 @@ window.concluirProd=id=>{const o=D.orcamentos.find(x=>x.id===id);
   $("#vOrc").hidden=false;
   $("#vOrc").innerHTML=`🏭 Produção concluída: pedido de <b>${esc(o.cliente)}</b> (orçamento de ${fmtData(o.data)}). Confira a data e a forma de pagamento e toque em <b>Salvar venda</b>. Os gastos de produção entram em Despesas.`+
     (+o.sinal?` <br>💰 O cliente já pagou <b>${brl(o.sinal)}</b> de sinal; falta receber <b>${brl(r2(o.valor-o.sinal))}</b>. Se ele ainda não pagou o resto, desmarque “Já recebi tudo”.`:"");
+  fV.usaEst.checked=false; // pedido impresso para o cliente: não tira das peças prontas (marque se usou as prontas)
   calcVenda();scrollTo({top:0,behavior:"smooth"})};
 window.verVendaOrc=id=>{const o=D.orcamentos.find(x=>x.id===id),v=D.vendas.find(x=>x.id===o.vendaId);if(!v)return;
   document.querySelector("#nav [data-s=vendas]").click();$("#vMes").value=v.data.slice(0,7);renderVendas();editarVenda(v.id)};
@@ -1697,7 +1721,7 @@ function tempoItem(x){return tempoInfo(x)?.h||0}
 const filaProd=()=>D.orcamentos.filter(o=>o.status==="producao").sort((a,b)=>(a.ordem??1e9)-(b.ordem??1e9)||(a.aprovadoEm||a.data).localeCompare(b.aprovadoEm||b.data)||a.id.localeCompare(b.id,"pt-BR",{numeric:true}));
 var voltaProd=false;
 function renderProducao(){
-  const L=filaProd(), E=estoques(), precisa={}, hj=hoje();
+  const L=filaProd(), E=estoques(), precisa={}, hj=hoje(), PE=pecasProntas();
   const cards=L.map((o,n)=>{
     const h=soma(o.itens||[],tempoItem), g={};
     (o.itens||[]).forEach(x=>matDoItem(x).forEach(m=>{g[m.f]=(g[m.f]||0)+m.g*(+x.qtd||0)}));
@@ -1708,6 +1732,7 @@ function renderProducao(){
     <div class="l1"><b>${n+1}. ${esc(o.cliente)}</b><span class="tag ${ETAPA[et][1]}">${ETAPA[et][0]}</span></div>
     <div class="l3">Aprovado em ${fmtData(o.aprovadoEm||o.data)}${o.prazo?` · <span class="${atras?"taxa":""}">📅 entrega ${fmtData(o.prazo)}${atras?" · atrasado":""}</span>`:""}</div>
     <div class="l3">${esc(descItens(o))}</div>
+    ${(()=>{const T=(o.itens||[]).filter(x=>!ehEstoqueOrc(o)&&PE[x.produtoId]>0);return T.length?`<div class="l3">📦 Já tem pronto: ${T.map(x=>`${num(PE[x.produtoId],0)}× ${esc(x.nome)}`).join(", ")}</div>`:""})()}
     <div class="l3">${h?`⏱️ ${fmtTempo(h)} de impressão`:""}${h&&mats?" · ":""}${mats?`🧵 ${mats}`:""}</div>
     <div class="nums"><div><small>Valor</small><b>${brl(o.valor)}</b></div><div><small>Custo</small><b>${brl(o.custo)}</b></div><div><small>Lucro</small><b class="lucro">${brl(o.valor-(o.custo||0))}</b></div></div>
     ${+o.sinal?`<div class="l3">💰 Sinal recebido ${brl(o.sinal)} · falta <b>${brl(falta)}</b> na entrega</div>`:""}
@@ -1718,9 +1743,10 @@ function renderProducao(){
       <label>Sinal recebido (R$)<input type="number" step="0.01" min="0" data-o="${o.id}" data-k="sinal" value="${+o.sinal||""}" placeholder="0,00"></label>
     </div>
     <div class="acts">${et==="fila"?`<button class="btn sm" onclick="etapaProd('${o.id}','imprimindo')">▶ Começar</button>`
+        :ehEstoqueOrc(o)?`<button class="btn sm" onclick="concluirProd('${o.id}')">📦 Guardar no estoque</button>`
         :et==="imprimindo"?`<button class="btn sm" onclick="concluirProd('${o.id}')">✅ Concluir</button>`
         :`<button class="btn sm" onclick="concluirProd('${o.id}')">🧾 Lançar a venda</button>`}
-      <button class="btn sm sec2" onclick="avisarCli('${o.id}')">📲 Avisar cliente</button>
+      ${ehEstoqueOrc(o)?"":`<button class="btn sm sec2" onclick="avisarCli('${o.id}')">📲 Avisar cliente</button>`}
       <button class="btn sm sec2" onclick="editarPedido('${o.id}')">✏️ Editar</button>
       ${n>0?`<button class="btn sm sec2" onclick="moverProd('${o.id}',-1)" title="Subir na fila">▲</button>`:""}${n<L.length-1?`<button class="btn sm sec2" onclick="moverProd('${o.id}',1)" title="Descer na fila">▼</button>`:""}
       <button class="btn sm sec2" onclick="tirarProd('${o.id}')">Tirar da produção</button></div></div>`});
@@ -2116,13 +2142,14 @@ function renderResumo(){
 function renderDestinos(mes){
   const F=fluxo(), V=D.vendas.filter(v=>v.data.startsWith(mes)), cp=esc(comprador()), S=socios(), n=pctsLucro().n;
   document.querySelectorAll(".nmComp").forEach(e=>e.textContent=comprador());
-  const t={caixa:0,material:0,energia:0,mao:0,gui:0,manut:0,empresa:0,guardar:0,reinvestir:0,socios:0};
+  const t={caixa:0,liquido:0,custoImp:0,material:0,energia:0,mao:0,gui:0,manut:0,empresa:0,guardar:0,reinvestir:0,socios:0};
   V.forEach(v=>{const d=F.porVenda[v.id];if(d)for(const k in t)t[k]+=d[k]});
   const lin=(cls,l,v)=>`<tr class="${cls}"><td>${l}</td><td class="n">${brl(v)}</td></tr>`;
   const tit=(l,v)=>`<tr><td style="padding-top:14px;font-weight:700">${l}</td><td class="n" style="padding-top:14px;font-weight:700">${brl(v)}</td></tr>`;
   $("#tDest").innerHTML=lin("","Recebido das vendas <span class=\"muted\">(sem a taxa da maquininha)</span>",t.caixa)+
-    tit(`🧵 ${cp}`,t.gui)+lin("sub","1º Energia",t.energia)+lin("sub","2º O que ele pagou do bolso (filamentos e contas)",t.material)+lin("sub","3º Mão de obra",t.mao)+
-    tit("🔧 Manutenção da impressora",t.manut)+lin("sub","4º Desgaste e manutenção das peças vendidas",t.manut)+
+    tit("Custo de impressão (sai primeiro)",t.custoImp)+lin("sub",`1º ⚡ Energia → ${cp}`,t.energia)+lin("sub",`2º ✋ Mão de obra → ${cp}`,t.mao)+lin("sub","3º 🔧 Desgaste e manutenção → caixinha Manutenção",t.manut)+
+    tit("Valor líquido (recebido − custo de impressão)",t.liquido)+lin("sub",`4º 🧵 Devolvido a ${cp}: o que ele comprou do bolso (materiais, filamentos e contas)`,t.material)+
+    tit(`🧵 Total para ${cp} (energia + mão de obra + bolso)`,t.gui)+
     tit("🏢 Empresa",t.empresa)+lin("sub",`🐷 Guardar ${num(n[0]*100,0)}%`,t.guardar)+lin("sub",`🔁 Reinvestir ${num(n[1]*100,0)}%`,t.reinvestir)+
     tit(`👥 Sócios ${num(n[2]*100,0)}%`,t.socios)+S.map(x=>lin("sub",esc(x),t.socios/S.length)).join("");
   $("#tDestV").innerHTML=V.length?`<tr><th>Data</th><th>Cliente</th><th class="n">Recebe</th><th class="n">${cp}</th><th class="n">Manutenção</th><th class="n">Empresa</th><th class="n">Sócios</th><th></th></tr>`+
@@ -2182,7 +2209,7 @@ function renderCaixas(){
   // por que as caixinhas não mudam: o dinheiro das vendas ainda está devolvendo o que o Gui pagou do bolso (1.21.1)
   {const falta=soma(F.compras,c=>c.resto), cp=esc(comprador()), V=Object.values(F.porVenda), paraGui=soma(V,d=>d.gui), cx=soma(V,d=>(d.manut||0)+d.guardar+d.reinvestir+d.socios);
    const o=$("#cxObs");o.hidden=!(V.length&&falta>0.004);
-   if(!o.hidden)o.innerHTML=`ℹ️ <b>Por que as caixinhas estão ${cx>0.004?"baixas":"zeradas"}?</b> O dinheiro das vendas vai primeiro para ${cp}: 1º energia, 2º o que ele pagou do bolso, 3º mão de obra.
+   if(!o.hidden)o.innerHTML=`ℹ️ <b>Por que as caixinhas estão ${cx>0.004?"baixas":"zeradas"}?</b> Depois do custo de impressão (energia, mão de obra e desgaste), o valor líquido das vendas vai para ${cp} devolver o que ele pagou do bolso.
      Até agora as vendas mandaram <b>${brl(paraGui)}</b> para ele, e ainda faltam <b>${brl(falta)}</b> do que ele pagou do bolso.
      As caixinhas (🔧 Manutenção, 🐷 Guardar, 🔁 Reinvestir e sócios) só recebem o que sobra depois disso.`}
   const nomes=[...new Set([...S,...Object.keys(parte)])];
@@ -2295,6 +2322,22 @@ $("#fCfg").addEventListener("change",e=>{if(e.detail?.target)e=e.detail;const k=
    tirados do produto (gramas ÷ peças por impressão) ou da peça sob medida. Item antigo sem "mat" usa o produto atual. */
 const matDeProduto=p=>p?(p.filamentos||[]).filter(f=>f.filamentoId&&+f.g>0).map(f=>({f:f.filamentoId,g:r2(p.porPeca?+f.g:(+f.g)/Math.max(1,Math.round(+p.unidades||1)))})):[];
 const matDoItem=x=>x.mat||(x.produtoId?matDeProduto(D.produtos.find(p=>p.id===x.produtoId)):[]);
+/* Peças prontas em estoque (1.34.0). Saldo de cada produto = acertos (D.pecasMovs: “contei e tenho…”, em Produtos)
+   + pedidos do cliente 📦 Estoque da empresa guardados na Produção (status "estocado", data estocadoEm) − peças que as vendas tiraram (item.est).
+   O material (filamento e por unidade) dessas peças sai do estoque de materiais quando o pedido é guardado;
+   a venda que tira peças prontas só desconta material das unidades que faltaram (qtd − est). */
+const CLI_EST="estoque", NOME_EST="Estoque da empresa";
+const ehEstoqueOrc=o=>o?.clienteId===CLI_EST;
+const estocados=()=>D.orcamentos.filter(o=>o.status==="estocado");
+const qtdMat=x=>Math.max(0,(+x.qtd||0)-(+x.est||0));
+// tudo que gastou material: vendas (só as unidades que não vieram prontas) e pedidos guardados no estoque
+const usosMat=()=>[...D.vendas.flatMap(v=>(v.itens||[]).map(x=>({data:v.data,x,q:qtdMat(x)}))),
+  ...estocados().flatMap(o=>(o.itens||[]).map(x=>({data:o.estocadoEm||o.data,x,q:+x.qtd||0})))];
+function pecasProntas(semVenda){const e={};
+  (D.pecasMovs||[]).forEach(m=>e[m.produtoId]=(e[m.produtoId]||0)+(+m.qtd||0));
+  estocados().forEach(o=>(o.itens||[]).forEach(x=>{if(x.produtoId)e[x.produtoId]=(e[x.produtoId]||0)+(+x.qtd||0)}));
+  D.vendas.forEach(v=>{if(v.id!==semVenda)(v.itens||[]).forEach(x=>{if(x.produtoId&&+x.est)e[x.produtoId]=(e[x.produtoId]||0)-x.est})});
+  return e}
 // movimentações do estoque + compras de filamento parceladas (Despesas › Parcelamentos), que entram no mês da 1ª parcela
 const movsEstoque=()=>[...D.estoque,...D.parcelamentos.filter(pc=>pc.material&&+pc.materialG>0).map(pc=>({id:null,pcId:pc.id,data:pc.data||pc.inicio+"-01",filamentoId:pc.material,tipo:"parcelada",g:+pc.materialG,valor:pc.total,pagoPor:pc.pagoPor}))];
 // compras de material pagas pela empresa (1.31.0): saem do 🔁 Reinvestir e não entram no que o Gui pagou do bolso
@@ -2303,7 +2346,7 @@ const comprasEmpresa=()=>[...movsEstoque().filter(m=>(m.tipo==="compra"||m.tipo=
 function estoques(){
   const e={};D.filamentos.forEach(f=>e[f.id]={entrou:0,perdas:0,usado:0});
   movsEstoque().forEach(m=>{const a=e[m.filamentoId];if(a)m.tipo==="perda"?a.perdas+=m.g:a.entrou+=m.g});
-  D.vendas.forEach(v=>(v.itens||[]).forEach(x=>matDoItem(x).forEach(m=>{if(e[m.f])e[m.f].usado+=m.g*(+x.qtd||0)})));
+  usosMat().forEach(u=>matDoItem(u.x).forEach(m=>{if(e[m.f])e[m.f].usado+=m.g*u.q}));
   for(const k in e){const a=e[k];a.saldo=r2(a.entrou-a.perdas-a.usado);a.registrado=!!(a.entrou||a.perdas)}
   return e;
 }
@@ -2319,7 +2362,7 @@ const insGravar=x=>x.ins||(x.produtoId?insDeProduto(D.produtos.find(p=>p.id===x.
 const custoInsumos=p=>soma(p.insumos||[],x=>(+insumoDe(x.insumoId)?.precoUn||0)*(+x.qtd||0));
 function estInsumos(){const e={};(D.insumos||[]).forEach(x=>e[x.id]={entrou:0,perdas:0,usado:0});
   (D.insumoMovs||[]).forEach(m=>{const a=e[m.insumoId];if(a)m.tipo==="perda"?a.perdas+=+m.qtd:a.entrou+=+m.qtd});
-  D.vendas.forEach(v=>(v.itens||[]).forEach(x=>insDoItem(x).forEach(m=>{if(e[m.i])e[m.i].usado+=m.q*(+x.qtd||0)})));
+  usosMat().forEach(u=>insDoItem(u.x).forEach(m=>{if(e[m.i])e[m.i].usado+=m.q*u.q}));
   for(const k in e){const a=e[k];a.saldo=r2(a.entrou-a.perdas-a.usado);a.registrado=!!(a.entrou||a.perdas)}return e}
 const fmtUn=q=>`${num(q,0)} un`;
 /* Lotes de filamento (1.13.0). Cada compra (à vista ou parcelada) e o estoque inicial é um lote, com o preço do kg dele.
@@ -2336,7 +2379,7 @@ function lotes(){
   movs.forEach(m=>{if(m.tipo!=="perda"&&L[m.filamentoId]&&+m.g>0)L[m.filamentoId].push({data:m.data,g:+m.g,resto:+m.g,
     kg:+m.valor>0?m.valor/m.g*1000:(+m.kg||+filamentoDe(m.filamentoId)?.precoKg||0)})});
   const saidas=[...movs.filter(m=>m.tipo==="perda").map(m=>({data:m.data,f:m.filamentoId,g:+m.g})),
-    ...D.vendas.flatMap(v=>(v.itens||[]).flatMap(x=>matDoItem(x).map(mm=>({data:v.data,f:mm.f,g:mm.g*(+x.qtd||0)}))))].sort((a,b)=>a.data.localeCompare(b.data));
+    ...usosMat().flatMap(u=>matDoItem(u.x).map(mm=>({data:u.data,f:mm.f,g:mm.g*u.q})))].sort((a,b)=>a.data.localeCompare(b.data));
   saidas.forEach(o=>{let g=o.g;for(const l of L[o.f]||[]){if(g<=0)break;const t=Math.min(l.resto,g);l.resto-=t;g-=t}});
   return _lotes=L;
 }
@@ -2527,6 +2570,17 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.34.0",data:"2026-11-16",titulo:"Custo de impressão primeiro, peças prontas e orçamento mais simples",itens:[
+    {novo:"O dinheiro da venda separa primeiro o custo de impressão (energia e mão de obra para o Gui, desgaste para a caixinha 🔧). O valor líquido que sobra devolve ao Gui o que ele comprou do bolso (materiais e filamentos); depois, empresa e sócios.",
+     uso:"Vendas › Para onde vai o dinheiro desta venda, e Resumo › Para onde foi o dinheiro."},
+    {novo:"Editar produto agora tem ✕ Cancelar edição (em cima e embaixo do formulário), para quando tocar em Editar sem querer.",
+     uso:"Produtos › Editar › ✕ Cancelar edição."},
+    {novo:"Peças prontas em estoque: cada produto mostra quantas tem prontas. A venda tira delas primeiro e só desconta material das que faltaram.",
+     uso:"Produtos › Editar › 📦 Peças prontas em estoque (digite quantas tem e salve)."},
+    {novo:"Imprimir para deixar no estoque: faça um orçamento para o cliente 📦 Estoque da empresa, aprove e, na Produção, toque em 📦 Guardar no estoque. As peças entram nas prontas e o filamento e os materiais saem do estoque.",
+     uso:"Orçamentos › Cliente › 📦 Estoque da empresa › Aprovar › Produção › 📦 Guardar no estoque."},
+    {novo:"No orçamento você escolhe só o produto, a quantidade e o valor: o filamento vem do cadastro do produto.",
+     uso:"Orçamentos › escolha o produto e a quantidade."}]},
   {v:"1.33.0",data:"2026-11-15",titulo:"Produto mais simples",itens:[
     {novo:"Saiu o campo Impressora do produto: é sempre a Bambu Lab A1. E o Preparar + timelapse agora vem antes do Tempo do modelo, na mesma ordem do fatiador.",
      uso:"Produtos › preencha primeiro o preparo e depois o tempo do modelo."}]},

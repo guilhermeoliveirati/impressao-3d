@@ -65,6 +65,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
   "insumos": [ { "id" /* u… */, "nome", "marca", "precoUn" /* custo de 1 un */, "precoVenda" /* venda de 1 un (1.30.0, só informativo) */ } ],   // materiais por unidade: chaveiro, ímã, embalagem (1.24.0)
   "insumoMovs": [ { "id", "data", "insumoId", "tipo": "compra" | "inicial" | "perda", "qtd", "valor", "pagoPor" /* "gui" | "empresa" (1.31.0) */ } ],
   "reembolsos": [ { "id", "data", "valor", "fonte", "obs" } ],   // pagamento ao Gui de outra fonte (abate as compras de filamento)
+  "pecasMovs": [ { "id" /* pe… */, "data", "produtoId", "qtd" /* + ou −: acerto “contei e tenho…” */, "obs" } ],   // peças prontas em estoque (1.34.0)
   "retiradas": [ { "id", "data", "caixa": "guardar" | "reinvestir" | "socio:Nome", "valor", "obs" } ],   // saídas das caixinhas (1.16.0)
   "backups": [ { "id" /* arquivo no Drive */, "data" } ], "ultimoBackup": "AAAA-MM-DD",   // cópia semanal (1.16.0); config.backupPasta se precisou criar pasta  // arredondar: nao | 1 | 90 | 5
   "impressoras": [ { "id", "nome", "preparoMin" /* aquecer e calibrar, 1x por impressão */, "potenciaW", "valor", "vidaUtilH", "manutHora" } ],
@@ -75,7 +76,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
                      "material": filamentoId | null, "materialG" /* compra de filamento parcelada: entra no estoque */, "data" /* dia da compra (1.13.0) */, "doGui" /* 💰 pago do bolso do Gui (1.14.0) */ } ],
   "estoque": [ { "id", "data", "filamentoId", "tipo": "compra" | "inicial" | "perda", "g", "valor", "kg" /* só inicial: preço do kg do dia */, "obs" /* "acerto de estoque" (1.27.0) */ } ],
   "orcamentos": [ { "id", "data", "cliente", "validade" /* dias */, "itens": [ …iguais aos da venda… ], "frete", "valor", "custo", "obs",
-                    "status": "aberto" | "producao" | "aprovado" /* vendido */ | "recusado", "vendaId": null, "clienteId",
+                    "status": "aberto" | "producao" | "aprovado" /* vendido */ | "estocado" /* 📦 guardado nas peças prontas, estocadoEm (1.34.0) */ | "recusado", "vendaId": null, "clienteId",
                     "etapa": "fila" | "imprimindo" | "pronto" /* só em producao */, "aprovadoEm": "AAAA-MM-DD",
                     "ordem" /* posição na fila */, "prazo": "AAAA-MM-DD" /* entregar até */, "sinal" /* R$ já recebido */ } ],   // item pode ter "detalhe" (peça sob medida)
   "produtos": [ { "id", "nome", "categoria", "impressoraId", "horas", "minutos", "unidades", "maoMin", "extras",
@@ -88,6 +89,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
                 "recebido": false /* cliente ainda deve; sem o campo = recebido */, "sinal", "repassado" /* parte do material já entregue ao comprador */ } ],
                 // cada item pode ter "mat": [ { "f": filamentoId, "g": gramas POR UNIDADE } ] — usado pelo estoque
                 // e "ins": [ { "i": insumoId, "q": unidades POR UNIDADE vendida } ] — estoque dos materiais por unidade (1.24.0)
+                // e "est": unidades que saíram das peças prontas (1.34.0; material só desconta qtd − est)
                 // e "partes": custo de 1 unidade por tipo { fil, energia, maquina, falha, mao, extras | outros } — usado nas despesas de produção
   "despesas": [ { "id", "data", "categoria", "descricao", "valor", "pago" /* false = a pagar; sem o campo = paga */, "repete" /* 🔁 todo mês */, "serie" /* id da primeira da série */, "doGui" /* 💰 o Gui pagou do bolso: vendas devolvem (1.14.0) */, "vendaId" /* só nos gastos de produção, lançados pela venda */ } ],
 }
@@ -160,6 +162,11 @@ Filamento sempre pode atualizar o `precoKg` (valor ÷ gramas × 1000). Saiu o bo
 só as de data ≤ venda; pode ser mais que o custo da própria venda); 3º mão de obra da venda ao Gui (ordem pedida pelo dono na 1.13.1); o resto: guardar + reinvestir (empresa) e sócios
 (`sociosPct`, dividido entre `socios()`). `D.reembolsos` (outra fonte) abate as compras na data dele. Cada compra guarda de onde veio cada pagamento.
 O desgaste da impressora entra no resto.
+**Ordem desde 1.34.0** (pedido do dono): custo de impressão primeiro — 1º energia e 2º mão de obra ao Gui, 3º desgaste e manutenção à caixinha 🔧;
+o **valor líquido** (recebido − custo de impressão) 4º devolve o bolso do Gui (fila acima); 5º o resto vai para guardar/reinvestir/sócios. (Substitui a ordem 1.13.1/1.21.0.)
+**Peças prontas** (1.34.0, `pecasProntas`, `usosMat`): saldo = `pecasMovs` + pedidos do cliente fixo 📦 Estoque da empresa (`clienteId:"estoque"`) guardados
+(`status:"estocado"`, "📦 Guardar no estoque" na Produção, sem venda) − `item.est` das vendas. O material desses pedidos sai em `estocadoEm`; a venda só gasta material de `qtd − est`.
+Venda nova marca "📦 Tirar das peças prontas" (desmarcado quando vem da Produção). Produtos › "Peças prontas em estoque" grava a diferença como acerto. Orçamento não escolhe filamento (vem do produto).
 **Despesas pagas do bolso do Gui** (1.14.0, `contasDoGui()`): despesa com `doGui` (desde 1.15.0 sempre, sem olhar `pago`; nome = descrição + categoria) e parcelamento com `doGui` (valor total, no dia `data`)
 entram na mesma fila da prioridade 2 que os filamentos (do mais antigo). Marca-se em Lançar despesa (💰) ou no cartão do parcelamento;
 parcelado do Gui fica só no nome dele; a repetição mensal leva o `doGui`. Continuam contando como despesa no Resumo (a devolução é só o caminho do dinheiro).
@@ -233,7 +240,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-15, versão 1.33.0)
+## Estado atual (2026-11-16, versão 1.34.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -294,6 +301,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 2026-11-15: no dados.json, tudo menos a impressora marcado como pago pelo Gui (`pagoPor:"gui"` nos 8 filamentos parcelados e na compra do NFC; despesas já tinham `doGui`); cópia em `backup/`.
 - 1.32.0: Parcelamentos mostra só os não-Gui (`!doGuiPc`, a impressora); lista de Despesas traz compras de material e parcelados 💰 com Editar (`editarMovAqui`, `editarParc` em janela) e ✕, e situação automática pelas vendas (`statusDev` pela chave da fila do `fluxo`).
 - 1.33.0: produto sem o campo Impressora na tela (`#pImp` escondido; salva/usa a primeira de Config, `custoProduto` cai na primeira se faltar); Preparar + timelapse antes do Tempo do modelo.
+- 1.34.0: dinheiro da venda com custo de impressão primeiro e o líquido devolvendo o bolso do Gui; ✕ Cancelar edição no produto; peças prontas em estoque (cliente 📦 Estoque da empresa); orçamento sem escolha de filamento.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -351,3 +359,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.31.0 | 2026-11-15 | Lançar despesa: “Quem pagou?” (Gui, do próprio dinheiro, ou Empresa); material pago pela empresa sai do Reinvestir e não entra no bolso do Gui; compras de material aparecem na lista de Despesas do mês |
 | 1.32.0 | 2026-11-15 | Parcelamentos só com a impressora; compras e parcelados do Gui na lista de despesas com Editar e ✕; situação paga automática pelas vendas (✓ pago pelas vendas / falta R$ X / a pagar pelas vendas) |
 | 1.33.0 | 2026-11-15 | Produtos: sai o campo Impressora (sempre a Bambu Lab A1, a primeira de Config); Preparar + timelapse antes do Tempo do modelo |
+| 1.34.0 | 2026-11-16 | Venda: custo de impressão (energia, mão de obra, desgaste) sai primeiro e o valor líquido devolve o bolso do Gui; ✕ Cancelar edição em Produtos; peças prontas em estoque (acerto no produto, cliente 📦 Estoque da empresa, Guardar no estoque na Produção, venda tira das prontas); orçamento sem escolher filamento |
