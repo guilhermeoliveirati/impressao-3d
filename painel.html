@@ -766,7 +766,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.36.0";
+const VERSAO="1.36.1";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -804,10 +804,15 @@ const tokenValido=()=>gToken&&Date.now()<gToken.exp-60000;
 async function loginGoogle(){
   await carregarScript("https://accounts.google.com/gsi/client");
   await new Promise((ok,err)=>{
+    // 1.36.1: no Chrome do celular a janela do Google abre em outra aba e o Google às vezes avisa "janela fechada"
+    // antes de devolver o login (o usuário ainda está escolhendo a conta). Então não desiste na hora: espera o login chegar.
+    let fim=false,t=null;const acaba=f=>v=>{if(fim)return;fim=true;clearTimeout(t);f(v)}, OK=acaba(ok), ERR=acaba(err);
     google.accounts.oauth2.initTokenClient({client_id:GOOGLE.clientId,scope:"https://www.googleapis.com/auth/drive.file",
       ...(LS.get("gEmail")?{login_hint:LS.get("gEmail"),hint:LS.get("gEmail")}:{}), // conta já usada: o Google não pergunta de novo
-      callback:r=>{if(r.error)return err(new Error(r.error_description||r.error));gToken={t:r.access_token,exp:Date.now()+r.expires_in*1000};LS.set("gToken",gToken);ok()},
-      error_callback:e=>err(new Error(e.type==="popup_closed"?"janela do Google fechada":"login não concluído ("+e.type+")"))
+      callback:r=>{if(r.error)return ERR(new Error(r.error_description||r.error));gToken={t:r.access_token,exp:Date.now()+r.expires_in*1000};LS.set("gToken",gToken);OK()},
+      error_callback:e=>{if(e.type==="popup_closed"){const m=$("#gateMsg");if(m&&!$("#gate").hidden)m.textContent="Esperando o Google… Termine o login na outra aba. Se você fechou a janela, toque de novo em Abrir pelo Google Drive.";
+          t=setTimeout(()=>ERR(new Error("janela do Google fechada")),180000);return}
+        ERR(new Error("login não concluído ("+e.type+")"))}
     }).requestAccessToken({prompt:LS.get("gJaAutorizou")?"":"consent"});
   });
   LS.set("gJaAutorizou",true);
@@ -867,6 +872,7 @@ async function abrirLocal(h){
 }
 async function abrirDrive(escolherOutro){
   if(!tokenValido())await loginGoogle();
+  if(fonte?.tipo==="drive"&&!escolherOutro)return; // tocou duas vezes e o primeiro login já abriu
   let arq=LS.get("driveArquivo");
   // 1.36.0: aparelho novo (nada lembrado): procura o dados.json que este app já abriu nesta conta (em outro aparelho);
   // só abre o seletor do Drive se não achar
@@ -2594,6 +2600,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.36.1",data:"2026-11-18",titulo:"Entrar pelo celular",itens:[
+    {novo:"No navegador do celular, o painel dava “janela do Google fechada” enquanto você ainda escolhia a conta. Agora ele espera o login terminar.",
+     uso:"☁️ Abrir pelo Google Drive › escolha a conta › Continuar › volte para a aba do painel."}]},
   {v:"1.36.0",data:"2026-11-18",titulo:"Venda do orçamento travada e abrir em outro aparelho",itens:[
     {novo:"A venda que vem do orçamento (🧾 Lançar a venda) mostra só os itens, sem escolher filamento e sem adicionar item: o orçamento já tem tudo.",
      uso:"Produção › 🧾 Lançar a venda › confira data e pagamento › Salvar venda."},
