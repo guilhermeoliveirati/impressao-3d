@@ -240,7 +240,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-17, versão 1.35.0)
+## Estado atual (2026-11-18, versão 1.36.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -304,6 +304,8 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.34.0: dinheiro da venda com custo de impressão primeiro e o líquido devolvendo o bolso do Gui; ✕ Cancelar edição no produto; peças prontas em estoque (cliente 📦 Estoque da empresa); orçamento sem escolha de filamento.
 - 1.35.0: Produtos: materiais digitados da mesa inteira (`prodFil` = mesa; `lerProduto` ÷ `unForm()`, `carregarProduto` × peças; o dados.json continua com 1 peça); com mais de 1 peça, tabela Mesa × 1 peça (gastos, custo, venda, lucro) e linha da mesa no catálogo.
 - 2026-11-17: Mini Jesus 25 (p136) tinha os gramas da mesa como se fossem de 1 peça (213,2 g × 25 = 5.330 g): divididos por 25 no dados.json; cópia em `backup/`.
+- 1.36.0: venda vinda do orçamento (ou ligada a um, ao editar) com itens travados (`edV.travar`, `travarVenda`: sem filamento, sem ＋ Adicionar item);
+  aparelho novo sem `driveArquivo`: `abrirDrive` procura `name='dados.json'` (files.list; com o escopo drive.file só aparecem arquivos que o app já abriu nesta conta) antes do seletor do Drive.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -363,3 +365,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.33.0 | 2026-11-15 | Produtos: sai o campo Impressora (sempre a Bambu Lab A1, a primeira de Config); Preparar + timelapse antes do Tempo do modelo |
 | 1.34.0 | 2026-11-16 | Venda: custo de impressão (energia, mão de obra, desgaste) sai primeiro e o valor líquido devolve o bolso do Gui; ✕ Cancelar edição em Produtos; peças prontas em estoque (acerto no produto, cliente 📦 Estoque da empresa, Guardar no estoque na Produção, venda tira das prontas); orçamento sem escolher filamento |
 | 1.35.0 | 2026-11-17 | Produtos: materiais da mesa inteira (como o fatiador; o painel divide pelas peças); tabela da mesa e de 1 peça com gastos, custo, venda e lucro; catálogo mostra a mesa |
+| 1.36.0 | 2026-11-18 | Venda do orçamento com itens travados (sem filamento e sem adicionar item); em outro aparelho, depois do login, o painel acha sozinho o dados.json da conta |

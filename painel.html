@@ -153,6 +153,7 @@ table.resumo tr.final td{font-size:1.286rem;font-weight:700;border-top:2px solid
 #vInfoLinha{padding:10px 0 8px;border-top:1px solid var(--brd)}
 /* itens da venda */
 #vItens{display:grid;gap:10px}
+.item.trav{display:flex!important;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
 .item{display:grid;grid-template-columns:2.2fr 80px 1fr 1fr auto;gap:8px;align-items:end;background:#f8fafc;border-radius:12px;padding:10px}
 .item .del{min-height:44px}
 .item .filsel{grid-column:1/-1}
@@ -765,7 +766,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.35.0";
+const VERSAO="1.36.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -867,7 +868,12 @@ async function abrirLocal(h){
 async function abrirDrive(escolherOutro){
   if(!tokenValido())await loginGoogle();
   let arq=LS.get("driveArquivo");
-  if(!arq||escolherOutro){const d=await escolherNoDrive();arq={id:d.id,nome:d.name};LS.set("driveArquivo",arq)}
+  // 1.36.0: aparelho novo (nada lembrado): procura o dados.json que este app já abriu nesta conta (em outro aparelho);
+  // só abre o seletor do Drive se não achar
+  if(!arq&&!escolherOutro){try{$("#gateMsg").textContent="Procurando o dados.json no seu Google Drive…";
+    const L=(await (await api("https://www.googleapis.com/drive/v3/files?q="+encodeURIComponent("name='dados.json' and trashed=false")+"&fields=files(id,name,modifiedTime)&orderBy=modifiedTime%20desc&pageSize=5")).json()).files||[];
+    if(L[0]){arq={id:L[0].id,nome:L[0].name};LS.set("driveArquivo",arq)}}catch(e){if(e instanceof ErroLogin)throw e;console.warn("procurar dados.json:",e)}}
+  if(!arq||escolherOutro){$("#gateMsg").textContent="Escolha o dados.json (Meu Drive › Impressora 3D).";const d=await escolherNoDrive();arq={id:d.id,nome:d.name};LS.set("driveArquivo",arq)}
   LS.set("modo","drive");
   try{await abrirFonte(fonteDrive(arq.id,arq.nome))}
   catch(e){ // só pergunta de novo se o arquivo do projeto mudou (apagado, movido ou de outra conta)
@@ -1379,7 +1385,10 @@ function editorItens(box,aoMudar,catalogo=false){
     <label>Qtd<input data-k="qtd" type="number" min="1" step="1" value="${x.qtd}"></label>
     <label title="Vem da aba Produtos; mude se quiser dar desconto">Preço un. (R$)<input data-k="preco" type="number" min="0" step="0.01" value="${x.preco}"></label>
     <button type="button" class="btn sm del" data-rm="${i}" title="Tirar item" ${itens.length<2?"disabled style='opacity:.4'":""}>✕</button><small class="muted fifo" style="grid-column:1/-1">${fifoItem(x)}</small></div>`; // 1.34.0: sem escolher filamento: vem do produto
-  const rowsItens=()=>{box.innerHTML=itens.map((x,i)=>catalogo?linhaCat(x,i):`<div class="item" data-i="${i}">
+  let travado=false; // 1.36.0: venda que veio do orçamento: os itens só aparecem (sem filamento, sem adicionar nem tirar)
+  const linhaTrav=x=>`<div class="item trav"><span><b>${num(x.qtd,0)}×</b> ${esc(x.nome)}</span><span class="n">${brl(x.preco)} un · <b>${brl(x.qtd*x.preco)}</b></span></div>`;
+  const rowsItens=()=>{if(travado){box.innerHTML=itens.map(linhaTrav).join("");return}
+    box.innerHTML=itens.map((x,i)=>catalogo?linhaCat(x,i):`<div class="item" data-i="${i}">
     <label class="nm">Produto<input data-k="nome" list="dlProdutos" value="${esc(x.nome)}" placeholder="escolha do catálogo ou digite um item avulso"></label>
     <label>Qtd<input data-k="qtd" type="number" min="1" step="1" value="${x.qtd}"></label>
     <label>Preço un. (R$)<input data-k="preco" type="number" min="0" step="0.01" value="${x.preco}"></label>
@@ -1418,6 +1427,7 @@ function editorItens(box,aoMudar,catalogo=false){
         return y});if(!itens.length)itens=[itemVazio()];rowsItens()},
     adicionar(){itens.push(itemVazio());rowsItens();aoMudar();box.querySelector(".item:last-child :is(select,input)").focus()},
     redesenhar(){rowsItens()},
+    travar(b){travado=!!b;rowsItens()},
     // põe o produto na linha i (ou na primeira linha vazia, ou numa linha nova)
     colocar(i,p){let x=itens[i];if(!x||x.nome)x=itens.find(y=>!y.nome);if(!x)itens.push(x=itemVazio());
       Object.assign(x,{produtoId:p.id,nome:p.nome,preco:precoDe(p),custo:r2(custoItemProd(p,x.qtd).unit),mat:matDeProduto(p)});delete x.detalhe;rowsItens();aoMudar()},
@@ -1459,7 +1469,9 @@ fV.addEventListener("input",e=>{
 fV.cobrado.addEventListener("input",()=>calcVenda());
 $("#vInfoLinha").onclick=()=>{const box=$("#vInfo");box.hidden=!box.hidden;$("#vInfoBtn").setAttribute("aria-expanded",!box.hidden)};
 function limparVenda(){fV.reset();fV.id.value="";fV.data.value=hoje();fV.metodo.value="Pix";cobradoManual=false;edV.set([]);
-  orcEmVenda=null;$("#vOrc").hidden=true;$("#vTitulo").textContent="Nova venda";calcVenda()}
+  orcEmVenda=null;$("#vOrc").hidden=true;$("#vTitulo").textContent="Nova venda";travarVenda(false);calcVenda()}
+// itens da venda vinda do orçamento ficam travados: o orçamento já tem produto, quantidade, valor e o filamento do produto
+const travarVenda=b=>{edV.travar(b);$("#vAddItem").hidden=!!b};
 $("#vCancelar").onclick=()=>limparVenda();
 fV.onsubmit=async e=>{e.preventDefault();
   const L=edV.validos();
@@ -1587,7 +1599,7 @@ function renderVendas(){
 }
 window.editarVenda=id=>{const v=D.vendas.find(x=>x.id===id);
   fV.id.value=v.id;fV.cliente.value=v.cliente;fV.data.value=v.data;fV.cobrado.value=v.cobrado;fV.frete.value=v.frete||0;fV.metodo.value=v.metodo||"Pix";
-  edV.set(v.itens);orcEmVenda=null;$("#vOrc").hidden=true;fV.recebido.checked=v.recebido!==false;fV.usaEst.checked=(v.itens||[]).some(x=>+x.est>0);
+  edV.set(v.itens);orcEmVenda=null;$("#vOrc").hidden=true;travarVenda(D.orcamentos.some(o=>o.vendaId===v.id));fV.recebido.checked=v.recebido!==false;fV.usaEst.checked=(v.itens||[]).some(x=>+x.est>0);
   cobradoManual=true;$("#vTitulo").textContent="Editando venda de "+v.cliente;calcVenda();scrollTo({top:0,behavior:"smooth"})};
 window.apagar=async(col,id)=>{
   let msg={estoque:"Apagar esta movimentação do estoque?",vendas:"Apagar esta venda?",despesas:"Apagar esta despesa?",orcamentos:"Apagar este orçamento?",clientes:"Apagar este cliente do cadastro? As vendas e orçamentos continuam com o nome dele.",parcelamentos:"Apagar este parcelamento e todas as marcações de pago?",retiradas:"Apagar esta saída de dinheiro?",insumoMovs:"Apagar esta movimentação?",reembolsos:"Apagar este pagamento ao Gui? As compras voltam a mostrar esse valor como falta."}[col]||"Apagar?";
@@ -1697,7 +1709,7 @@ window.concluirProd=async id=>{const o=D.orcamentos.find(x=>x.id===id);
   if(o.etapa!=="pronto"){o.etapa="pronto";salvar()}
   document.querySelector("#nav [data-s=vendas]").click();
   limparVenda();orcEmVenda=o.id;
-  fV.cliente.value=o.cliente;fV.frete.value=o.frete||0;edV.set(o.itens);fV.cobrado.value=o.valor;cobradoManual=true;
+  fV.cliente.value=o.cliente;fV.frete.value=o.frete||0;edV.set(o.itens);travarVenda(true);fV.cobrado.value=o.valor;cobradoManual=true;
   $("#vTitulo").textContent="Venda do orçamento de "+o.cliente;
   $("#vOrc").hidden=false;
   $("#vOrc").innerHTML=`🏭 Produção concluída: pedido de <b>${esc(o.cliente)}</b> (orçamento de ${fmtData(o.data)}). Confira a data e a forma de pagamento e toque em <b>Salvar venda</b>. Os gastos de produção entram em Despesas.`+
@@ -2582,6 +2594,11 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.36.0",data:"2026-11-18",titulo:"Venda do orçamento travada e abrir em outro aparelho",itens:[
+    {novo:"A venda que vem do orçamento (🧾 Lançar a venda) mostra só os itens, sem escolher filamento e sem adicionar item: o orçamento já tem tudo.",
+     uso:"Produção › 🧾 Lançar a venda › confira data e pagamento › Salvar venda."},
+    {novo:"Em outro aparelho com a mesma conta do Google, o painel acha sozinho o dados.json depois do login, sem pedir para escolher o arquivo.",
+     uso:"No aparelho novo: ☁️ Google Drive › entre com a conta › o painel abre."}]},
   {v:"1.35.0",data:"2026-11-17",titulo:"Produto com os valores da mesa inteira",itens:[
     {novo:"Em Produtos, os materiais agora são da mesa inteira, igual ao tempo: digite os gramas que o fatiador mostra para a mesa toda. O painel divide pelas peças por impressão.",
      uso:"Produtos › 🧵 Materiais da mesa inteira › gramas do fatiador."},
