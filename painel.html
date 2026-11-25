@@ -361,6 +361,13 @@ nav .ct{display:none}
     <div id="prResumo" class="calc" style="margin-bottom:10px"></div>
     <div class="pgrid" id="prLista"></div>
   </div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">📦 Produção para o estoque</h2>
+      <button type="button" class="btn" onclick="registrarProducao()">＋ Registrar produção</button></div>
+    <p class="muted">Imprimiu peças para deixar prontas? Toque em <b>＋ Registrar produção</b>, escolha o produto (ou crie um novo ali mesmo) e copie do fatiador o que a mesa gastou.
+      O painel calcula o custo de cada peça, guarda as peças no estoque e atualiza o produto.</p>
+    <div id="prEstoque"></div>
+  </div>
 </section>
 
 <!-- VENDAS -->
@@ -768,7 +775,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.37.0";
+const VERSAO="1.38.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1347,17 +1354,18 @@ function renderProdutos(){
   if(!fP.nome.value&&!fP.id.value)limparProduto();else{rowsFil();calcProduto()}
   $("#dlCats").innerHTML=[...new Set(D.produtos.map(p=>p.categoria).filter(Boolean))].sort().map(c=>`<option value="${esc(c)}">`).join("");
   const vend={};D.vendas.forEach(v=>(v.itens||[]).forEach(x=>{if(x.produtoId)vend[x.produtoId]=(vend[x.produtoId]||0)+x.qtd}));
-  const q=norm($("#pBusca").value), PE=pecasProntas();
+  const q=norm($("#pBusca").value), PE=pecasProntas(), LP=lotesPecas();
+  const custoPronto=id=>{const A=(LP[id]||[]).filter(l=>l.resto>1e-6),n=soma(A,l=>l.resto);return n>0?soma(A,l=>l.resto*l.custo)/n:0};
   const L=D.produtos.filter(p=>!q||norm(p.nome+" "+p.categoria).includes(q));
   $("#pLista").innerHTML=L.length?L.map(p=>{const c=custoProduto(p),pr=precoDe(p),l=pr-c.unit;return`<div class="pcard">
     ${p.foto?`<img class="foto" src="${p.foto}" alt="${esc(p.nome)}" onclick="verFoto('${p.id}')" loading="lazy">`:""}
-    <div class="l1"><b>${esc(p.nome)}</b>${p.categoria?`<span class="tag">${esc(p.categoria)}</span>`:""}${PE[p.id]>0?`<span class="tag ok" title="Peças prontas em estoque">📦 ${num(PE[p.id],0)} prontas</span>`:""}${(p.filamentos||[]).some(f=>!filamentoDe(f.filamentoId))?'<span class="tag aberto" title="O filamento deste produto foi apagado: o custo do filamento está saindo R$ 0">⚠️ filamento apagado: toque em Editar e escolha de novo</span>':""}</div>
+    <div class="l1"><b>${esc(p.nome)}</b>${p.categoria?`<span class="tag">${esc(p.categoria)}</span>`:""}${PE[p.id]>0?`<span class="tag ok" title="Peças prontas em estoque (custo real da produção)">📦 ${num(PE[p.id],0)} prontas · ${brl(custoPronto(p.id))} cada</span>`:""}${(p.filamentos||[]).some(f=>!filamentoDe(f.filamentoId))?'<span class="tag aberto" title="O filamento deste produto foi apagado: o custo do filamento está saindo R$ 0">⚠️ filamento apagado: toque em Editar e escolha de novo</span>':""}</div>
     <div class="l3">${fmtTempo(c.horas)} · ${num(c.gramas)} g${(p.insumos||[]).filter(x=>insumoDe(x.insumoId)).map(x=>` · ${num(x.qtd,0)} ${esc(insumoDe(x.insumoId).nome)}`).join("")}${c.un>1?` · ${c.un} por impressão`:""}</div>
     <div class="nums"><div><small>Custo${c.un>1?" 1 peça":""}</small><b>${brl(c.unit)}</b></div><div><small>Preço${p.precoVenda==null?" sug.":""}</small><b>${brl(pr)}</b></div><div><small>Lucro</small><b class="${l>=0?"lucro":"taxa"}">${brl(l)}</b></div></div>
     ${c.un>1?`<div class="l3">🧊 Mesa com ${c.un}: custo <b>${brl(c.unit*c.un)}</b> · venda <b>${brl(pr*c.un)}</b> · lucro <b class="${l>=0?"lucro":"taxa"}">${brl(l*c.un)}</b> · ${num(c.gramas/c.un,1)} g por peça</div>`:""}
     ${detalhesProd(p)?`<div class="det">${esc(detalhesProd(p))}</div>`:""}
     <div class="l3">Margem ${pct(pr?l/pr:0)} do preço · ${vend[p.id]?`${num(vend[p.id],0)} vendidos`:"nenhum vendido"}${p.obs?` · ${esc(p.obs)}`:""}</div>
-    <div class="acts"><button class="btn sm sec2" onclick="enviarProd('${p.id}')" title="Mandar foto, detalhes e preço ao cliente">📤 Enviar</button><button class="btn sm sec2" onclick="editarProd('${p.id}')">Editar</button><button class="btn sm sec2" onclick="duplicarProd('${p.id}')">Duplicar</button><button class="btn sm del" onclick="apagar('produtos','${p.id}')">✕</button></div></div>`}).join("")
+    <div class="acts"><button class="btn sm sec2" onclick="enviarProd('${p.id}')" title="Mandar foto, detalhes e preço ao cliente">📤 Enviar</button><button class="btn sm sec2" onclick="editarProd('${p.id}')">Editar</button><button class="btn sm sec2" onclick="registrarProducao('${p.id}')" title="Registrar peças impressas para o estoque">🏭 Produzi</button><button class="btn sm sec2" onclick="duplicarProd('${p.id}')">Duplicar</button><button class="btn sm del" onclick="apagar('produtos','${p.id}')">✕</button></div></div>`}).join("")
     :`<p class="muted">${D.produtos.length?"Nenhum produto com esse nome.":"Nenhum produto cadastrado ainda. Preencha a calculadora acima e clique em Salvar produto."}</p>`;
 }
 $("#pBusca").oninput=renderProdutos;
@@ -1729,15 +1737,19 @@ window.concluirProd=async id=>{const o=D.orcamentos.find(x=>x.id===id);
   calcVenda();scrollTo({top:0,behavior:"smooth"})};
 /* "O que a impressão gastou" (1.37.0): ao guardar um pedido no estoque, informa peças boas, tempos e materiais da mesa (do fatiador).
    O custo sai pelas mesmas contas do produto (custoProduto) com esses números; vira o custo das peças desse lote. */
-const lerGasto=(div,p)=>{const v=k=>div.querySelector(`[data-k="${k}"]`).value;
-  const q=Math.max(1,Math.round(+v("qtd")||1)),prep=lerMin(v("prep"))||0,mod=lerMin(v("mod"))||0,mao=lerMin(v("mao"))||0;
-  const mat=[...div.querySelectorAll('[data-k="g"]')].map(e=>({f:e.dataset.f,g:r2(+e.value||0)})).filter(m=>m.g>0);
-  const ins=[...div.querySelectorAll('[data-k="u"]')].map(e=>({i:e.dataset.u,q:+e.value||0})).filter(m=>m.q>0);
-  const c=custoProduto({...p,porPeca:true,unidades:q,horas:0,minutos:mod/q,preparoMin:prep,maoMin:mao,
-    filamentos:mat.map(m=>({filamentoId:m.f,g:m.g/q})),insumos:ins.map(m=>({insumoId:m.i,qtd:m.q/q}))});
+// custo de uma mesa impressa: q peças boas, tempos em minutos e materiais da mesa inteira (mat [{f,g}], ins [{i,q}])
+// receita = os mesmos números como produto (1 peça), para atualizar o cadastro (1.38.0)
+function calcGasto(p,q,prep,mod,mao,mat,ins){
+  const receita={porPeca:true,unidades:q,horas:0,minutos:r4(mod/q),preparoMin:r4(prep),maoMin:r4(mao),
+    filamentos:mat.map(m=>({filamentoId:m.f,g:r4(m.g/q)})),insumos:ins.map(m=>({insumoId:m.i,qtd:r4(m.q/q)}))};
+  const c=custoProduto({...p,...receita});
   const pt={fil:c.fil/q,energia:c.energia/q,maquina:c.maquina/q,falha:c.falha/q,mao:c.mao/q,extras:c.extras};
   for(const k in pt){pt[k]=Math.round(pt[k]*1e4)/1e4;if(!pt[k])delete pt[k]}
-  return{qtd:q,prepMin:r4(prep),modeloMin:r4(mod),maoMin:r4(mao),mat,ins,custoUn:r2(c.unit),total:r2(c.unit*q),horas:c.horas,partes:pt}};
+  return{qtd:q,prepMin:r4(prep),modeloMin:r4(mod),maoMin:r4(mao),mat,ins,custoUn:r2(c.unit),total:r2(c.unit*q),horas:c.horas,partes:pt,receita}}
+const lerGasto=(div,p)=>{const v=k=>div.querySelector(`[data-k="${k}"]`).value;
+  const mat=[...div.querySelectorAll('[data-k="g"]')].map(e=>({f:e.dataset.f,g:r2(+e.value||0)})).filter(m=>m.g>0);
+  const ins=[...div.querySelectorAll('[data-k="u"]')].map(e=>({i:e.dataset.u,q:+e.value||0})).filter(m=>m.q>0);
+  const g=calcGasto(p,Math.max(1,Math.round(+v("qtd")||1)),lerMin(v("prep"))||0,lerMin(v("mod"))||0,lerMin(v("mao"))||0,mat,ins);delete g.receita;return g};
 window.gastosEstoque=id=>{const o=D.orcamentos.find(x=>x.id===id);if(!o)return;
   const lb='style="display:flex;flex-direction:column;gap:4px"';
   const bloco=(x,i)=>{const p=D.produtos.find(y=>y.id===x.produtoId);if(!p)return`<p class="muted">${esc(x.nome)}: o produto foi apagado; entra com o custo gravado.</p>`;
@@ -1764,9 +1776,77 @@ window.gastosEstoque=id=>{const o=D.orcamentos.find(x=>x.id===id);if(!o)return;
       <span class="muted">(no catálogo: ${brl(cat)})</span>`});
   $("#gEstItens").addEventListener("input",calc);calc();
   $("#gEstOk").onclick=()=>{document.querySelectorAll("#gEstItens .gEst").forEach(div=>{const x=o.itens[div.dataset.i],p=D.produtos.find(y=>y.id===x.produtoId);
-      const g=lerGasto(div,p);delete g.total;delete g.horas;x.real=g});
+      const g=lerGasto(div,p);delete g.total;delete g.horas;x.real=g;x.custo=g.custoUn});
     const novo=o.status!=="estocado";o.status="estocado";o.estocadoEm??=hoje();delete o.etapa;$("#modal").hidden=true;salvar();render();
     status(novo?`${descItens(o)} guardado nas peças prontas com o custo real`:"gastos corrigidos")}};
+/* ＋ Registrar produção (1.38.0): direto na Produção, sem orçamento. Escolhe o produto ou cria um novo ali mesmo,
+   informa peças boas, tempos e materiais da mesa (do fatiador). Grava um pedido do 📦 Estoque da empresa já guardado
+   (status "estocado", com x.real), então tudo o que vale para ele vale aqui: lote com custo real, materiais saem do estoque, ✏️ Corrigir gastos, ✕.
+   "Usar estes números no produto" atualiza o cadastro (tempos e materiais de 1 peça = mesa ÷ peças boas). */
+let regMat=[];
+window.registrarProducao=pid=>{
+  const opts=D.produtos.map(p=>`<option value="${p.id}"${p.id===pid?" selected":""}>${esc(p.nome)}</option>`).join("");
+  const lb='style="display:flex;flex-direction:column;gap:4px"';
+  abrirModal(`<h2>🏭 Registrar produção</h2>
+    <p class="muted">Copie do fatiador o que a mesa gastou. O painel calcula o custo de cada peça, guarda as peças prontas no estoque e tira os materiais.</p>
+    <form class="f" id="fReg" onsubmit="return false">
+      <label ${lb}>Produto<select id="rgProd"><option value="__novo"${pid?"":" selected"}>＋ Produto novo</option>${opts}</select></label>
+      <label ${lb} id="rgNomeL">Nome do produto novo<input id="rgNome" placeholder="ex.: Mini Jesus"></label>
+      <label ${lb} id="rgCatL">Categoria<input id="rgCat" list="dlCats" placeholder="ex.: Religioso"></label>
+      <label ${lb}>Data<input id="rgData" type="date" value="${hoje()}"></label>
+      <label ${lb}>Peças que saíram boas<input data-k="qtd" type="number" min="1" step="1" value="1"></label>
+      <label ${lb}>Preparar + timelapse<input data-k="prep" placeholder="ex.: 6m17s + 38s"></label>
+      <label ${lb}>Tempo do modelo (mesa inteira)<input data-k="mod" placeholder="ex.: 21h11m"></label>
+      <label ${lb}>Trabalho manual<input data-k="mao" placeholder="ex.: 10m"></label>
+      <label ${lb}>Preço de venda de 1 peça (R$)<input id="rgPreco" type="number" min="0" step="0.01" placeholder="vazio = sugerido"></label>
+      <label id="rgAtuL" style="grid-column:1/-1;flex-direction:row;align-items:center;gap:8px;display:flex"><input type="checkbox" id="rgAtu" checked style="min-height:0;width:20px;height:20px"> Usar estes números no cadastro do produto (tempo, materiais e peças por mesa)</label>
+    </form>
+    <h3>🧵 Materiais da mesa inteira</h3><div id="rgMat"></div>
+    <button type="button" class="btn sm sec2" id="rgAddMat">＋ Outro material</button>
+    <div class="calc" id="rgRes" style="margin-top:10px"></div>
+    <div class="row" style="margin-top:10px"><button class="btn" id="rgOk">📦 Guardar no estoque</button></div>`);
+  const f=k=>$(`#fReg [data-k="${k}"]`), prodSel=()=>D.produtos.find(p=>p.id===$("#rgProd").value);
+  const linhas=()=>{$("#rgMat").innerHTML=regMat.map((x,i)=>{const md=medidaDe(x.id);return`<div class="linha" style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+      <select data-i="${i}" data-c="id" style="flex:1;min-width:0">${md?"":'<option value="" selected>— escolha o material —</option>'}${opcoesMat(x.id)}</select>
+      <input data-i="${i}" data-c="q" type="number" min="0" step="${md==="un"?1:0.1}" value="${x.q||""}" style="width:90px" aria-label="quantidade"><span class="muted">${md||"g"}</span>
+      ${regMat.length>1?`<button type="button" class="btn sm del" data-rm="${i}">✕</button>`:""}</div>`}).join("")};
+  const preencher=()=>{const p=prodSel(),novo=!p;$("#rgNomeL").hidden=$("#rgCatL").hidden=!novo;$("#rgAtuL").style.display=novo?"none":"flex";
+    if(novo){regMat=[{id:D.filamentos[0]?.id||"",q:0}];f("qtd").value=1;f("prep").value=f("mod").value=f("mao").value="";$("#rgPreco").value=""}
+    else{const un=Math.max(1,Math.round(+p.unidades||1)),imp=impressoraDe(p.impressoraId)||D.impressoras[0]||{};
+      f("qtd").value=un;f("prep").value=fmtHMS(+(p.preparoMin??imp.preparoMin??0));f("mod").value=fmtHMS(((+p.horas||0)*60+(+p.minutos||0))*un);f("mao").value=+p.maoMin?fmtHMS(+p.maoMin):"";
+      $("#rgPreco").value=p.precoVenda??"";
+      regMat=[...(p.filamentos||[]).map(x=>({id:x.filamentoId,q:r2(x.g*un)})),...(p.insumos||[]).map(x=>({id:x.insumoId,q:r2(x.qtd*un)}))];
+      if(!regMat.length)regMat=[{id:D.filamentos[0]?.id||"",q:0}]}
+    linhas();calc()};
+  const ler=()=>{const p=prodSel()||{impressoraId:D.impressoras[0]?.id||"",extras:0,falhaPct:null,margemPct:null};
+    const ok=regMat.filter(x=>medidaDe(x.id)&&+x.q>0);
+    return{p,g:calcGasto(p,Math.max(1,Math.round(+f("qtd").value||1)),lerMin(f("prep").value)||0,lerMin(f("mod").value)||0,lerMin(f("mao").value)||0,
+      ok.filter(x=>filamentoDe(x.id)).map(x=>({f:x.id,g:r2(x.q)})),ok.filter(x=>insumoDe(x.id)).map(x=>({i:x.id,q:+x.q})))}};
+  const calc=()=>{const{p,g}=ler(),pr=$("#rgPreco").value!==""?+$("#rgPreco").value:precoSugerido({...p,...g.receita,precoVenda:null});
+    $("#rgRes").innerHTML=`⏱️ ${fmtTempo(g.horas)} de impressão · custo desta produção <b>${brl(g.total)}</b><br>
+      <b>${num(g.qtd,0)} peças a ${brl(g.custoUn)} cada</b> · venda ${brl(pr)} · lucro <b class="${pr-g.custoUn>=0?"lucro":"taxa"}">${brl(pr-g.custoUn)}</b> por peça`+
+      (prodSel()?` <span class="muted">(no catálogo hoje: ${brl(custoProduto(prodSel()).unit)})</span>`:"")};
+  $("#rgProd").onchange=preencher;$("#fReg").addEventListener("input",calc);
+  $("#rgMat").addEventListener("input",e=>{const el=e.target,x=regMat[el.dataset.i];if(!x)return;if(el.dataset.c==="q")x.q=+el.value||0;calc()});
+  $("#rgMat").addEventListener("change",e=>{const el=e.target,x=regMat[el.dataset.i];if(!x||el.dataset.c!=="id")return;x.id=el.value;linhas();calc()});
+  $("#rgMat").addEventListener("click",e=>{const i=e.target.dataset?.rm;if(i==null)return;regMat.splice(+i,1);linhas();calc()});
+  $("#rgAddMat").onclick=()=>{regMat.push({id:"",q:0});linhas();calc()};
+  preencher();
+  $("#rgOk").onclick=()=>{let p=prodSel();const{g}=ler(),preco=$("#rgPreco").value===""?null:r2($("#rgPreco").value),data=$("#rgData").value||hoje();
+    if(!p&&!$("#rgNome").value.trim())return avisar("Escreva o nome do produto novo.");
+    if(regMat.some(x=>+x.q>0&&!medidaDe(x.id)))return avisar("Escolha o material de cada linha.");
+    if(!g.mat.length&&!g.ins.length)return avisar("Informe os materiais que a mesa gastou (pelo menos um).");
+    if(!p){p={id:novoId("p"),nome:nomeProprio($("#rgNome").value.trim()),categoria:$("#rgCat").value.trim(),impressoraId:D.impressoras[0]?.id||"",
+        ...g.receita,extras:0,falhaPct:null,margemPct:null,precoVenda:preco,obs:"",tamanho:"",espessura:"",detalhes:""};
+      if(D.produtos.some(x=>norm(x.nome)===norm(p.nome)))return avisar(`Já existe um produto chamado "${p.nome}". Escolha ele na lista.`);
+      D.produtos.push(p);D.produtos.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"))}
+    else if($("#rgAtu").checked){Object.assign(p,g.receita);if(preco!=null)p.precoVenda=preco}
+    else if(preco!=null)p.precoVenda=preco;
+    const real={...g};delete real.total;delete real.horas;delete real.receita;
+    D.orcamentos.push({id:novoId("o"),data,cliente:NOME_EST,clienteId:CLI_EST,validade:7,
+      itens:[{produtoId:p.id,nome:p.nome,qtd:g.qtd,preco:precoDe(p),custo:g.custoUn,mat:g.mat.map(m=>({f:m.f,g:r2(m.g/g.qtd)})),...(g.ins.length?{ins:g.ins.map(m=>({i:m.i,q:r4(m.q/g.qtd)}))}:{}),real}],
+      frete:0,valor:r2(precoDe(p)*g.qtd),custo:g.total,obs:"registrado na Produção",status:"estocado",estocadoEm:data,vendaId:null});
+    $("#modal").hidden=true;salvar();render();status(`${num(g.qtd,0)}× ${p.nome} guardados nas peças prontas a ${brl(g.custoUn)} cada`)}};
 window.verVendaOrc=id=>{const o=D.orcamentos.find(x=>x.id===id),v=D.vendas.find(x=>x.id===o.vendaId);if(!v)return;
   document.querySelector("#nav [data-s=vendas]").click();$("#vMes").value=v.data.slice(0,7);renderVendas();editarVenda(v.id)};
 // Texto do orçamento para mandar ao cliente (WhatsApp): abre o compartilhar do celular ou copia.
@@ -1795,7 +1875,13 @@ function tempoItem(x){return tempoInfo(x)?.h||0}
 // ordem da fila: "ordem" (▲▼), depois a data de aprovação
 const filaProd=()=>D.orcamentos.filter(o=>o.status==="producao").sort((a,b)=>(a.ordem??1e9)-(b.ordem??1e9)||(a.aprovadoEm||a.data).localeCompare(b.aprovadoEm||b.data)||a.id.localeCompare(b.id,"pt-BR",{numeric:true}));
 var voltaProd=false;
-function renderProducao(){
+function renderProdEstoque(){const L=estocados().slice().sort((a,b)=>(b.estocadoEm||b.data).localeCompare(a.estocadoEm||a.data)).slice(0,10);
+  $("#prEstoque").innerHTML=L.length?`<div style="overflow-x:auto"><table><tr><th>Data</th><th>Produção</th><th class="n">Custo por peça</th><th class="n">Total</th><th></th></tr>`+
+    L.map(o=>`<tr><td>${fmtData(o.estocadoEm||o.data)}</td><td style="white-space:normal">${(o.itens||[]).map(x=>`${num(qtdEstocada(x),0)}× ${esc(x.nome)}`).join(", ")}</td>
+      <td class="n">${(o.itens||[]).map(x=>brl(x.real?.custoUn??x.custo)).join(", ")}</td><td class="n">${brl(soma(o.itens||[],x=>qtdEstocada(x)*(x.real?.custoUn??+x.custo??0)))}</td>
+      <td style="white-space:nowrap"><button class="btn sm sec2" onclick="gastosEstoque('${o.id}')">✏️ Corrigir</button> <button class="btn sm del" onclick="apagar('orcamentos','${o.id}')">✕</button></td></tr>`).join("")+`</table></div>`
+    :'<p class="muted">Nenhuma produção para o estoque ainda.</p>'}
+function renderProducao(){renderProdEstoque();
   const L=filaProd(), E=estoques(), precisa={}, hj=hoje(), PE=pecasProntas();
   const cards=L.map((o,n)=>{
     const h=soma(o.itens||[],tempoItem), g={};
@@ -2676,6 +2762,11 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.38.0",data:"2026-11-25",titulo:"Registrar produção direto",itens:[
+    {novo:"Agora dá para registrar o que você imprimiu para o estoque direto na Produção, sem orçamento: escolha o produto ou crie um novo ali mesmo, informe as peças boas, os tempos e os materiais da mesa. O painel calcula o custo de cada peça, guarda as peças prontas e atualiza o produto.",
+     uso:"Fila › 📦 Produção para o estoque › ＋ Registrar produção. Ou em Produtos › 🏭 Produzi."},
+    {novo:"O cartão do produto mostra quantas peças prontas tem e o custo real de cada uma.",
+     uso:"Produtos › catálogo › 📦 N prontas · R$ X cada."}]},
   {v:"1.37.0",data:"2026-11-25",titulo:"Peças prontas com o custo real",itens:[
     {novo:"Ao guardar uma produção no estoque, o painel pergunta o que a impressão gastou: peças que saíram boas, preparar + timelapse, tempo do modelo, trabalho manual e os gramas da mesa. Ele calcula o custo de cada peça desse lote.",
      uso:"Produção › 📦 Guardar no estoque › confira com o fatiador › Guardar. Para corrigir: Orçamentos › 📦 Para estoque › ✏️ Corrigir gastos."},

@@ -241,7 +241,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-25, versão 1.37.0)
+## Estado atual (2026-11-25, versão 1.38.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -311,6 +311,8 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.36.2: orçamento do 📦 Estoque da empresa sem Validade e Entregar até (`ajustaOrcEst`).
 - 1.37.0: "📦 Guardar no estoque" abre "O que a impressão gastou" (`gastosEstoque`, `lerGasto`: peças boas, tempos, gramas/unidades da mesa → `custoProduto` sintético → `x.real`);
   peças prontas em lotes com custo (`lotesPecas`, FIFO); venda com `aplicaEstoque` (est + custo do lote, `custoCat`, partes misturadas); Estoque › 📦 Peças prontas (`renderPecasProntas`); ✏️ Corrigir gastos no orçamento guardado.
+- 1.38.0: ＋ Registrar produção (`registrarProducao`, na aba Produção e em Produtos › 🏭 Produzi): produto existente ou novo criado ali, peças boas + tempos + materiais da mesa → `calcGasto` (custo e `receita` de 1 peça);
+  grava um pedido do Estoque da empresa já `estocado` com `real` (mesmo caminho de lotes/materiais/✏️ Corrigir); "Usar estes números no cadastro" atualiza o produto com a `receita`. Lista das últimas produções na aba Produção (`renderProdEstoque`); cartão do produto com custo real das prontas.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -374,3 +376,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.36.1 | 2026-11-18 | Correção: no navegador do celular o login do Google dava “janela do Google fechada” antes de terminar; agora o painel espera o login voltar |
 | 1.36.2 | 2026-11-25 | Orçamento para o 📦 Estoque da empresa sem validade e sem data de entrega |
 | 1.37.0 | 2026-11-25 | Guardar no estoque pergunta o que a impressão gastou (peças boas, tempos, gramas) e calcula o custo real de cada peça; peças prontas em lotes com custo, a venda usa o custo do lote mais antigo; Estoque mostra peças prontas e valor |
+| 1.38.0 | 2026-11-25 | Registrar produção para o estoque direto na Produção (ou Produtos › 🏭 Produzi), criando o produto ali se for novo; custo real por peça, peças prontas e produto atualizado; cartão do produto mostra prontas e custo |
