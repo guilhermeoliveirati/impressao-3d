@@ -778,7 +778,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.40.2";
+const VERSAO="1.40.3";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1393,9 +1393,10 @@ function editorItens(box,aoMudar,catalogo=false){
     const atual=matDoItem(x)[0]?.f||p.filamentos[0].filamentoId;
     return`<label class="filsel">Filamento (marca e cor)<select data-k="fil">${filamentoDe(atual)?"":'<option value="" selected>⚠️ escolha o filamento (o deste produto foi apagado)</option>'}${D.filamentos.map(f=>`<option value="${f.id}"${f.id===atual?" selected":""}>${esc(nomeFil(f))} · ${brl(precoKgDe(f.id))}/kg${estTxt(f.id)}</option>`).join("")}</select>
       <small class="muted fifo">${esc(fifoItem(x))}</small></label>`};
-  // "usa 30 g por peça: ⚪ Branco 15 g a R$ 100,00/kg · 🟤 Marrom 12 g a R$ 120,00/kg" (todos os filamentos; rolo antigo primeiro). Texto puro.
+  // "usa 33 g de filamento por peça" (soma de todos os filamentos do item; 1.40.3). Texto puro.
   const fifoItem=x=>{const q=Math.max(1,+x.qtd||1),M=matDoItem(x).filter(m=>+m.g>0),tot=soma(M,m=>m.g*q);
-    const t=M.length?`usa ${fmtG(tot)}${q>1?` nas ${q} peças (${fmtG(tot/q)} cada)`:" por peça"}: `+M.map(m=>nomeFil(filamentoDe(m.f))+" "+fifoTxt(m.f,m.g*q).replace(/^usa /,"")).join(" · "):"";
+    const falta=M.some(m=>custoFil(m.f,m.g*q).partes.some(y=>y.falta));
+    const t=M.length?`usa ${fmtG(tot)} de filamento${q>1?` nas ${q} peças (${fmtG(tot/q)} cada)`:" por peça"}${falta?" · ⚠️ falta filamento no estoque":""}`:"";
     return t+avisoPreco(x)};
   // preço abaixo do sugerido para o custo com este filamento (1.16.0)
   const avisoPreco=x=>{const p=x.produtoId&&D.produtos.find(y=>y.id===x.produtoId);if(!p||!(+x.custo>0))return"";
@@ -2784,6 +2785,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.40.3",data:"2026-11-25",titulo:"Filamento do item mais simples",itens:[
+    {novo:"Embaixo do produto no orçamento e na venda aparece só o total de filamento (somando todas as cores), sem a lista de cada uma. Se faltar filamento no estoque, avisa.",
+     uso:"Orçamentos › escolha o produto: “usa 130 g de filamento nas 4 peças (33 g cada)”."}]},
   {v:"1.40.2",data:"2026-11-25",titulo:"Filamento do item no orçamento",itens:[
     {novo:"A linha “usa … g” embaixo do produto no orçamento e na venda mostrava só o primeiro filamento. Agora mostra todos, com o total de gramas por peça (e da quantidade). O custo já contava todos.",
      uso:"Orçamentos › escolha o produto: embaixo aparece “usa 30 g por peça: ⚪ Branco 15 g a R$ 100/kg · …”."}]},
