@@ -324,8 +324,8 @@ nav .ct{display:none}
       <input type="hidden" name="id">
       <label style="grid-column:1/-1">Cliente<span class="campoBtn"><select name="cliente" id="oCli" required></select><button type="button" class="btn sm sec2" id="oNovoCli" title="Cadastrar cliente novo">＋ Novo</button></span></label>
       <label>Data<input name="data" type="date" required></label>
-      <label>Validade (dias)<input name="validade" type="number" min="1" step="1" value="7"></label>
-      <label>Entregar até <span class="muted">(opcional)</span><input name="prazo" type="date"></label>
+      <label id="oValLbl">Validade (dias)<input name="validade" type="number" min="1" step="1" value="7"></label>
+      <label id="oPrazoLbl">Entregar até <span class="muted">(opcional)</span><input name="prazo" type="date"></label>
       <div style="grid-column:1/-1">
         <div id="oItens"></div>
         <div class="row" style="margin-top:8px;justify-content:space-between">
@@ -766,7 +766,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.36.1";
+const VERSAO="1.36.2";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1634,7 +1634,9 @@ const edO=editorItens($("#oItens"),()=>{valorManual=false;calcOrc()},true); // m
 $("#oAddItem").onclick=()=>edO.adicionar();
 $("#oNovoProd").onclick=()=>irCadastrar("produto",-1);
 $("#oNovoCli").onclick=()=>irCadastrar("cliente");
-fO.cliente.addEventListener("change",e=>{if(e.target.value==="__novo"){e.target.value="";irCadastrar("cliente")}});
+fO.cliente.addEventListener("change",e=>{if(e.target.value==="__novo"){e.target.value="";irCadastrar("cliente")}ajustaOrcEst()});
+// 1.36.2: pedido para o 📦 Estoque da empresa não tem validade nem data de entrega
+const ajustaOrcEst=()=>{const est=fO.cliente.value===CLI_EST;$("#oValLbl").hidden=est;$("#oPrazoLbl").hidden=est;if(est)fO.prazo.value=""};
 // Cliente do orçamento: escolhido numa lista do cadastro; "＋ Cadastrar cliente novo…" leva à aba Clientes.
 function opcoesCli(){const sel=fO.cliente,v=sel.value;
   sel.innerHTML='<option value="">— escolha o cliente —</option><option value="estoque">📦 Estoque da empresa (peças para deixar prontas)</option>'+D.clientes.slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"))
@@ -1657,7 +1659,7 @@ function calcOrc(){
   return{custo};
 }
 fO.addEventListener("input",e=>{if(e.target.name==="valor")valorManual=true;if(e.target.name==="valor"||e.target.name==="frete")calcOrc()});
-function limparOrc(){voltaProd=false;fO.reset();fO.id.value="";fO.data.value=hoje();valorManual=false;edO.set([]);$("#oTitulo").textContent="📝 Novo orçamento";calcOrc()}
+function limparOrc(){voltaProd=false;fO.reset();fO.id.value="";fO.data.value=hoje();valorManual=false;edO.set([]);$("#oTitulo").textContent="📝 Novo orçamento";ajustaOrcEst();calcOrc()}
 $("#oCancelar").onclick=limparOrc;
 fO.onsubmit=e=>{e.preventDefault();
   const cli=fO.cliente.value===CLI_EST?{id:CLI_EST,nome:NOME_EST}:D.clientes.find(c=>c.id===fO.cliente.value);
@@ -1701,7 +1703,7 @@ function renderOrcamentos(){
 $("#oFiltro").addEventListener("click",e=>{const f=e.target.dataset?.f;if(f){filtroOrc=f;renderOrcamentos()}});
 window.editarOrc=id=>{const o=D.orcamentos.find(x=>x.id===id);
   opcoesCli();fO.id.value=o.id;fO.cliente.value=ehEstoqueOrc(o)?CLI_EST:(D.clientes.find(c=>c.id===o.clienteId)||clientePorNome(o.cliente))?.id||"";fO.data.value=o.data;fO.validade.value=o.validade||7;fO.frete.value=o.frete||0;fO.prazo.value=o.prazo||"";fO.valor.value=o.valor;fO.obs.value=o.obs||"";
-  edO.set(o.itens);valorManual=true;$("#oTitulo").textContent="✏️ Editando orçamento de "+o.cliente;calcOrc();scrollTo({top:0,behavior:"smooth"})};
+  edO.set(o.itens);valorManual=true;ajustaOrcEst();$("#oTitulo").textContent="✏️ Editando orçamento de "+o.cliente;calcOrc();scrollTo({top:0,behavior:"smooth"})};
 window.recusarOrc=id=>{D.orcamentos.find(x=>x.id===id).status="recusado";salvar();renderOrcamentos()};
 window.reabrirOrc=id=>{D.orcamentos.find(x=>x.id===id).status="aberto";filtroOrc="aberto";salvar();renderOrcamentos()};
 window.aprovarOrc=id=>{const o=D.orcamentos.find(x=>x.id===id);
@@ -2600,6 +2602,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.36.2",data:"2026-11-25",titulo:"Pedido para o estoque mais simples",itens:[
+    {novo:"No orçamento para o 📦 Estoque da empresa saem a validade e a data de entrega.",
+     uso:"Orçamentos › Cliente › 📦 Estoque da empresa."}]},
   {v:"1.36.1",data:"2026-11-18",titulo:"Entrar pelo celular",itens:[
     {novo:"No navegador do celular, o painel dava “janela do Google fechada” enquanto você ainda escolhia a conta. Agora ele espera o login terminar.",
      uso:"☁️ Abrir pelo Google Drive › escolha a conta › Continuar › volte para a aba do painel."}]},

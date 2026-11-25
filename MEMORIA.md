@@ -240,7 +240,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-18, versão 1.36.1)
+## Estado atual (2026-11-25, versão 1.36.2)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -307,6 +307,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.36.0: venda vinda do orçamento (ou ligada a um, ao editar) com itens travados (`edV.travar`, `travarVenda`: sem filamento, sem ＋ Adicionar item);
   aparelho novo sem `driveArquivo`: `abrirDrive` procura `name='dados.json'` (files.list; com o escopo drive.file só aparecem arquivos que o app já abriu nesta conta) antes do seletor do Drive.
 - 1.36.1: `loginGoogle` não desiste no `popup_closed` (Chrome do Android avisa antes de o login voltar): espera o callback até 3 min; `abrirDrive` ignora o 2º toque se já abriu. Se ainda falhar, a saída é o login por redirecionamento (precisa cadastrar a URI de redirecionamento no cliente OAuth).
+- 1.36.2: orçamento do 📦 Estoque da empresa sem Validade e Entregar até (`ajustaOrcEst`).
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -368,3 +369,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.35.0 | 2026-11-17 | Produtos: materiais da mesa inteira (como o fatiador; o painel divide pelas peças); tabela da mesa e de 1 peça com gastos, custo, venda e lucro; catálogo mostra a mesa |
 | 1.36.0 | 2026-11-18 | Venda do orçamento com itens travados (sem filamento e sem adicionar item); em outro aparelho, depois do login, o painel acha sozinho o dados.json da conta |
 | 1.36.1 | 2026-11-18 | Correção: no navegador do celular o login do Google dava “janela do Google fechada” antes de terminar; agora o painel espera o login voltar |
+| 1.36.2 | 2026-11-25 | Orçamento para o 📦 Estoque da empresa sem validade e sem data de entrega |
