@@ -570,6 +570,8 @@ nav .ct{display:none}
     <p class="muted">Estoque = compras + estoque que já tinha − perdas − o que as vendas usaram. Cada venda desconta sozinha os gramas e as unidades dos produtos vendidos
       (pelos materiais cadastrados no produto ou na peça sob medida). Editar ou apagar uma venda devolve os gramas. Orçamento não mexe no estoque.</p>
   </div>
+  <div class="card"><h2>📦 Peças prontas</h2><div id="estPecas" style="overflow-x:auto"></div>
+    <p class="muted">Cada produção guardada no estoque entra com o custo real de 1 peça (o que a impressão gastou). As vendas tiram das mais antigas primeiro e levam esse custo.</p></div>
   <div class="card"><h2>Registrar compra ou baixa</h2>
     <form class="f" id="fEst" autocomplete="off"><input type="hidden" name="id">
       <label>Material<select name="filamentoId" id="estFil"></select></label>
@@ -766,7 +768,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.36.2";
+const VERSAO="1.37.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1313,7 +1315,7 @@ fP.onsubmit=async e=>{e.preventDefault();
   D.produtos.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
   // peças prontas (1.34.0): o número digitado vira um acerto (a diferença para o que o painel calcula)
   {const alvo=fP.pecasEst.value===""?null:Math.max(0,Math.round(+fP.pecasEst.value||0)),tem=pecasProntas()[p.id]||0;
-   if(alvo!=null&&alvo!==tem)D.pecasMovs.push({id:novoId("pe"),data:hoje(),produtoId:p.id,qtd:alvo-tem,obs:`contei e tenho ${alvo}`})}
+   if(alvo!=null&&alvo!==tem)D.pecasMovs.push({id:novoId("pe"),data:hoje(),produtoId:p.id,qtd:alvo-tem,custo:r2(custoProduto(p).unit),obs:`contei e tenho ${alvo}`})}
   salvar();limparProduto();renderProdutos();status(`produto "${p.nome}" salvo`);
   if(retorno?.tipo==="produto"){const l=retorno.linha;voltarOrc();edO.colocar(l,p);status(`"${p.nome}" cadastrado e colocado no orçamento: confira a quantidade`)}
 };
@@ -1453,7 +1455,8 @@ $("#vChips").addEventListener("change",e=>{if(e.target.id==="vParc"){fV.metodo.v
 let cobradoManual=false, orcEmVenda=null;
 function calcVenda(){
   chipsPagamento();
-  const sub=r2(soma(edV.itens,x=>x.qtd*x.preco)), custo=r2(soma(edV.itens,x=>x.qtd*x.custo)), frete=+fV.frete.value||0;
+  const IT=aplicaEstoque(edV.itens,fV.id.value||"__nova",fV.usaEst.checked); // 1.37.0: peças prontas levam o custo do lote
+  const sub=r2(soma(edV.itens,x=>x.qtd*x.preco)), custo=r2(soma(IT,x=>x.qtd*x.custo)), frete=+fV.frete.value||0;
   if(!cobradoManual)fV.cobrado.value=r2(sub+frete);
   const cob=+fV.cobrado.value||0, tx=D.taxas[fV.metodo.value]??0;
   const taxa=r2(cob*tx), lucro=r2(cob-custo-taxa);
@@ -1463,7 +1466,7 @@ function calcVenda(){
   {const P=pecasProntas(fV.id.value||"__nova"),T=edV.itens.filter(x=>x.produtoId&&(P[x.produtoId]||0)>0);
    $("#vEstLinha").hidden=!T.length;$("#vEstTxt").textContent=T.length?`(tem pronto: ${T.map(x=>`${num(P[x.produtoId],0)}× ${x.nome}`).join(", ")}; desmarque se imprimiu agora)`:""}
   const tem=edV.itens.some(x=>x.nome);$("#vDest").hidden=!tem;
-  if(tem){const hv={id:fV.id.value||"__nova",data:fV.data.value||hoje(),cliente:fV.cliente.value,itens:edV.itens,cobrado:cob,taxa,custo,lucro};
+  if(tem){const hv={id:fV.id.value||"__nova",data:fV.data.value||hoje(),cliente:fV.cliente.value,itens:IT,cobrado:cob,taxa,custo,lucro};
     $("#vDest").innerHTML=htmlDestinos(fluxo(hv).porVenda[hv.id],lucro)}
   return{taxa,lucro,custo};
 }
@@ -1487,10 +1490,11 @@ fV.onsubmit=async e=>{e.preventDefault();
   if(lucro<0&&!await confirmar(`Esta venda não paga todos os custos (material, energia, manutenção, taxa): faltam ${brl(-lucro)}.\nSalvar mesmo assim?`,"Salvar mesmo assim",true))return;
   const ant=D.vendas.find(x=>x.id===fV.id.value);
   const v={id:fV.id.value||novoId("v"),data:fV.data.value,cliente:nomeProprio(fV.cliente.value),clienteId:garantirCliente(fV.cliente.value).id,
-    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(insGravar(x).length?{ins:insGravar(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{}),...(x.partes?{partes:x.partes}:{})})),
+    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(insGravar(x).length?{ins:insGravar(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{}),...(x.partes?{partes:x.partes}:{}),...(x.custoCat!=null?{custoCat:x.custoCat}:{})})),
     frete:r2(fV.frete.value),cobrado:r2(fV.cobrado.value),metodo:fV.metodo.value,custo,taxa,lucro,recebido:fV.recebido.checked,repassado:!!ant?.repassado,obs:ant?.obs||""};
   // peças prontas (1.34.0): as unidades que existem no estoque saem dele (item.est); o material só é descontado das que faltaram
-  if(fV.usaEst.checked){const P=pecasProntas(v.id);v.itens.forEach(x=>{const t=x.produtoId?Math.min(x.qtd,Math.max(0,Math.floor(P[x.produtoId]||0))):0;if(t>0){x.est=t;P[x.produtoId]-=t}})}
+  // 1.37.0: com o custo do lote de cada peça (o mais antigo primeiro)
+  v.itens=aplicaEstoque(v.itens,v.id,fV.usaEst.checked);v.custo=r2(soma(v.itens,x=>x.qtd*x.custo));v.lucro=r2(v.cobrado-v.custo-v.taxa);
   const i=D.vendas.findIndex(x=>x.id===v.id); i>=0?D.vendas[i]=v:D.vendas.push(v);
   D.vendas.sort((a,b)=>a.data.localeCompare(b.data));
   $("#vMes").value=v.data.slice(0,7);
@@ -1693,7 +1697,7 @@ function renderOrcamentos(){
     <div class="l3">${esc(descItens(o))}${o.frete?` · frete ${brl(o.frete)}`:""}</div>
     <div class="nums"><div><small>Valor</small><b>${brl(o.valor)}</b></div><div><small>Custo</small><b>${brl(o.custo)}</b></div><div><small>Lucro</small><b class="${l>=0?"lucro":"taxa"}">${brl(l)}</b></div></div>
     ${o.obs?`<div class="l3">${esc(o.obs)}</div>`:""}
-    <div class="acts">${o.status==="estocado"?`<span class="muted">📦 guardado em ${fmtData(o.estocadoEm||o.data)}</span>`:o.status==="aprovado"?(temVenda?`<button class="btn sm sec2" onclick="verVendaOrc('${o.id}')">Ver venda</button>`:""):o.status==="producao"?`<button class="btn sm sec2" onclick="abrirMes('producao')">🏭 Ver na produção</button>`:`<button class="btn sm" onclick="aprovarOrc('${o.id}')">✅ Aprovar</button>`}
+    <div class="acts">${o.status==="estocado"?`<span class="muted">📦 guardado em ${fmtData(o.estocadoEm||o.data)}${(o.itens||[]).some(x=>x.real)?` · ${(o.itens||[]).filter(x=>x.real).map(x=>`${num(x.real.qtd,0)} a ${brl(x.real.custoUn)}`).join(", ")}`:""}</span> <button class="btn sm sec2" onclick="gastosEstoque('${o.id}')">✏️ Corrigir gastos</button>`:o.status==="aprovado"?(temVenda?`<button class="btn sm sec2" onclick="verVendaOrc('${o.id}')">Ver venda</button>`:""):o.status==="producao"?`<button class="btn sm sec2" onclick="abrirMes('producao')">🏭 Ver na produção</button>`:`<button class="btn sm" onclick="aprovarOrc('${o.id}')">✅ Aprovar</button>`}
       ${o.status==="aberto"?`<button class="btn sm sec2" onclick="recusarOrc('${o.id}')">Recusado</button>`:""}${o.status==="recusado"?`<button class="btn sm sec2" onclick="reabrirOrc('${o.id}')">Reabrir</button>`:""}
       <button class="btn sm sec2" onclick="enviarOrc('${o.id}')">📤 Enviar</button>
       <button class="btn sm sec2" onclick="editarOrc('${o.id}')">Editar</button>
@@ -1712,8 +1716,7 @@ window.aprovarOrc=id=>{const o=D.orcamentos.find(x=>x.id===id);
 // Produção concluída: abre Vendas preenchida (a venda nunca é salva sozinha)
 window.concluirProd=async id=>{const o=D.orcamentos.find(x=>x.id===id);
   // pedido do 📦 Estoque da empresa (1.34.0): não vira venda; as peças entram nas peças prontas e o material sai do estoque hoje
-  if(ehEstoqueOrc(o)){if(!await confirmar(`Guardar no estoque de peças prontas: ${descItens(o)}?\nO material usado sai do estoque de materiais hoje.`,"📦 Guardar"))return;
-    o.status="estocado";o.estocadoEm=hoje();delete o.etapa;salvar();render();status(`${descItens(o)} guardado nas peças prontas`);return}
+  if(ehEstoqueOrc(o)){gastosEstoque(o.id);return} // 1.37.0: pergunta o que a impressão gastou e guarda com o custo real
   if(o.etapa!=="pronto"){o.etapa="pronto";salvar()}
   document.querySelector("#nav [data-s=vendas]").click();
   limparVenda();orcEmVenda=o.id;
@@ -1724,6 +1727,46 @@ window.concluirProd=async id=>{const o=D.orcamentos.find(x=>x.id===id);
     (+o.sinal?` <br>💰 O cliente já pagou <b>${brl(o.sinal)}</b> de sinal; falta receber <b>${brl(r2(o.valor-o.sinal))}</b>. Se ele ainda não pagou o resto, desmarque “Já recebi tudo”.`:"");
   fV.usaEst.checked=false; // pedido impresso para o cliente: não tira das peças prontas (marque se usou as prontas)
   calcVenda();scrollTo({top:0,behavior:"smooth"})};
+/* "O que a impressão gastou" (1.37.0): ao guardar um pedido no estoque, informa peças boas, tempos e materiais da mesa (do fatiador).
+   O custo sai pelas mesmas contas do produto (custoProduto) com esses números; vira o custo das peças desse lote. */
+const lerGasto=(div,p)=>{const v=k=>div.querySelector(`[data-k="${k}"]`).value;
+  const q=Math.max(1,Math.round(+v("qtd")||1)),prep=lerMin(v("prep"))||0,mod=lerMin(v("mod"))||0,mao=lerMin(v("mao"))||0;
+  const mat=[...div.querySelectorAll('[data-k="g"]')].map(e=>({f:e.dataset.f,g:r2(+e.value||0)})).filter(m=>m.g>0);
+  const ins=[...div.querySelectorAll('[data-k="u"]')].map(e=>({i:e.dataset.u,q:+e.value||0})).filter(m=>m.q>0);
+  const c=custoProduto({...p,porPeca:true,unidades:q,horas:0,minutos:mod/q,preparoMin:prep,maoMin:mao,
+    filamentos:mat.map(m=>({filamentoId:m.f,g:m.g/q})),insumos:ins.map(m=>({insumoId:m.i,qtd:m.q/q}))});
+  const pt={fil:c.fil/q,energia:c.energia/q,maquina:c.maquina/q,falha:c.falha/q,mao:c.mao/q,extras:c.extras};
+  for(const k in pt){pt[k]=Math.round(pt[k]*1e4)/1e4;if(!pt[k])delete pt[k]}
+  return{qtd:q,prepMin:r4(prep),modeloMin:r4(mod),maoMin:r4(mao),mat,ins,custoUn:r2(c.unit),total:r2(c.unit*q),horas:c.horas,partes:pt}};
+window.gastosEstoque=id=>{const o=D.orcamentos.find(x=>x.id===id);if(!o)return;
+  const lb='style="display:flex;flex-direction:column;gap:4px"';
+  const bloco=(x,i)=>{const p=D.produtos.find(y=>y.id===x.produtoId);if(!p)return`<p class="muted">${esc(x.nome)}: o produto foi apagado; entra com o custo gravado.</p>`;
+    const r=x.real,q=r?r.qtd:Math.max(1,+x.qtd||1),un=Math.max(1,Math.round(+p.unidades||1)),imp=impressoraDe(p.impressoraId)||D.impressoras[0]||{};
+    const prep=r?r.prepMin:+(p.preparoMin??imp.preparoMin??0), mod=r?r.modeloMin:((+p.horas||0)*60+(+p.minutos||0))*q, mao=r?r.maoMin:(+p.maoMin||0)*Math.ceil(q/un);
+    const mats=r?r.mat:(p.filamentos||[]).map(f=>({f:f.filamentoId,g:r2(f.g*q)})), ins=r?(r.ins||[]):(p.insumos||[]).map(y=>({i:y.insumoId,q:r2(y.qtd*q)}));
+    return`<div class="gEst" data-i="${i}" style="border:1px solid #e5e7eb;border-radius:12px;padding:10px;margin-bottom:10px">
+      <b>${esc(x.nome)}</b> <span class="muted">(pedido: ${num(x.qtd,0)} peças)</span>
+      <form class="f" onsubmit="return false" style="margin-top:8px">
+        <label ${lb}>Peças que saíram boas<input data-k="qtd" type="number" min="1" step="1" value="${q}"></label>
+        <label ${lb}>Preparar + timelapse<input data-k="prep" value="${fmtHMS(prep)}" placeholder="ex.: 6m17s + 38s"></label>
+        <label ${lb}>Tempo do modelo (mesa inteira)<input data-k="mod" value="${fmtHMS(mod)}" placeholder="ex.: 21h11m"></label>
+        <label ${lb}>Trabalho manual<input data-k="mao" value="${mao?fmtHMS(mao):""}" placeholder="ex.: 10m"></label>
+        ${mats.map(m=>`<label ${lb}>${esc(nomeFil(filamentoDe(m.f)))} (g, mesa)<input data-k="g" data-f="${m.f}" type="number" min="0" step="0.1" value="${m.g}"></label>`).join("")}
+        ${ins.map(m=>`<label ${lb}>🔩 ${esc(insumoDe(m.i)?.nome||"material")} (un)<input data-k="u" data-u="${m.i}" type="number" min="0" step="1" value="${m.q}"></label>`).join("")}
+      </form><div class="calc gRes" style="margin-top:8px"></div></div>`};
+  abrirModal(`<h2>📦 O que a impressão gastou</h2>
+    <p class="muted">Confira com o fatiador o que foi impresso de verdade (os números já vêm do produto). O painel calcula o custo de cada peça
+      e guarda as peças no estoque com esse valor. Os materiais saem do estoque de materiais.</p>
+    <div id="gEstItens">${(o.itens||[]).map(bloco).join("")}</div>
+    <div class="row"><button class="btn" id="gEstOk">📦 ${o.status==="estocado"?"Salvar correção":"Guardar no estoque"}</button></div>`);
+  const calc=()=>document.querySelectorAll("#gEstItens .gEst").forEach(div=>{const x=o.itens[div.dataset.i],p=D.produtos.find(y=>y.id===x.produtoId),g=lerGasto(div,p),cat=custoProduto(p).unit;
+    div.querySelector(".gRes").innerHTML=`⏱️ ${fmtTempo(g.horas)} de impressão · custo desta produção <b>${brl(g.total)}</b> · <b>${brl(g.custoUn)} por peça</b>
+      <span class="muted">(no catálogo: ${brl(cat)})</span>`});
+  $("#gEstItens").addEventListener("input",calc);calc();
+  $("#gEstOk").onclick=()=>{document.querySelectorAll("#gEstItens .gEst").forEach(div=>{const x=o.itens[div.dataset.i],p=D.produtos.find(y=>y.id===x.produtoId);
+      const g=lerGasto(div,p);delete g.total;delete g.horas;x.real=g});
+    const novo=o.status!=="estocado";o.status="estocado";o.estocadoEm??=hoje();delete o.etapa;$("#modal").hidden=true;salvar();render();
+    status(novo?`${descItens(o)} guardado nas peças prontas com o custo real`:"gastos corrigidos")}};
 window.verVendaOrc=id=>{const o=D.orcamentos.find(x=>x.id===id),v=D.vendas.find(x=>x.id===o.vendaId);if(!v)return;
   document.querySelector("#nav [data-s=vendas]").click();$("#vMes").value=v.data.slice(0,7);renderVendas();editarVenda(v.id)};
 // Texto do orçamento para mandar ao cliente (WhatsApp): abre o compartilhar do celular ou copia.
@@ -2363,11 +2406,37 @@ const ehEstoqueOrc=o=>o?.clienteId===CLI_EST;
 const estocados=()=>D.orcamentos.filter(o=>o.status==="estocado");
 const qtdMat=x=>Math.max(0,(+x.qtd||0)-(+x.est||0));
 // tudo que gastou material: vendas (só as unidades que não vieram prontas) e pedidos guardados no estoque
+// 1.37.0: pedido guardado com "o que a impressão gastou" (x.real) desconta os gramas e unidades reais da mesa
+const qtdEstocada=x=>x.real?+x.real.qtd||0:+x.qtd||0;
 const usosMat=()=>[...D.vendas.flatMap(v=>(v.itens||[]).map(x=>({data:v.data,x,q:qtdMat(x)}))),
-  ...estocados().flatMap(o=>(o.itens||[]).map(x=>({data:o.estocadoEm||o.data,x,q:+x.qtd||0})))];
+  ...estocados().flatMap(o=>(o.itens||[]).map(x=>x.real?{data:o.estocadoEm||o.data,x:{mat:x.real.mat||[],ins:x.real.ins||[]},q:1}:{data:o.estocadoEm||o.data,x,q:+x.qtd||0}))];
+/* Lotes de peças prontas (1.37.0): cada pedido guardado no estoque é um lote com o custo real de 1 peça (x.real.custoUn,
+   calculado pelo que a impressão gastou: peças boas, tempos e gramas da mesa). Acerto "contei e tenho" entra com o custo do catálogo do dia.
+   As vendas tiram do lote mais antigo primeiro (como o filamento) e levam o custo dele. */
+function lotesPecas(semVenda){const L={},sai=[],add=(pid,l)=>(L[pid]??=[]).push(l);
+  const cat=pid=>{const p=D.produtos.find(y=>y.id===pid);return p?r2(custoProduto(p).unit):0};
+  (D.pecasMovs||[]).forEach(m=>{if(+m.qtd>0)add(m.produtoId,{data:m.data,qtd:+m.qtd,resto:+m.qtd,custo:m.custo??cat(m.produtoId),orig:"acerto"});
+    else if(+m.qtd<0)sai.push({data:m.data,pid:m.produtoId,n:-m.qtd})});
+  estocados().forEach(o=>(o.itens||[]).forEach(x=>{const q=qtdEstocada(x);if(x.produtoId&&q>0)add(x.produtoId,{data:o.estocadoEm||o.data,qtd:q,resto:q,custo:x.real?.custoUn??(+x.custo||0),partes:x.real?.partes,orig:"prod"})}));
+  D.vendas.forEach(v=>{if(v.id!==semVenda)(v.itens||[]).forEach(x=>{if(x.produtoId&&+x.est)sai.push({data:v.data,pid:x.produtoId,n:+x.est})})});
+  for(const k in L)L[k].sort((a,b)=>a.data.localeCompare(b.data));
+  sai.sort((a,b)=>a.data.localeCompare(b.data)).forEach(o=>{let n=o.n;for(const l of L[o.pid]||[]){if(n<=0)break;const t=Math.min(l.resto,n);l.resto-=t;n-=t}});
+  return L}
+/* Venda que tira das peças prontas (1.37.0): as unidades do estoque levam o custo do lote (o mais antigo primeiro);
+   as outras, o custo do catálogo (custoCat). O item guarda est, custoCat, o custo misturado e as partes (para o caminho do dinheiro). */
+function aplicaEstoque(itens,semVenda,usar){const L=usar?lotesPecas(semVenda):{};
+  return itens.map(x0=>{const x={...x0},base=+(x0.custoCat??x0.custo)||0;delete x.est;delete x.custoCat;
+    if(x0.custoCat!=null){x.custo=base;delete x.partes}
+    const A=x.produtoId&&L[x.produtoId];if(!A)return x;
+    const pc=partesItem({...x,custo:base,partes:undefined}),pt={};let n=Math.max(0,Math.floor(+x.qtd||0)),tot=0,est=0;
+    for(const l of A){if(n<=0)break;const t=Math.min(Math.floor(l.resto+1e-9),n);if(t<=0)continue;l.resto-=t;n-=t;est+=t;tot+=t*l.custo;
+      const lp=l.partes||Object.fromEntries(Object.entries(pc).map(([k,v])=>[k,base?v*l.custo/base:0]));for(const k in lp)pt[k]=(pt[k]||0)+lp[k]*t}
+    if(!est)return x;const resto=(+x.qtd||0)-est;for(const k in pc)pt[k]=(pt[k]||0)+pc[k]*resto;
+    x.est=est;x.custoCat=base;x.custo=r2((tot+resto*base)/x.qtd);
+    x.partes=Object.fromEntries(Object.entries(pt).map(([k,v])=>[k,Math.round(v/x.qtd*1e4)/1e4]));return x})}
 function pecasProntas(semVenda){const e={};
   (D.pecasMovs||[]).forEach(m=>e[m.produtoId]=(e[m.produtoId]||0)+(+m.qtd||0));
-  estocados().forEach(o=>(o.itens||[]).forEach(x=>{if(x.produtoId)e[x.produtoId]=(e[x.produtoId]||0)+(+x.qtd||0)}));
+  estocados().forEach(o=>(o.itens||[]).forEach(x=>{if(x.produtoId)e[x.produtoId]=(e[x.produtoId]||0)+qtdEstocada(x)}));
   D.vendas.forEach(v=>{if(v.id!==semVenda)(v.itens||[]).forEach(x=>{if(x.produtoId&&+x.est)e[x.produtoId]=(e[x.produtoId]||0)-x.est})});
   return e}
 // movimentações do estoque + compras de filamento parceladas (Despesas › Parcelamentos), que entram no mês da 1ª parcela
@@ -2494,8 +2563,13 @@ window.novoMat=m=>{$("#modal").hidden=true;
   salvar();render();setTimeout(()=>{const L=[...document.querySelectorAll('#tMatCfg input[data-k="nome"]')];const el=L.find(i=>i.value.startsWith("Novo"));if(el){el.focus();el.select()}},300);
   status("material novo: escreva o nome e o preço na tabela")};
 $("#cfgMinimo").onchange=e=>{D.config.estoqueMinimoG=Math.max(0,Math.round(+e.target.value||0));salvar();render()};
+function renderPecasProntas(){const L=lotesPecas();let total=0;
+  const rows=D.produtos.map(p=>{const A=(L[p.id]||[]).filter(l=>l.resto>1e-6),n=soma(A,l=>l.resto);if(!(n>0))return"";const val=soma(A,l=>l.resto*l.custo);total+=val;
+    return`<tr><td>${esc(p.nome)}</td><td class="n"><b>${num(n,0)}</b></td><td class="n">${brl(val/n)}${A.length>1?`<br><span class="muted">${A.map(l=>`${num(l.resto,0)} a ${brl(l.custo)}`).join(" + ")}</span>`:""}</td><td class="n"><b>${brl(val)}</b></td></tr>`}).filter(Boolean);
+  $("#estPecas").innerHTML=rows.length?`<table><tr><th>Produto</th><th class="n">Prontas</th><th class="n">Custo por peça</th><th class="n">Valor</th></tr>${rows.join("")}<tr><td><b>Total</b></td><td></td><td></td><td class="n"><b>${brl(total)}</b></td></tr></table>`
+    :'<p class="muted">Nenhuma peça pronta. Para imprimir para o estoque: Orçamentos › cliente 📦 Estoque da empresa › Aprovar › Produção › 📦 Guardar no estoque.</p>'}
 function renderEstoque(){
-  _E=estoques();
+  _E=estoques();renderPecasProntas();
   // tabela única de materiais (1.26.0): filamentos (por grama) e materiais por unidade
   {const EI=estInsumos(), inp=(col,i,k,t,v,w)=>`<input data-t="${col}" data-i="${i}" data-k="${k}" type="${t}" ${t==="number"?`step="any" min="0" style="text-align:right;width:${w||90}px"`:t==="color"?'style="width:44px;min-width:44px;padding:2px;min-height:40px" title="Cor"':`style="min-width:${w||130}px"`} value="${esc(v??"")}">`;
    const estUn=x=>{const a=EI[x.id];if(!a||(!a.registrado&&!a.usado))return'<span class="muted">sem registro</span>';
@@ -2602,6 +2676,11 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.37.0",data:"2026-11-25",titulo:"Peças prontas com o custo real",itens:[
+    {novo:"Ao guardar uma produção no estoque, o painel pergunta o que a impressão gastou: peças que saíram boas, preparar + timelapse, tempo do modelo, trabalho manual e os gramas da mesa. Ele calcula o custo de cada peça desse lote.",
+     uso:"Produção › 📦 Guardar no estoque › confira com o fatiador › Guardar. Para corrigir: Orçamentos › 📦 Para estoque › ✏️ Corrigir gastos."},
+    {novo:"Estoque › 📦 Peças prontas mostra quantas peças tem, o custo de cada lote e o valor total. A venda tira das peças mais antigas e usa o custo delas no lucro.",
+     uso:"Estoque › 📦 Peças prontas."}]},
   {v:"1.36.2",data:"2026-11-25",titulo:"Pedido para o estoque mais simples",itens:[
     {novo:"No orçamento para o 📦 Estoque da empresa saem a validade e a data de entrega.",
      uso:"Orçamentos › Cliente › 📦 Estoque da empresa."}]},

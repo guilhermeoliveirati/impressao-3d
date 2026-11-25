@@ -65,7 +65,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
   "insumos": [ { "id" /* u… */, "nome", "marca", "precoUn" /* custo de 1 un */, "precoVenda" /* venda de 1 un (1.30.0, só informativo) */ } ],   // materiais por unidade: chaveiro, ímã, embalagem (1.24.0)
   "insumoMovs": [ { "id", "data", "insumoId", "tipo": "compra" | "inicial" | "perda", "qtd", "valor", "pagoPor" /* "gui" | "empresa" (1.31.0) */ } ],
   "reembolsos": [ { "id", "data", "valor", "fonte", "obs" } ],   // pagamento ao Gui de outra fonte (abate as compras de filamento)
-  "pecasMovs": [ { "id" /* pe… */, "data", "produtoId", "qtd" /* + ou −: acerto “contei e tenho…” */, "obs" } ],   // peças prontas em estoque (1.34.0)
+  "pecasMovs": [ { "id" /* pe… */, "data", "produtoId", "qtd" /* + ou −: acerto “contei e tenho…” */, "custo" /* de 1 peça, catálogo do dia (1.37.0) */, "obs" } ],   // peças prontas em estoque (1.34.0)
   "retiradas": [ { "id", "data", "caixa": "guardar" | "reinvestir" | "socio:Nome", "valor", "obs" } ],   // saídas das caixinhas (1.16.0)
   "backups": [ { "id" /* arquivo no Drive */, "data" } ], "ultimoBackup": "AAAA-MM-DD",   // cópia semanal (1.16.0); config.backupPasta se precisou criar pasta  // arredondar: nao | 1 | 90 | 5
   "impressoras": [ { "id", "nome", "preparoMin" /* aquecer e calibrar, 1x por impressão */, "potenciaW", "valor", "vidaUtilH", "manutHora" } ],
@@ -78,7 +78,8 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
   "orcamentos": [ { "id", "data", "cliente", "validade" /* dias */, "itens": [ …iguais aos da venda… ], "frete", "valor", "custo", "obs",
                     "status": "aberto" | "producao" | "aprovado" /* vendido */ | "estocado" /* 📦 guardado nas peças prontas, estocadoEm (1.34.0) */ | "recusado", "vendaId": null, "clienteId",
                     "etapa": "fila" | "imprimindo" | "pronto" /* só em producao */, "aprovadoEm": "AAAA-MM-DD",
-                    "ordem" /* posição na fila */, "prazo": "AAAA-MM-DD" /* entregar até */, "sinal" /* R$ já recebido */ } ],   // item pode ter "detalhe" (peça sob medida)
+                    "ordem" /* posição na fila */, "prazo": "AAAA-MM-DD" /* entregar até */, "sinal" /* R$ já recebido */ } ],
+                    // item de pedido guardado no estoque (1.37.0): "real": { qtd /* peças boas */, prepMin, modeloMin /* mesa */, maoMin, mat: [{f,g /* total */}], ins: [{i,q}], custoUn, partes }   // item pode ter "detalhe" (peça sob medida)
   "produtos": [ { "id", "nome", "categoria", "impressoraId", "horas", "minutos", "unidades", "maoMin", "extras",
                   "falhaPct": null, "margemPct": null, "precoVenda": null,   // null = usa o padrão de Config / o preço sugerido
                   "porPeca": true,   // desde 1.7.0: horas/minutos e filamentos.g são de 1 peça (sem: da impressão inteira)
@@ -89,7 +90,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
                 "recebido": false /* cliente ainda deve; sem o campo = recebido */, "sinal", "repassado" /* parte do material já entregue ao comprador */ } ],
                 // cada item pode ter "mat": [ { "f": filamentoId, "g": gramas POR UNIDADE } ] — usado pelo estoque
                 // e "ins": [ { "i": insumoId, "q": unidades POR UNIDADE vendida } ] — estoque dos materiais por unidade (1.24.0)
-                // e "est": unidades que saíram das peças prontas (1.34.0; material só desconta qtd − est)
+                // e "est": unidades que saíram das peças prontas (1.34.0; material só desconta qtd − est); "custoCat": custo do catálogo de 1 un (1.37.0; "custo" = misturado com o dos lotes)
                 // e "partes": custo de 1 unidade por tipo { fil, energia, maquina, falha, mao, extras | outros } — usado nas despesas de produção
   "despesas": [ { "id", "data", "categoria", "descricao", "valor", "pago" /* false = a pagar; sem o campo = paga */, "repete" /* 🔁 todo mês */, "serie" /* id da primeira da série */, "doGui" /* 💰 o Gui pagou do bolso: vendas devolvem (1.14.0) */, "vendaId" /* só nos gastos de produção, lançados pela venda */ } ],
 }
@@ -240,7 +241,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-25, versão 1.36.2)
+## Estado atual (2026-11-25, versão 1.37.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -308,6 +309,8 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   aparelho novo sem `driveArquivo`: `abrirDrive` procura `name='dados.json'` (files.list; com o escopo drive.file só aparecem arquivos que o app já abriu nesta conta) antes do seletor do Drive.
 - 1.36.1: `loginGoogle` não desiste no `popup_closed` (Chrome do Android avisa antes de o login voltar): espera o callback até 3 min; `abrirDrive` ignora o 2º toque se já abriu. Se ainda falhar, a saída é o login por redirecionamento (precisa cadastrar a URI de redirecionamento no cliente OAuth).
 - 1.36.2: orçamento do 📦 Estoque da empresa sem Validade e Entregar até (`ajustaOrcEst`).
+- 1.37.0: "📦 Guardar no estoque" abre "O que a impressão gastou" (`gastosEstoque`, `lerGasto`: peças boas, tempos, gramas/unidades da mesa → `custoProduto` sintético → `x.real`);
+  peças prontas em lotes com custo (`lotesPecas`, FIFO); venda com `aplicaEstoque` (est + custo do lote, `custoCat`, partes misturadas); Estoque › 📦 Peças prontas (`renderPecasProntas`); ✏️ Corrigir gastos no orçamento guardado.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -370,3 +373,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.36.0 | 2026-11-18 | Venda do orçamento com itens travados (sem filamento e sem adicionar item); em outro aparelho, depois do login, o painel acha sozinho o dados.json da conta |
 | 1.36.1 | 2026-11-18 | Correção: no navegador do celular o login do Google dava “janela do Google fechada” antes de terminar; agora o painel espera o login voltar |
 | 1.36.2 | 2026-11-25 | Orçamento para o 📦 Estoque da empresa sem validade e sem data de entrega |
+| 1.37.0 | 2026-11-25 | Guardar no estoque pergunta o que a impressão gastou (peças boas, tempos, gramas) e calcula o custo real de cada peça; peças prontas em lotes com custo, a venda usa o custo do lote mais antigo; Estoque mostra peças prontas e valor |
