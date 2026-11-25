@@ -778,7 +778,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.40.1";
+const VERSAO="1.40.2";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1392,9 +1392,11 @@ function editorItens(box,aoMudar,catalogo=false){
   const filItem=x=>{const p=x.produtoId&&D.produtos.find(q=>q.id===x.produtoId);if(!p||!(p.filamentos||[]).length)return"";
     const atual=matDoItem(x)[0]?.f||p.filamentos[0].filamentoId;
     return`<label class="filsel">Filamento (marca e cor)<select data-k="fil">${filamentoDe(atual)?"":'<option value="" selected>⚠️ escolha o filamento (o deste produto foi apagado)</option>'}${D.filamentos.map(f=>`<option value="${f.id}"${f.id===atual?" selected":""}>${esc(nomeFil(f))} · ${brl(precoKgDe(f.id))}/kg${estTxt(f.id)}</option>`).join("")}</select>
-      <small class="muted fifo">${fifoItem(x)}</small></label>`};
-  // "usa 200 g a R$ 120,00/kg + 100 g a R$ 100,00/kg" (rolo antigo primeiro)
-  const fifoItem=x=>{const m=matDoItem(x)[0];return(m?fifoTxt(m.f,m.g*Math.max(1,+x.qtd||1)):"")+avisoPreco(x)};
+      <small class="muted fifo">${esc(fifoItem(x))}</small></label>`};
+  // "usa 30 g por peça: ⚪ Branco 15 g a R$ 100,00/kg · 🟤 Marrom 12 g a R$ 120,00/kg" (todos os filamentos; rolo antigo primeiro). Texto puro.
+  const fifoItem=x=>{const q=Math.max(1,+x.qtd||1),M=matDoItem(x).filter(m=>+m.g>0),tot=soma(M,m=>m.g*q);
+    const t=M.length?`usa ${fmtG(tot)}${q>1?` nas ${q} peças (${fmtG(tot/q)} cada)`:" por peça"}: `+M.map(m=>nomeFil(filamentoDe(m.f))+" "+fifoTxt(m.f,m.g*q).replace(/^usa /,"")).join(" · "):"";
+    return t+avisoPreco(x)};
   // preço abaixo do sugerido para o custo com este filamento (1.16.0)
   const avisoPreco=x=>{const p=x.produtoId&&D.produtos.find(y=>y.id===x.produtoId);if(!p||!(+x.custo>0))return"";
     const sug=r2(arredondar(x.custo*(1+margemDe(p)/100)));
@@ -1406,7 +1408,7 @@ function editorItens(box,aoMudar,catalogo=false){
     <label class="nm">Produto<select data-k="prod">${opcoesProd(x)}</select></label>
     <label>Qtd<input data-k="qtd" type="number" min="1" step="1" value="${x.qtd}"></label>
     <label title="Vem da aba Produtos; mude se quiser dar desconto">Preço un. (R$)<input data-k="preco" type="number" min="0" step="0.01" value="${x.preco}"></label>
-    <button type="button" class="btn sm del" data-rm="${i}" title="Tirar item" ${itens.length<2?"disabled style='opacity:.4'":""}>✕</button><small class="muted fifo" style="grid-column:1/-1">${fifoItem(x)}</small></div>`; // 1.34.0: sem escolher filamento: vem do produto
+    <button type="button" class="btn sm del" data-rm="${i}" title="Tirar item" ${itens.length<2?"disabled style='opacity:.4'":""}>✕</button><small class="muted fifo" style="grid-column:1/-1">${esc(fifoItem(x))}</small></div>`; // 1.34.0: sem escolher filamento: vem do produto
   let travado=false; // 1.36.0: venda que veio do orçamento: os itens só aparecem (sem filamento, sem adicionar nem tirar)
   const linhaTrav=x=>`<div class="item trav"><span><b>${num(x.qtd,0)}×</b> ${esc(x.nome)}</span><span class="n">${brl(x.preco)} un · <b>${brl(x.qtd*x.preco)}</b></span></div>`;
   const rowsItens=()=>{if(travado){box.innerHTML=itens.map(linhaTrav).join("");return}
@@ -2782,6 +2784,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.40.2",data:"2026-11-25",titulo:"Filamento do item no orçamento",itens:[
+    {novo:"A linha “usa … g” embaixo do produto no orçamento e na venda mostrava só o primeiro filamento. Agora mostra todos, com o total de gramas por peça (e da quantidade). O custo já contava todos.",
+     uso:"Orçamentos › escolha o produto: embaixo aparece “usa 30 g por peça: ⚪ Branco 15 g a R$ 100/kg · …”."}]},
   {v:"1.40.1",data:"2026-11-25",titulo:"Gramas com centésimos",itens:[
     {novo:"Os campos de gramas aceitam qualquer número com vírgula, como o fatiador mostra (ex.: 113,68 g). Antes só aceitavam uma casa depois da vírgula.",
      uso:"Produtos, Registrar produção, Estoque e Despesas: digite os gramas como estão no fatiador."}]},

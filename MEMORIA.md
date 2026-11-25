@@ -241,7 +241,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-25, versão 1.40.1)
+## Estado atual (2026-11-25, versão 1.40.2)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -317,6 +317,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Registrar produção com foto (`reduzirFoto` → `p.foto`); Produtos sem o formulário de cadastro (`#pLado` só aparece ao Editar/Duplicar ou vindo do orçamento), botão "＋ Produto novo (registrar produção)" no catálogo.
 - 1.40.0: `produto.minPronto` (Produtos › Editar e Registrar produção); `faltaPronto()` avisa em Geral (`#gAlerta`), na Fila (`#prFalta` com 🏭 Produzi) e no catálogo.
 - 1.40.1: campos de gramas com `step="any"` (o navegador recusava 113,68 com step 0.1/1).
+- 1.40.2: `fifoItem` (orçamento/venda) lista todos os filamentos do item (antes só `matDoItem(x)[0]`) com o total de gramas; texto puro (`esc` no HTML).
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -384,3 +385,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.39.0 | 2026-11-25 | Tempo total num campo só (no lugar de preparar + modelo); foto no Registrar produção; Produtos só com o catálogo (formulário só ao editar), produto novo pela produção |
 | 1.40.0 | 2026-11-25 | Aviso para produzir: mínimo de peças prontas por produto; avisa em Geral, na Fila (com 🏭 Produzi) e no catálogo |
 | 1.40.1 | 2026-11-25 | Correção: campos de gramas aceitam centésimos (113,68 g), como o fatiador mostra |
+| 1.40.2 | 2026-11-25 | Correção: a linha “usa … g” do item no orçamento/venda mostra todos os filamentos e o total por peça (antes só o primeiro) |
