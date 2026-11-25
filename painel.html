@@ -367,6 +367,7 @@ nav .ct{display:none}
       <button type="button" class="btn" onclick="registrarProducao()">＋ Registrar produção</button></div>
     <p class="muted">Imprimiu peças para deixar prontas? Toque em <b>＋ Registrar produção</b>, escolha o produto (ou crie um novo ali mesmo) e copie do fatiador o que a mesa gastou.
       O painel calcula o custo de cada peça, guarda as peças no estoque e atualiza o produto.</p>
+    <div class="infobox" id="prFalta" hidden style="margin-bottom:10px;background:#fffbeb;border-color:#fde68a"></div>
     <div id="prEstoque"></div>
   </div>
 </section>
@@ -444,6 +445,7 @@ nav .ct{display:none}
         <label title="Quantas peças saem de uma impressão (mesa cheia)">Peças por impressão<input name="unidades" type="number" step="1" min="1" value="1"></label>
         <label title="Preparar o arquivo, tirar da mesa, lixar, pintar, montar… (tempo total da impressão). Aceita 30s, 5m, 1h30m ou só minutos">✋ Trabalho manual<input name="maoMin" placeholder="ex.: 45s, 5m, 1h30m" autocomplete="off"></label>
         <label title="Peças deste produto já impressas e guardadas. Se contar um número diferente, digite e salve: o painel lança o acerto. As vendas tiram daqui.">📦 Peças prontas em estoque<input name="pecasEst" type="number" step="1" min="0" placeholder="0"></label>
+        <label title="Quando as peças prontas ficarem abaixo deste número, o painel avisa em Geral, na Fila e no catálogo para produzir mais. Vazio = sem aviso.">🔔 Avisar com menos de (peças prontas)<input name="minPronto" type="number" step="1" min="0" placeholder="sem aviso"></label>
         <div style="grid-column:1/-1">
           <h3 style="margin-top:4px">🧵 Materiais da mesa inteira <span class="muted" style="font-weight:400">(todas as peças da impressão, como o fatiador mostra)</span></h3>
           <div id="pFil"></div>
@@ -776,7 +778,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.39.0";
+const VERSAO="1.40.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1132,8 +1134,9 @@ function renderGeral(){
      <p style="margin:0">${meta<=0?`Nenhuma conta a pagar neste mês. Em Config você pode dizer quanto quer sobrar por mês.`
        :feito>=meta?`✅ Meta batida: lucro de ${brl(feito)} no mês.`
        :`Lucro das vendas até agora: <b>${brl(feito)}</b> (${pct(Math.max(0,feito)/meta)}). Falta <b>${brl(falta)}</b>${lv>0?` ≈ ${Math.ceil(falta/lv)} ${Math.ceil(falta/lv)>1?"vendas":"venda"} (lucro médio de ${brl(lv)} por venda)`:""}.`}</p>`}
-  const ac=acabando();$("#gAlerta").hidden=!ac.length;
-  $("#gAlerta").innerHTML=ac.length?`⚠️ <b>Material acabando:</b> ${ac.map(x=>`${esc(nomeFil(x.f))} (${fmtG(x.saldo)})`).join(", ")}. <a href="#" onclick="abrirEstoque();return false">Registrar compra</a>`:"";
+  const ac=acabando(),fp=faltaPronto();$("#gAlerta").hidden=!ac.length&&!fp.length;
+  $("#gAlerta").innerHTML=[ac.length?`⚠️ <b>Material acabando:</b> ${ac.map(x=>`${esc(nomeFil(x.f))} (${fmtG(x.saldo)})`).join(", ")}. <a href="#" onclick="abrirEstoque();return false">Registrar compra</a>`:"",
+    fp.length?`🔔 <b>Produzir para o estoque:</b> ${fp.map(x=>`${esc(x.p.nome)} (tem ${num(x.tem,0)}, mínimo ${num(x.min,0)})`).join(", ")}. <a href="#" onclick="abrirMes('producao');return false">Ver na Fila</a>`:""].filter(Boolean).join("<br>");
   $("#gKpis").innerHTML=
     k("Faturamento",t.fat,p.fat)+k("Lucro das vendas",t.lucro,p.lucro)+
     k("Despesas",t.desp,p.desp,brl0,true)+k("Lucro final",t.lucro-t.desp,p.desp?p.lucro-p.desp:0)+
@@ -1244,6 +1247,7 @@ function lerProduto(){
     // 1.35.0: na tela os materiais são da mesa inteira; o produto guarda os de 1 peça (÷ peças por impressão)
     filamentos:prodFil.filter(x=>filamentoDe(x.id)&&x.q>0).map(x=>({filamentoId:x.id,g:r4(x.q/unForm())})),
     insumos:prodFil.filter(x=>insumoDe(x.id)&&x.q>0).map(x=>({insumoId:x.id,qtd:r4(x.q/unForm())})),obs:D.produtos.find(x=>x.id===fP.id.value)?.obs||"",
+    minPronto:fP.minPronto.value===""?null:Math.max(0,Math.round(+fP.minPronto.value)), // 1.40.0: aviso de peças prontas
     tamanho:fP.tamanho.value.trim(),espessura:fP.espessura.value.trim(),detalhes:D.produtos.find(x=>x.id===fP.id.value)?.detalhes||"",...(prodFoto?{foto:prodFoto}:{})};
 }
 // Preço necessário em cada forma de pagamento para receber o mesmo valor do Pix.
@@ -1330,7 +1334,7 @@ fP.onsubmit=async e=>{e.preventDefault();
 };
 function carregarProduto(p,copia){
   limparProduto();
-  for(const k of ["id","nome","categoria","impressoraId","horas","minutos","unidades","extras","falhaPct","margemPct","precoVenda","obs","tamanho","espessura","detalhes"])
+  for(const k of ["id","nome","categoria","impressoraId","horas","minutos","unidades","extras","falhaPct","margemPct","precoVenda","obs","tamanho","espessura","detalhes","minPronto"])
     if(fP[k])fP[k].value=p[k]??"";
   if(!fP.impressoraId.value)fP.impressoraId.value=D.impressoras[0]?.id||"";
   // produto antigo (tempo e gramas da impressão inteira): converte para 1 peça, tirando o aquecer e calibrar
@@ -1361,7 +1365,7 @@ function renderProdutos(){
   const L=D.produtos.filter(p=>!q||norm(p.nome+" "+p.categoria).includes(q));
   $("#pLista").innerHTML=L.length?L.map(p=>{const c=custoProduto(p),pr=precoDe(p),l=pr-c.unit;return`<div class="pcard">
     ${p.foto?`<img class="foto" src="${p.foto}" alt="${esc(p.nome)}" onclick="verFoto('${p.id}')" loading="lazy">`:""}
-    <div class="l1"><b>${esc(p.nome)}</b>${p.categoria?`<span class="tag">${esc(p.categoria)}</span>`:""}${PE[p.id]>0?`<span class="tag ok" title="Peças prontas em estoque (custo real da produção)">📦 ${num(PE[p.id],0)} prontas · ${brl(custoPronto(p.id))} cada</span>`:""}${(p.filamentos||[]).some(f=>!filamentoDe(f.filamentoId))?'<span class="tag aberto" title="O filamento deste produto foi apagado: o custo do filamento está saindo R$ 0">⚠️ filamento apagado: toque em Editar e escolha de novo</span>':""}</div>
+    <div class="l1"><b>${esc(p.nome)}</b>${p.categoria?`<span class="tag">${esc(p.categoria)}</span>`:""}${PE[p.id]>0?`<span class="tag ok" title="Peças prontas em estoque (custo real da produção)">📦 ${num(PE[p.id],0)} prontas · ${brl(custoPronto(p.id))} cada</span>`:""}${+p.minPronto>0&&(PE[p.id]||0)<+p.minPronto?`<span class="tag aberto" title="Abaixo do mínimo de peças prontas">🔔 produzir: tem ${num(Math.max(0,PE[p.id]||0),0)} de ${num(p.minPronto,0)}</span>`:""}${(p.filamentos||[]).some(f=>!filamentoDe(f.filamentoId))?'<span class="tag aberto" title="O filamento deste produto foi apagado: o custo do filamento está saindo R$ 0">⚠️ filamento apagado: toque em Editar e escolha de novo</span>':""}</div>
     <div class="l3">${fmtTempo(c.horas)} · ${num(c.gramas)} g${(p.insumos||[]).filter(x=>insumoDe(x.insumoId)).map(x=>` · ${num(x.qtd,0)} ${esc(insumoDe(x.insumoId).nome)}`).join("")}${c.un>1?` · ${c.un} por impressão`:""}</div>
     <div class="nums"><div><small>Custo${c.un>1?" 1 peça":""}</small><b>${brl(c.unit)}</b></div><div><small>Preço${p.precoVenda==null?" sug.":""}</small><b>${brl(pr)}</b></div><div><small>Lucro</small><b class="${l>=0?"lucro":"taxa"}">${brl(l)}</b></div></div>
     ${c.un>1?`<div class="l3">🧊 Mesa com ${c.un}: custo <b>${brl(c.unit*c.un)}</b> · venda <b>${brl(pr*c.un)}</b> · lucro <b class="${l>=0?"lucro":"taxa"}">${brl(l*c.un)}</b> · ${num(c.gramas/c.un,1)} g por peça</div>`:""}
@@ -1799,6 +1803,7 @@ window.registrarProducao=pid=>{
       <label ${lb}>Tempo total (mesa inteira)<input data-k="tot" placeholder="ex.: 21h23m"></label>
       <label ${lb}>Trabalho manual<input data-k="mao" placeholder="ex.: 10m"></label>
       <label ${lb}>Preço de venda de 1 peça (R$)<input id="rgPreco" type="number" min="0" step="0.01" placeholder="vazio = sugerido"></label>
+      <label ${lb} title="Quando as peças prontas ficarem abaixo disso, o painel avisa para produzir mais">🔔 Avisar com menos de<input id="rgMin" type="number" min="0" step="1" placeholder="sem aviso"></label>
       <div style="grid-column:1/-1"><div class="fotoBox"><img id="rgFotoPrev" alt="foto do produto" hidden>
         <label class="btn sm sec2" style="cursor:pointer">📷 Foto do produto<input type="file" id="rgFotoArq" accept="image/*" hidden></label></div></div>
       <label id="rgAtuL" style="grid-column:1/-1;flex-direction:row;align-items:center;gap:8px;display:flex"><input type="checkbox" id="rgAtu" checked style="min-height:0;width:20px;height:20px"> Usar estes números no cadastro do produto (tempo, materiais e peças por mesa)</label>
@@ -1815,10 +1820,10 @@ window.registrarProducao=pid=>{
   let regFoto=null;const fotoPrev=()=>{const im=$("#rgFotoPrev"),src=regFoto||prodSel()?.foto;im.hidden=!src;if(src)im.src=src};
   $("#rgFotoArq").onchange=async e=>{const a=e.target.files[0];e.target.value="";if(!a)return;try{regFoto=await reduzirFoto(a);fotoPrev()}catch(er){avisar(er.message)}};
   const preencher=()=>{const p=prodSel(),novo=!p;regFoto=null;fotoPrev();$("#rgNomeL").hidden=$("#rgCatL").hidden=!novo;$("#rgAtuL").style.display=novo?"none":"flex";
-    if(novo){regMat=[{id:D.filamentos[0]?.id||"",q:0}];f("qtd").value=1;f("tot").value=f("mao").value="";$("#rgPreco").value=""}
+    if(novo){regMat=[{id:D.filamentos[0]?.id||"",q:0}];f("qtd").value=1;f("tot").value=f("mao").value="";$("#rgPreco").value="";$("#rgMin").value=""}
     else{const un=Math.max(1,Math.round(+p.unidades||1)),imp=impressoraDe(p.impressoraId)||D.impressoras[0]||{};
       f("qtd").value=un;f("tot").value=fmtHMS(+(p.preparoMin??imp.preparoMin??0)+((+p.horas||0)*60+(+p.minutos||0))*un);f("mao").value=+p.maoMin?fmtHMS(+p.maoMin):"";
-      $("#rgPreco").value=p.precoVenda??"";
+      $("#rgPreco").value=p.precoVenda??"";$("#rgMin").value=p.minPronto??"";
       regMat=[...(p.filamentos||[]).map(x=>({id:x.filamentoId,q:r2(x.g*un)})),...(p.insumos||[]).map(x=>({id:x.insumoId,q:r2(x.qtd*un)}))];
       if(!regMat.length)regMat=[{id:D.filamentos[0]?.id||"",q:0}]}
     linhas();calc()};
@@ -1846,8 +1851,9 @@ window.registrarProducao=pid=>{
       if(regFoto)p.foto=regFoto;
       D.produtos.push(p);D.produtos.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"))}
     else if($("#rgAtu").checked){Object.assign(p,g.receita);if(preco!=null)p.precoVenda=preco}
-    if(regFoto)p.foto=regFoto;
     else if(preco!=null)p.precoVenda=preco;
+    if(regFoto)p.foto=regFoto;
+    p.minPronto=$("#rgMin").value===""?null:Math.max(0,Math.round(+$("#rgMin").value));
     const real={...g};delete real.total;delete real.horas;delete real.receita;
     D.orcamentos.push({id:novoId("o"),data,cliente:NOME_EST,clienteId:CLI_EST,validade:7,
       itens:[{produtoId:p.id,nome:p.nome,qtd:g.qtd,preco:precoDe(p),custo:g.custoUn,mat:g.mat.map(m=>({f:m.f,g:r2(m.g/g.qtd)})),...(g.ins.length?{ins:g.ins.map(m=>({i:m.i,q:r4(m.q/g.qtd)}))}:{}),real}],
@@ -1881,7 +1887,12 @@ function tempoItem(x){return tempoInfo(x)?.h||0}
 // ordem da fila: "ordem" (▲▼), depois a data de aprovação
 const filaProd=()=>D.orcamentos.filter(o=>o.status==="producao").sort((a,b)=>(a.ordem??1e9)-(b.ordem??1e9)||(a.aprovadoEm||a.data).localeCompare(b.aprovadoEm||b.data)||a.id.localeCompare(b.id,"pt-BR",{numeric:true}));
 var voltaProd=false;
-function renderProdEstoque(){const L=estocados().slice().sort((a,b)=>(b.estocadoEm||b.data).localeCompare(a.estocadoEm||a.data)).slice(0,10);
+function renderProdEstoque(){
+  {const fp=faltaPronto();$("#prFalta").hidden=!fp.length;
+   $("#prFalta").innerHTML=fp.length?`<b>🔔 Precisa produzir para o estoque</b>`+fp.map(x=>`<div class="row" style="justify-content:space-between;align-items:center;margin-top:6px">
+     <span>${esc(x.p.nome)} <span class="muted">· tem ${num(x.tem,0)} pronta${x.tem===1?"":"s"}, mínimo ${num(x.min,0)} · faltam ${num(x.falta,0)}</span></span>
+     <button class="btn sm" onclick="registrarProducao('${x.p.id}')">🏭 Produzi</button></div>`).join(""):""}
+  const L=estocados().slice().sort((a,b)=>(b.estocadoEm||b.data).localeCompare(a.estocadoEm||a.data)).slice(0,10);
   $("#prEstoque").innerHTML=L.length?`<div style="overflow-x:auto"><table><tr><th>Data</th><th>Produção</th><th class="n">Custo por peça</th><th class="n">Total</th><th></th></tr>`+
     L.map(o=>`<tr><td>${fmtData(o.estocadoEm||o.data)}</td><td style="white-space:normal">${(o.itens||[]).map(x=>`${num(qtdEstocada(x),0)}× ${esc(x.nome)}`).join(", ")}</td>
       <td class="n">${(o.itens||[]).map(x=>brl(x.real?.custoUn??x.custo)).join(", ")}</td><td class="n">${brl(soma(o.itens||[],x=>qtdEstocada(x)*(x.real?.custoUn??+x.custo??0)))}</td>
@@ -2505,6 +2516,9 @@ const usosMat=()=>[...D.vendas.flatMap(v=>(v.itens||[]).map(x=>({data:v.data,x,q
 /* Lotes de peças prontas (1.37.0): cada pedido guardado no estoque é um lote com o custo real de 1 peça (x.real.custoUn,
    calculado pelo que a impressão gastou: peças boas, tempos e gramas da mesa). Acerto "contei e tenho" entra com o custo do catálogo do dia.
    As vendas tiram do lote mais antigo primeiro (como o filamento) e levam o custo dele. */
+/* Aviso de produzir (1.40.0): produto com "minPronto" e menos peças prontas que isso. */
+const faltaPronto=()=>{const PE=pecasProntas();return D.produtos.filter(p=>+p.minPronto>0&&(PE[p.id]||0)<+p.minPronto)
+  .map(p=>({p,tem:Math.max(0,PE[p.id]||0),min:+p.minPronto,falta:+p.minPronto-Math.max(0,PE[p.id]||0)}))};
 function lotesPecas(semVenda){const L={},sai=[],add=(pid,l)=>(L[pid]??=[]).push(l);
   const cat=pid=>{const p=D.produtos.find(y=>y.id===pid);return p?r2(custoProduto(p).unit):0};
   (D.pecasMovs||[]).forEach(m=>{if(+m.qtd>0)add(m.produtoId,{data:m.data,qtd:+m.qtd,resto:+m.qtd,custo:m.custo??cat(m.produtoId),orig:"acerto"});
@@ -2768,6 +2782,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.40.0",data:"2026-11-25",titulo:"Aviso para produzir",itens:[
+    {novo:"Cada produto pode ter um mínimo de peças prontas. Quando o estoque fica abaixo dele, o painel avisa em Geral, na Fila (com o botão 🏭 Produzi) e no catálogo.",
+     uso:"Produtos › Editar › 🔔 Avisar com menos de (peças prontas). Também em ＋ Registrar produção."}]},
   {v:"1.39.0",data:"2026-11-25",titulo:"Tempo total e produto pela produção",itens:[
     {novo:"No lugar de “Preparar + timelapse” e “Tempo do modelo” agora há um campo só: Tempo total, o que o fatiador mostra para a mesa inteira.",
      uso:"Fila › ＋ Registrar produção › Tempo total (ex.: 21h23m)."},

@@ -84,7 +84,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
                   "falhaPct": null, "margemPct": null, "precoVenda": null,   // null = usa o padrão de Config / o preço sugerido
                   "porPeca": true,   // desde 1.7.0: horas/minutos e filamentos.g são de 1 peça (sem: da impressão inteira)
                   "filamentos": [ { "filamentoId", "g" /* de 1 peça; a tela mostra da mesa (1.35.0) */ } ], "insumos": [ { "insumoId", "qtd" /* de 1 peça */ } ], "obs", "preparoMin" /* preparar + timelapse do fatiador, min; null = da impressora (1.22.0) */,
-                  "foto" /* data URL JPEG até 600 px (1.18.0) */, "tamanho", "espessura", "detalhes" /* para o cliente */ } ],
+                  "foto" /* data URL JPEG até 600 px (1.18.0) */, "minPronto" /* avisar com menos peças prontas (1.40.0) */, "tamanho", "espessura", "detalhes" /* para o cliente */ } ],
   "vendas": [ { "id", "data", "cliente", "itens": [ { "produtoId"|null, "nome", "qtd", "preco", "custo" } ],
                 "frete", "cobrado", "metodo", "custo", "taxa", "lucro", "obs", "clienteId",
                 "recebido": false /* cliente ainda deve; sem o campo = recebido */, "sinal", "repassado" /* parte do material já entregue ao comprador */ } ],
@@ -241,7 +241,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-25, versão 1.39.0)
+## Estado atual (2026-11-25, versão 1.40.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -315,6 +315,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   grava um pedido do Estoque da empresa já `estocado` com `real` (mesmo caminho de lotes/materiais/✏️ Corrigir); "Usar estes números no cadastro" atualiza o produto com a `receita`. Lista das últimas produções na aba Produção (`renderProdEstoque`); cartão do produto com custo real das prontas.
 - 1.39.0: um campo só "Tempo total" (produto, Registrar produção e Corrigir gastos): grava `preparoMin:0` e `minutos` = total ÷ peças (ao editar um produto antigo, o campo mostra preparo + modelo, mesmo custo);
   Registrar produção com foto (`reduzirFoto` → `p.foto`); Produtos sem o formulário de cadastro (`#pLado` só aparece ao Editar/Duplicar ou vindo do orçamento), botão "＋ Produto novo (registrar produção)" no catálogo.
+- 1.40.0: `produto.minPronto` (Produtos › Editar e Registrar produção); `faltaPronto()` avisa em Geral (`#gAlerta`), na Fila (`#prFalta` com 🏭 Produzi) e no catálogo.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -380,3 +381,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.37.0 | 2026-11-25 | Guardar no estoque pergunta o que a impressão gastou (peças boas, tempos, gramas) e calcula o custo real de cada peça; peças prontas em lotes com custo, a venda usa o custo do lote mais antigo; Estoque mostra peças prontas e valor |
 | 1.38.0 | 2026-11-25 | Registrar produção para o estoque direto na Produção (ou Produtos › 🏭 Produzi), criando o produto ali se for novo; custo real por peça, peças prontas e produto atualizado; cartão do produto mostra prontas e custo |
 | 1.39.0 | 2026-11-25 | Tempo total num campo só (no lugar de preparar + modelo); foto no Registrar produção; Produtos só com o catálogo (formulário só ao editar), produto novo pela produção |
+| 1.40.0 | 2026-11-25 | Aviso para produzir: mínimo de peças prontas por produto; avisa em Geral, na Fila (com 🏭 Produzi) e no catálogo |
