@@ -49,13 +49,18 @@ nav button .ico{margin-right:4px}
   .item{grid-template-columns:1fr 1fr 1fr auto!important}
   .item .nm{grid-column:1/-1}
   .item.cat{grid-template-columns:1fr 1fr auto!important}
+  .itensCab{display:none!important}
+  .item.cat .lb{display:inline!important}
   #fProd label[style*="span 2"]{grid-column:1/-1!important}
   #vMes{width:140px}
   #vExcel{padding:11px 12px}
 }
 form.f>*,.item>*,.lado>*{min-width:0}
 .item input,.item select{width:100%}
-.item.cat{grid-template-columns:2.2fr 80px 1fr auto}
+.item.cat{grid-template-columns:2.2fr 80px 1fr 44px;padding:6px 10px;margin-bottom:4px;row-gap:2px}
+.item.cat .lb{display:none}
+.item.cat .fifo:empty{display:none}
+.itensCab{display:grid;grid-template-columns:2.2fr 80px 1fr 44px;gap:8px;padding:0 10px 4px;font-size:.8rem;font-weight:600;color:#475569}
 .voltaOrc{margin-bottom:12px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .voltaOrc[hidden]{display:none}
 .campoBtn{display:flex;gap:6px;align-items:end}.campoBtn select{flex:1;min-width:0}
@@ -778,7 +783,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.41.1";
+const VERSAO="1.42.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1407,19 +1412,20 @@ function editorItens(box,aoMudar,catalogo=false){
   // preço abaixo do sugerido para o custo com este filamento (1.16.0)
   const avisoPreco=x=>{const p=x.produtoId&&D.produtos.find(y=>y.id===x.produtoId);if(!p||!(+x.custo>0))return"";
     const sug=r2(arredondar(x.custo*(1+margemDe(p)/100)));
-    return +x.preco<sug-0.009?` · ⚠️ com este filamento o preço sugerido é ${brl(sug)} (lucro hoje ${brl(x.preco-x.custo)} por peça)`:""};
+    return +x.preco<sug-0.009?` · ⚠️ abaixo do preço sugerido de ${brl(sug)} (lucro hoje ${brl(x.preco-x.custo)} por peça)`
+      :+x.preco>sug+0.009?` · ✅ acima do preço sugerido de ${brl(sug)} (lucro hoje ${brl(x.preco-x.custo)} por peça, ${brl(x.preco-sug)} a mais)`:""}; // 1.42.0
   // produto do item com o filamento escolhido nele
   const prodDoItem=x=>{const p=D.produtos.find(y=>y.id===x.produtoId);if(!p)return null;const f0=x.mat?.[0]?.f;
     return f0&&p.filamentos?.[0]&&p.filamentos[0].filamentoId!==f0?prodComFil(p,f0):p};
   const linhaCat=(x,i)=>`<div class="item cat" data-i="${i}">
-    <label class="nm">Produto<select data-k="prod">${opcoesProd(x)}</select></label>
-    <label>Qtd<input data-k="qtd" type="number" min="1" step="1" value="${x.qtd}"></label>
-    <label title="Vem da aba Produtos; mude se quiser dar desconto">Preço un. (R$)<input data-k="preco" type="number" min="0" step="0.01" value="${x.preco}"></label>
+    <label class="nm"><span class="lb">Produto</span><select data-k="prod" aria-label="Produto">${opcoesProd(x)}</select></label>
+    <label><span class="lb">Qtd</span><input data-k="qtd" aria-label="Quantidade" type="number" min="1" step="1" value="${x.qtd}"></label>
+    <label title="Vem da aba Produtos; mude se quiser dar desconto"><span class="lb">Preço un. (R$)</span><input data-k="preco" aria-label="Preço de 1 unidade" type="number" min="0" step="0.01" value="${x.preco}"></label>
     <button type="button" class="btn sm del" data-rm="${i}" title="Tirar item" ${itens.length<2?"disabled style='opacity:.4'":""}>✕</button><small class="muted fifo" style="grid-column:1/-1">${esc(avisoCat(x))}</small></div>`; // 1.34.0: sem escolher filamento: vem do produto
   let travado=false; // 1.36.0: venda que veio do orçamento: os itens só aparecem (sem filamento, sem adicionar nem tirar)
   const linhaTrav=x=>`<div class="item trav"><span><b>${num(x.qtd,0)}×</b> ${esc(x.nome)}</span><span class="n">${brl(x.preco)} un · <b>${brl(x.qtd*x.preco)}</b></span></div>`;
   const rowsItens=()=>{if(travado){box.innerHTML=itens.map(linhaTrav).join("");return}
-    box.innerHTML=itens.map((x,i)=>catalogo?linhaCat(x,i):`<div class="item" data-i="${i}">
+    box.innerHTML=(catalogo?'<div class="itensCab"><span>Produto</span><span>Qtd</span><span>Preço un. (R$)</span><span></span></div>':"")+itens.map((x,i)=>catalogo?linhaCat(x,i):`<div class="item" data-i="${i}">
     <label class="nm">Produto<input data-k="nome" list="dlProdutos" value="${esc(x.nome)}" placeholder="escolha do catálogo ou digite um item avulso"></label>
     <label>Qtd<input data-k="qtd" type="number" min="1" step="1" value="${x.qtd}"></label>
     <label>Preço un. (R$)<input data-k="preco" type="number" min="0" step="0.01" value="${x.preco}"></label>
@@ -2797,6 +2803,11 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.42.0",data:"2026-11-27",titulo:"Itens do orçamento mais juntos",itens:[
+    {novo:"No orçamento, os nomes Produto, Qtd e Preço un. aparecem uma vez só, no topo da lista, e os itens ficam mais juntos (no celular cada item continua com os nomes).",
+     uso:"Orçamentos › lista de produtos."},
+    {novo:"Além do aviso de preço abaixo do sugerido, aparece um ✅ quando o preço está acima do sugerido, com o lucro por peça e quanto passou.",
+     uso:"Orçamentos › mude o Preço un. de um item: o aviso aparece embaixo dele."}]},
   {v:"1.41.1",data:"2026-11-27",titulo:"Tempo da fila em dias",itens:[
     {novo:"A Fila de produção mostra o tempo de impressão pela frente em dias, horas e minutos (dd:hh:mm). Ex.: 99h53 vira 04:03:53.",
      uso:"Produção › Fila: no quadro do topo."}]},

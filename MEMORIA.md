@@ -241,7 +241,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-27, versão 1.41.1)
+## Estado atual (2026-11-27, versão 1.42.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -321,6 +321,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.40.3: `fifoItem` mostra só o total de filamento do item (soma das cores, por peça e da quantidade) e avisa se falta no estoque (pedido do dono).
 - 1.41.0: orçamento mostra só ⏱️ Tempo total (h:mm:ss) e 🧵 Filamento total (`#oTempo`); a linha do item só tem avisos (`avisoCat`); lista do item com optgroup 📦 Embalagens e materiais (`ins:<id>` → item sem produto com `insumoId`, `custo`=`precoUn`, `preco`=`precoVenda`||0, `ins:[{i,q:1}]`).
 - 1.41.1: Fila de produção mostra o tempo pela frente em dd:hh:mm (`ddhhmm`).
+- 1.42.0: orçamento com cabeçalho único dos itens (`.itensCab`; rótulos `.lb` só no celular) e itens mais juntos; `avisoPreco` também avisa ✅ preço acima do sugerido.
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -392,3 +393,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.40.3 | 2026-11-25 | Linha do item no orçamento/venda só com o total de filamento (soma das cores) e aviso se falta no estoque |
 | 1.41.0 | 2026-11-27 | Orçamento: só Tempo total e Filamento total embaixo dos itens; embalagens e materiais por unidade na lista de produtos (entram no custo e no estoque) |
 | 1.41.1 | 2026-11-27 | Fila de produção: tempo de impressão pela frente em dd:hh:mm |
+| 1.42.0 | 2026-11-27 | Orçamento: Produto/Qtd/Preço num cabeçalho só e itens mais juntos; aviso ✅ de preço acima do sugerido |
