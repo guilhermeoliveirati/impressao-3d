@@ -89,7 +89,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
                 "frete", "cobrado", "metodo", "custo", "taxa", "lucro", "obs", "clienteId",
                 "recebido": false /* cliente ainda deve; sem o campo = recebido */, "sinal", "repassado" /* parte do material já entregue ao comprador */ } ],
                 // cada item pode ter "mat": [ { "f": filamentoId, "g": gramas POR UNIDADE } ] — usado pelo estoque
-                // e "ins": [ { "i": insumoId, "q": unidades POR UNIDADE vendida } ] — estoque dos materiais por unidade (1.24.0)
+                // e "ins": [ { "i": insumoId, "q": unidades POR UNIDADE vendida } ] — estoque dos materiais por unidade (1.24.0); item só de embalagem/material: "insumoId", sem produtoId (1.41.0)
                 // e "est": unidades que saíram das peças prontas (1.34.0; material só desconta qtd − est); "custoCat": custo do catálogo de 1 un (1.37.0; "custo" = misturado com o dos lotes)
                 // e "partes": custo de 1 unidade por tipo { fil, energia, maquina, falha, mao, extras | outros } — usado nas despesas de produção
   "despesas": [ { "id", "data", "categoria", "descricao", "valor", "pago" /* false = a pagar; sem o campo = paga */, "repete" /* 🔁 todo mês */, "serie" /* id da primeira da série */, "doGui" /* 💰 o Gui pagou do bolso: vendas devolvem (1.14.0) */, "vendaId" /* só nos gastos de produção, lançados pela venda */ } ],
@@ -241,7 +241,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-25, versão 1.40.3)
+## Estado atual (2026-11-27, versão 1.41.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -319,6 +319,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.40.1: campos de gramas com `step="any"` (o navegador recusava 113,68 com step 0.1/1).
 - 1.40.2: `fifoItem` (orçamento/venda) lista todos os filamentos do item (antes só `matDoItem(x)[0]`) com o total de gramas; texto puro (`esc` no HTML).
 - 1.40.3: `fifoItem` mostra só o total de filamento do item (soma das cores, por peça e da quantidade) e avisa se falta no estoque (pedido do dono).
+- 1.41.0: orçamento mostra só ⏱️ Tempo total (h:mm:ss) e 🧵 Filamento total (`#oTempo`); a linha do item só tem avisos (`avisoCat`); lista do item com optgroup 📦 Embalagens e materiais (`ins:<id>` → item sem produto com `insumoId`, `custo`=`precoUn`, `preco`=`precoVenda`||0, `ins:[{i,q:1}]`).
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -388,3 +389,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.40.1 | 2026-11-25 | Correção: campos de gramas aceitam centésimos (113,68 g), como o fatiador mostra |
 | 1.40.2 | 2026-11-25 | Correção: a linha “usa … g” do item no orçamento/venda mostra todos os filamentos e o total por peça (antes só o primeiro) |
 | 1.40.3 | 2026-11-25 | Linha do item no orçamento/venda só com o total de filamento (soma das cores) e aviso se falta no estoque |
+| 1.41.0 | 2026-11-27 | Orçamento: só Tempo total e Filamento total embaixo dos itens; embalagens e materiais por unidade na lista de produtos (entram no custo e no estoque) |

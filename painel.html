@@ -778,7 +778,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.40.3";
+const VERSAO="1.41.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1383,10 +1383,13 @@ const itemVazio=()=>({produtoId:null,nome:"",qtd:1,preco:0,custo:0});
 // catalogo=true (Orçamentos): o produto é escolhido numa lista do que já está em Produtos; "＋ Cadastrar produto novo…" leva à aba Produtos.
 function editorItens(box,aoMudar,catalogo=false){
   let itens=[itemVazio()];
-  const opcoesProd=x=>{const existe=D.produtos.some(p=>p.id===x.produtoId);
+  const opcoesProd=x=>{const existe=D.produtos.some(p=>p.id===x.produtoId)||(!!x.insumoId&&!!insumoDe(x.insumoId));
+    const IN=(D.insumos||[]).slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
     return'<option value="">— escolha o produto —</option>'+
       (!existe&&x.nome?`<option value="${x.produtoId?esc(x.produtoId):"avulso"}" selected>${esc(x.nome)} (fora do catálogo)</option>`:"")+
-      D.produtos.map(p=>`<option value="${p.id}"${p.id===x.produtoId?" selected":""}>${esc(p.nome)} · ${brl(precoDe(p))}</option>`).join("")+
+      '<optgroup label="🧊 Produtos">'+D.produtos.map(p=>`<option value="${p.id}"${p.id===x.produtoId?" selected":""}>${esc(p.nome)} · ${brl(precoDe(p))}</option>`).join("")+'</optgroup>'+
+      // 1.41.0: embalagens e outros materiais por unidade entram no custo do orçamento
+      (IN.length?'<optgroup label="📦 Embalagens e materiais">'+IN.map(u=>`<option value="ins:${u.id}"${u.id===x.insumoId?" selected":""}>${esc(u.nome)} · custo ${brl(+u.precoUn||0)}</option>`).join("")+'</optgroup>':"")+
       '<option value="__novo">＋ Cadastrar produto novo…</option>'};
   // Filamento (marca/cor) do item: a mesma peça pode sair em outra marca, com outro custo (1.12.0)
   const filItem=x=>{const p=x.produtoId&&D.produtos.find(q=>q.id===x.produtoId);if(!p||!(p.filamentos||[]).length)return"";
@@ -1394,6 +1397,9 @@ function editorItens(box,aoMudar,catalogo=false){
     return`<label class="filsel">Filamento (marca e cor)<select data-k="fil">${filamentoDe(atual)?"":'<option value="" selected>⚠️ escolha o filamento (o deste produto foi apagado)</option>'}${D.filamentos.map(f=>`<option value="${f.id}"${f.id===atual?" selected":""}>${esc(nomeFil(f))} · ${brl(precoKgDe(f.id))}/kg${estTxt(f.id)}</option>`).join("")}</select>
       <small class="muted fifo">${esc(fifoItem(x))}</small></label>`};
   // "usa 33 g de filamento por peça" (soma de todos os filamentos do item; 1.40.3). Texto puro.
+  // orçamento (1.41.0): sem a linha de gramas, só os avisos (o total fica junto do tempo total)
+  const avisoCat=x=>{const q=Math.max(1,+x.qtd||1),M=matDoItem(x).filter(m=>+m.g>0);
+    return((M.some(m=>custoFil(m.f,m.g*q).partes.some(y=>y.falta))?"⚠️ falta filamento no estoque":"")+avisoPreco(x)).replace(/^ · /,"")};
   const fifoItem=x=>{const q=Math.max(1,+x.qtd||1),M=matDoItem(x).filter(m=>+m.g>0),tot=soma(M,m=>m.g*q);
     const falta=M.some(m=>custoFil(m.f,m.g*q).partes.some(y=>y.falta));
     const t=M.length?`usa ${fmtG(tot)} de filamento${q>1?` nas ${q} peças (${fmtG(tot/q)} cada)`:" por peça"}${falta?" · ⚠️ falta filamento no estoque":""}`:"";
@@ -1409,7 +1415,7 @@ function editorItens(box,aoMudar,catalogo=false){
     <label class="nm">Produto<select data-k="prod">${opcoesProd(x)}</select></label>
     <label>Qtd<input data-k="qtd" type="number" min="1" step="1" value="${x.qtd}"></label>
     <label title="Vem da aba Produtos; mude se quiser dar desconto">Preço un. (R$)<input data-k="preco" type="number" min="0" step="0.01" value="${x.preco}"></label>
-    <button type="button" class="btn sm del" data-rm="${i}" title="Tirar item" ${itens.length<2?"disabled style='opacity:.4'":""}>✕</button><small class="muted fifo" style="grid-column:1/-1">${esc(fifoItem(x))}</small></div>`; // 1.34.0: sem escolher filamento: vem do produto
+    <button type="button" class="btn sm del" data-rm="${i}" title="Tirar item" ${itens.length<2?"disabled style='opacity:.4'":""}>✕</button><small class="muted fifo" style="grid-column:1/-1">${esc(avisoCat(x))}</small></div>`; // 1.34.0: sem escolher filamento: vem do produto
   let travado=false; // 1.36.0: venda que veio do orçamento: os itens só aparecem (sem filamento, sem adicionar nem tirar)
   const linhaTrav=x=>`<div class="item trav"><span><b>${num(x.qtd,0)}×</b> ${esc(x.nome)}</span><span class="n">${brl(x.preco)} un · <b>${brl(x.qtd*x.preco)}</b></span></div>`;
   const rowsItens=()=>{if(travado){box.innerHTML=itens.map(linhaTrav).join("");return}
@@ -1424,9 +1430,11 @@ function editorItens(box,aoMudar,catalogo=false){
   const row=el.closest(".item"),x=itens[row.dataset.i];
   if(k==="prod"){
     if(el.value==="__novo"){rowsItens();irCadastrar("produto",+row.dataset.i);return}
-    const p=D.produtos.find(y=>y.id===el.value);
-    if(p){x.produtoId=p.id;x.nome=p.nome;x.preco=precoDe(p);x.custo=r2(custoItemProd(p,x.qtd).unit);x.mat=matDeProduto(p);delete x.detalhe;delete x.partes;row.querySelector('[data-k="preco"]').value=x.preco}
-    else if(!el.value){Object.assign(x,itemVazio(),{qtd:x.qtd});delete x.mat;delete x.detalhe;delete x.partes;row.querySelector('[data-k="preco"]').value=0}
+    const p=D.produtos.find(y=>y.id===el.value),u=el.value.startsWith("ins:")&&insumoDe(el.value.slice(4));
+    delete x.insumoId;
+    if(u){Object.assign(x,{produtoId:null,insumoId:u.id,nome:u.nome,preco:r2(+u.precoVenda||0),custo:r2(+u.precoUn||0),ins:[{i:u.id,q:1}]});delete x.mat;delete x.detalhe;delete x.partes;row.querySelector('[data-k="preco"]').value=x.preco}
+    else if(p){delete x.ins;x.produtoId=p.id;x.nome=p.nome;x.preco=precoDe(p);x.custo=r2(custoItemProd(p,x.qtd).unit);x.mat=matDeProduto(p);delete x.detalhe;delete x.partes;row.querySelector('[data-k="preco"]').value=x.preco}
+    else if(!el.value){Object.assign(x,itemVazio(),{qtd:x.qtd});delete x.mat;delete x.ins;delete x.detalhe;delete x.partes;row.querySelector('[data-k="preco"]').value=0}
     rowsItens()} // mostra (ou tira) a escolha do filamento
   else if(k==="fil"){const p=D.produtos.find(y=>y.id===x.produtoId);if(p){const q=prodComFil(p,el.value),c=custoItemProd(q,x.qtd);
     x.custo=r2(c.unit);x.mat=matDeProduto(q);delete x.partes;
@@ -1434,13 +1442,13 @@ function editorItens(box,aoMudar,catalogo=false){
     const ce=row.querySelector('[data-k="custo"]');if(ce)ce.value=x.custo;row.querySelector(".fifo").textContent=fifoItem(x)}}
   else if(k==="qtd"){x.qtd=+el.value||0;const q=x.produtoId&&prodDoItem(x); // mais peças podem passar para o rolo novo
     if(q){x.custo=r2(custoItemProd(q,x.qtd).unit);delete x.partes;const ce=row.querySelector('[data-k="custo"]');if(ce)ce.value=x.custo;
-      const fi=row.querySelector(".fifo");if(fi)fi.textContent=fifoItem(x)}}
+      const fi=row.querySelector(".fifo");if(fi)fi.textContent=catalogo?avisoCat(x):fifoItem(x)}}
   else if(k==="nome"){x.nome=el.value;const p=produtoPorNome(el.value);
     if(p&&x.produtoId!==p.id){x.produtoId=p.id;x.nome=p.nome;x.preco=precoDe(p);x.custo=r2(custoItemProd(p,x.qtd).unit);x.mat=matDeProduto(p);delete x.partes;
       row.querySelector('[data-k="preco"]').value=x.preco;row.querySelector('[data-k="custo"]').value=x.custo}
     else if(!p){x.produtoId=null;delete x.mat}}
   else x[k]=+el.value||0;
-  {const fi=box.querySelector(`.item[data-i="${row.dataset.i}"] .fifo`);if(fi)fi.textContent=fifoItem(x)} // rolos e aviso de preço
+  {const fi=box.querySelector(`.item[data-i="${row.dataset.i}"] .fifo`);if(fi)fi.textContent=catalogo?avisoCat(x):fifoItem(x)} // rolos e aviso de preço
   aoMudar();
   });
   box.addEventListener("change",e=>{if(e.target.dataset.k==="nome")rowsItens()}); // digitou um produto do catálogo: aparece a escolha do filamento
@@ -1507,7 +1515,7 @@ fV.onsubmit=async e=>{e.preventDefault();
   if(lucro<0&&!await confirmar(`Esta venda não paga todos os custos (material, energia, manutenção, taxa): faltam ${brl(-lucro)}.\nSalvar mesmo assim?`,"Salvar mesmo assim",true))return;
   const ant=D.vendas.find(x=>x.id===fV.id.value);
   const v={id:fV.id.value||novoId("v"),data:fV.data.value,cliente:nomeProprio(fV.cliente.value),clienteId:garantirCliente(fV.cliente.value).id,
-    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(insGravar(x).length?{ins:insGravar(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{}),...(x.partes?{partes:x.partes}:{}),...(x.custoCat!=null?{custoCat:x.custoCat}:{})})),
+    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(insGravar(x).length?{ins:insGravar(x)}:{}),...(x.insumoId?{insumoId:x.insumoId}:{}),...(x.detalhe?{detalhe:x.detalhe}:{}),...(x.partes?{partes:x.partes}:{}),...(x.custoCat!=null?{custoCat:x.custoCat}:{})})),
     frete:r2(fV.frete.value),cobrado:r2(fV.cobrado.value),metodo:fV.metodo.value,custo,taxa,lucro,recebido:fV.recebido.checked,repassado:!!ant?.repassado,obs:ant?.obs||""};
   // peças prontas (1.34.0): as unidades que existem no estoque saem dele (item.est); o material só é descontado das que faltaram
   // 1.37.0: com o custo do lote de cada peça (o mais antigo primeiro)
@@ -1673,10 +1681,12 @@ function calcOrc(){
   const sub=r2(soma(edO.itens,x=>x.qtd*x.preco)), custo=r2(soma(edO.itens,x=>x.qtd*x.custo)), frete=+fO.frete.value||0;
   if(!valorManual)fO.valor.value=r2(sub+frete);
   const lucro=r2((+fO.valor.value||0)-custo);
-  const T=edO.itens.map(x=>({x,t:tempoInfo(x)})).filter(y=>y.t), th=soma(T,y=>y.t.h);
+  const T=edO.itens.map(x=>({x,t:tempoInfo(x)})).filter(y=>y.t), th=soma(T,y=>y.t.h),
+    gt=soma(edO.itens,x=>soma(matDoItem(x),m=>+m.g||0)*Math.max(1,+x.qtd||1));
   $("#oSub").innerHTML=`Itens <b>${brl(sub)}</b> · Custo <b>${brl(custo)}</b> · Lucro previsto <b class="${lucro>=0?"lucro":"taxa"}">${brl(lucro)}</b>`;
-  $("#oTempo").hidden=!T.length;
-  $("#oTempo").innerHTML=T.length?`⏱️ <b>Tempo total (impressão + trabalho manual): ${fmtHMS(th*60)}</b>`+T.map(y=>`<br><span class="muted">${esc(y.x.nome)}: ${y.t.txt} = ${fmtHMS(y.t.h*60)}</span>`).join(""):"";
+  const hms=m=>{const t=Math.round(m*60);return`${Math.floor(t/3600)}:${String(Math.floor(t/60)%60).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`};
+  $("#oTempo").hidden=!T.length&&!(gt>0); // 1.41.0: só os dois totais
+  $("#oTempo").innerHTML=`⏱️ Tempo total: <b>${hms(th*60)}</b><br>🧵 Filamento total: <b>${fmtG(gt)}</b>`;
   return{custo};
 }
 fO.addEventListener("input",e=>{if(e.target.name==="valor")valorManual=true;if(e.target.name==="valor"||e.target.name==="frete")calcOrc()});
@@ -1691,7 +1701,7 @@ fO.onsubmit=e=>{e.preventDefault();
   const vp=voltaProd; // veio da Produção (✏️ Editar): volta para lá
   // ...ant mantém o que não está no formulário (etapa, ordem, sinal, data de aprovação)
   const o={...(ant||{}),id:fO.id.value||novoId("o"),data:fO.data.value,prazo:fO.prazo.value,cliente:cli.nome,clienteId:cli.id,validade:Math.max(1,Math.round(+fO.validade.value||7)),
-    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(insGravar(x).length?{ins:insGravar(x)}:{}),...(x.detalhe?{detalhe:x.detalhe}:{})})),
+    itens:L.map(x=>({produtoId:x.produtoId||null,nome:x.nome.trim(),qtd:+x.qtd||1,preco:r2(x.preco),custo:r2(x.custo),...(matDoItem(x).length?{mat:matDoItem(x)}:{}),...(insGravar(x).length?{ins:insGravar(x)}:{}),...(x.insumoId?{insumoId:x.insumoId}:{}),...(x.detalhe?{detalhe:x.detalhe}:{})})),
     frete:r2(fO.frete.value),valor:r2(fO.valor.value),custo,obs:fO.obs.value.trim(),status:ant?.status||"aberto",vendaId:ant?.vendaId||null};
   const i=D.orcamentos.findIndex(x=>x.id===o.id);i>=0?D.orcamentos[i]=o:D.orcamentos.push(o);
   filtroOrc=o.status;salvar();limparOrc();
@@ -2785,6 +2795,11 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.41.0",data:"2026-11-27",titulo:"Orçamento mais limpo e com embalagem",itens:[
+    {novo:"Embaixo dos produtos do orçamento aparecem só dois totais: Tempo total (h:mm:ss) e Filamento total (somando todos os itens). Cada item não mostra mais os gramas.",
+     uso:"Orçamentos › escolha os produtos: os totais aparecem embaixo da lista."},
+    {novo:"Na lista de produtos do orçamento agora aparecem as embalagens e os outros materiais por unidade. Eles entram no custo do orçamento e saem do estoque quando vender.",
+     uso:"Orçamentos › ＋ Adicionar produto › escolha em “📦 Embalagens e materiais”. O preço vem do preço de venda do material (vazio = R$ 0, só custo); dá para mudar."}]},
   {v:"1.40.3",data:"2026-11-25",titulo:"Filamento do item mais simples",itens:[
     {novo:"Embaixo do produto no orçamento e na venda aparece só o total de filamento (somando todas as cores), sem a lista de cada uma. Se faltar filamento no estoque, avisa.",
      uso:"Orçamentos › escolha o produto: “usa 130 g de filamento nas 4 peças (33 g cada)”."}]},
