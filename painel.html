@@ -60,6 +60,7 @@ form.f>*,.item>*,.lado>*{min-width:0}
 .item.cat{grid-template-columns:2.2fr 80px 1fr 44px;padding:6px 10px;margin-bottom:4px;row-gap:2px}
 .item.cat .lb{display:none}
 .item.cat .fifo:empty{display:none}
+.vrLin[hidden]{display:none!important}
 .itensCab{display:grid;grid-template-columns:2.2fr 80px 1fr 44px;gap:8px;padding:0 10px 4px;font-size:.8rem;font-weight:600;color:#475569}
 .voltaOrc{margin-bottom:12px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .voltaOrc[hidden]{display:none}
@@ -335,7 +336,7 @@ nav .ct{display:none}
       <div style="grid-column:1/-1">
         <div id="oItens"></div>
         <div class="row" style="margin-top:8px;justify-content:space-between">
-          <span class="row" style="gap:6px"><button type="button" class="btn sm" id="oVarios">＋ Vários produtos</button><button type="button" class="btn sm sec2" id="oAddItem">＋ Adicionar produto</button><button type="button" class="btn sm sec2" id="oNovoProd">＋ Cadastrar produto novo</button></span>
+          <span class="row" style="gap:6px"><button type="button" class="btn sm" id="oVarios">＋ Vários produtos</button><button type="button" class="btn sm sec2" id="oNovoProd">＋ Cadastrar produto novo</button></span>
           <span class="muted" id="oSub"></span>
         </div>
         <div class="calc" id="oTempo" hidden style="margin-top:8px"></div>
@@ -784,7 +785,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.43.0";
+const VERSAO="1.43.1";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1471,6 +1472,7 @@ function editorItens(box,aoMudar,catalogo=false){
     aviso:x=>catalogo?avisoCat(x):fifoItem(x),
     // 1.43.0: ＋ Vários produtos: tira as linhas vazias e junta os itens escolhidos
     incluir(L){itens=itens.filter(y=>y.nome.trim()).concat(L);if(!itens.length)itens=[itemVazio()];rowsItens();aoMudar()},
+    trocar(L){itens=L.length?L:[itemVazio()];rowsItens();aoMudar()},
     // põe o produto na linha i (ou na primeira linha vazia, ou numa linha nova)
     colocar(i,p){let x=itens[i];if(!x||x.nome)x=itens.find(y=>!y.nome);if(!x)itens.push(x=itemVazio());
       Object.assign(x,{produtoId:p.id,nome:p.nome,preco:precoDe(p),custo:r2(custoItemProd(p,x.qtd).unit),mat:matDeProduto(p)});delete x.detalhe;rowsItens();aoMudar()},
@@ -1670,7 +1672,6 @@ $("#vMes").oninput=renderVendas;$("#vBusca").oninput=renderVendas;
 const fO=$("#fOrc");
 let valorManual=false, filtroOrc="aberto";
 const edO=editorItens($("#oItens"),()=>{valorManual=false;calcOrc()},true); // mudou item/qtd/preço: o valor do orçamento volta a ser a soma (1.23.0)
-$("#oAddItem").onclick=()=>edO.adicionar();
 $("#oNovoProd").onclick=()=>irCadastrar("produto",-1);
 $("#oNovoCli").onclick=()=>irCadastrar("cliente");
 fO.cliente.addEventListener("change",e=>{if(e.target.value==="__novo"){e.target.value="";irCadastrar("cliente")}ajustaOrcEst()});
@@ -1690,24 +1691,33 @@ function irCadastrar(tipo,linha=-1){retorno={tipo,linha};
 function itemDoCatalogo(k,q){if(k.startsWith("ins:")){const u=insumoDe(k.slice(4));return u&&{produtoId:null,insumoId:u.id,nome:u.nome,qtd:q,preco:r2(+u.precoVenda||0),custo:r2(+u.precoUn||0),ins:[{i:u.id,q:1}]}}
   const p=D.produtos.find(y=>y.id===k);return p&&{produtoId:p.id,nome:p.nome,qtd:q,preco:precoDe(p),custo:r2(custoItemProd(p,q).unit),mat:matDeProduto(p)}}
 $("#oVarios").onclick=()=>{const PE=pecasProntas();
+  // 1.43.1: o que já está no orçamento aparece marcado, com a quantidade (desmarcar tira do orçamento)
+  const chave=x=>x.produtoId||(x.insumoId?"ins:"+x.insumoId:""),ja={};
+  edO.itens.forEach(x=>{const k=chave(x);if(k&&x.nome.trim())ja[k]=(ja[k]||0)+(+x.qtd||0)});
   const L=[...D.produtos.slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR")).map(p=>({k:p.id,nome:p.nome,foto:p.foto,sub:brl(precoDe(p))+(PE[p.id]>0?` · 📦 ${num(PE[p.id],0)} pronta${PE[p.id]===1?"":"s"}`:"")})),
     ...(D.insumos||[]).slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR")).map(u=>({k:"ins:"+u.id,nome:u.nome,sub:`📦 embalagem / material · custo ${brl(+u.precoUn||0)}`}))];
-  abrirModal(`<h2>＋ Vários produtos</h2><p class="muted" style="margin-top:0">Marque os produtos e a quantidade de cada um.</p>
+  abrirModal(`<h2>＋ Vários produtos</h2><p class="muted" style="margin-top:0">Marque os produtos e a quantidade de cada um. Os que já estão no orçamento vêm marcados.</p>
     <input id="vrBusca" type="search" placeholder="🔎 Buscar produto" autocomplete="off" style="width:100%;margin-bottom:8px">
     <div id="vrLista" style="max-height:52vh;overflow:auto">${L.map(r=>`<div class="vrLin" data-n="${esc(norm(r.nome))}" style="display:flex;align-items:center;gap:10px;padding:6px 2px;border-bottom:1px solid #eef2f7">
-      <input type="checkbox" data-k="${r.k}" aria-label="Marcar ${esc(r.nome)}" style="width:22px;height:22px;min-height:0;flex:none">
+      <input type="checkbox" data-k="${r.k}"${ja[r.k]?" checked":""} aria-label="Marcar ${esc(r.nome)}" style="width:22px;height:22px;min-height:0;flex:none">
       ${r.foto?`<img src="${r.foto}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:8px;flex:none">`:`<span style="width:40px;height:40px;flex:none;display:grid;place-items:center;background:#f1f5f9;border-radius:8px">${r.k.startsWith("ins:")?"📦":"🧊"}</span>`}
-      <span style="flex:1;min-width:0" data-marca="${r.k}">${esc(r.nome)}<br><small class="muted">${r.sub}</small></span>
-      <input type="number" min="1" step="1" value="1" data-q="${r.k}" aria-label="Quantidade de ${esc(r.nome)}" style="width:64px;flex:none"></div>`).join("")}</div>
-    <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap"><button class="btn" type="button" id="vrOk">Adicionar marcados</button><button class="btn sec2" type="button" id="vrTodos">Marcar todos os da busca</button></div>`);
-  const lista=$("#vrLista"),ck=k=>lista.querySelector(`[data-k="${k}"]`);
+      <span style="flex:1;min-width:0" data-marca="${r.k}">${esc(r.nome)}${ja[r.k]?' <span class="tag ok">✓ no orçamento</span>':""}<br><small class="muted">${r.sub}</small></span>
+      <input type="number" min="1" step="1" value="${ja[r.k]||1}" data-q="${r.k}" aria-label="Quantidade de ${esc(r.nome)}" style="width:64px;flex:none"></div>`).join("")}</div>
+    <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap"><button class="btn" type="button" id="vrOk">Pronto</button><button class="btn sec2" type="button" id="vrTodos">Marcar todos os da busca</button></div>`);
+  const lista=$("#vrLista"),ck=k=>lista.querySelector(`[data-k="${k}"]`),qt=k=>Math.max(1,Math.round(+lista.querySelector(`[data-q="${k}"]`).value||1));
   $("#vrBusca").oninput=e=>{const q=norm(e.target.value);lista.querySelectorAll(".vrLin").forEach(l=>l.hidden=!!q&&!l.dataset.n.includes(q))};
   lista.addEventListener("input",e=>{const k=e.target.dataset.q;if(k)ck(k).checked=+e.target.value>0});
   lista.addEventListener("click",e=>{const k=e.target.closest("[data-marca]")?.dataset.marca;if(k){const c=ck(k);c.checked=!c.checked}});
   $("#vrTodos").onclick=()=>lista.querySelectorAll(".vrLin:not([hidden]) [data-k]").forEach(c=>c.checked=true);
-  $("#vrOk").onclick=()=>{const it=[...lista.querySelectorAll("[data-k]:checked")].map(c=>itemDoCatalogo(c.dataset.k,Math.max(1,Math.round(+lista.querySelector(`[data-q="${c.dataset.k}"]`).value||1)))).filter(Boolean);
-    if(!it.length)return avisar("Marque pelo menos um produto.");
-    $("#modal").hidden=true;edO.incluir(it);status(`${it.length} produto${it.length>1?"s":""} no orçamento`)};
+  $("#vrOk").onclick=()=>{const M=new Map([...lista.querySelectorAll("[data-k]:checked")].map(c=>[c.dataset.k,qt(c.dataset.k)]));
+    const noCat=new Set(L.map(r=>r.k)),visto=new Set();
+    // itens que já estavam: ficam (com a quantidade nova) se continuam marcados; itens fora do catálogo não mudam
+    const novo=edO.itens.filter(x=>x.nome.trim()).filter(x=>{const k=chave(x);return!k||!noCat.has(k)||M.has(k)}).map(x=>{const k=chave(x);
+      if(!k||!M.has(k)||visto.has(k))return x;visto.add(k);
+      if(ja[k]!==M.get(k)&&edO.itens.filter(y=>chave(y)===k).length===1){const n=itemDoCatalogo(k,M.get(k));if(n)return{...x,qtd:n.qtd,custo:n.custo}}
+      return x});
+    M.forEach((q,k)=>{if(!ja[k]){const n=itemDoCatalogo(k,q);if(n)novo.push(n)}});
+    $("#modal").hidden=true;edO.trocar(novo);status(`${novo.length} ${novo.length===1?"item":"itens"} no orçamento`)};
   setTimeout(()=>$("#vrBusca").focus(),50)};
 window.voltarOrc=()=>document.querySelector("#nav [data-s=orcamentos]").click();
 function calcOrc(){
@@ -2887,6 +2897,9 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.43.1",data:"2026-11-28",titulo:"＋ Vários produtos melhor",itens:[
+    {novo:"A busca da janela ＋ Vários produtos agora filtra a lista. Os produtos que já estão no orçamento vêm marcados (✓ no orçamento) com a quantidade; desmarcar tira do orçamento. Saiu o botão ＋ Adicionar produto (um por um).",
+     uso:"Orçamentos › ＋ Vários produtos › busque, marque ou mude a quantidade e toque em Pronto."}]},
   {v:"1.43.0",data:"2026-11-28",titulo:"Orçamento mais esperto",itens:[
     {novo:"O orçamento olha as peças prontas: cada item mostra quantas já tem no estoque, e o Tempo total e o Filamento total contam só o que falta imprimir. Na Fila, cada pedido mostra o que separar das prontas e o que imprimir.",
      uso:"Orçamentos › escolha os produtos: veja “📦 9 prontas no estoque”. Produção › Fila: “📦 Separar das prontas” e “🖨️ Imprimir”."},

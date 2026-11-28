@@ -241,7 +241,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-28, versão 1.43.0)
+## Estado atual (2026-11-28, versão 1.43.1)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -325,7 +325,8 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 2026-11-28: orçamento o213 (Fabiana, 7 itens, preços do dono, R$ 97) gravado direto no dados.json; preços fixos testados nos produtos e desfeitos (o dono quer o sugerido no catálogo e ajusta o valor no orçamento). Cópias em `backup/`.
 - 1.43.0: peças prontas no orçamento e na Fila (`reservaProntas`: a fila, na ordem, reserva as prontas; `usoProntas`, `hImprimir`, `hPedido`); tempo/filamento só do que falta imprimir; venda vinda da Produção marca "Tirar das peças prontas" se o pedido usou;
   ＋ Vários produtos (janela com busca, `itemDoCatalogo`, `edO.incluir`); entrega sugerida (`horasFila` + pedido ÷ `config.horasDia` (vazio = 24) + 1 dia, botão Usar); 📤 Enviar com imagem (`imagemOrc` em canvas com as fotos; `enviarTextoOrc` = o envio antigo).
-- Proposta ao dono, sem resposta ainda: refazer criar/produzir (ficha do produto feita uma vez em Produtos; 🏭 Produzi só com mesas e peças boas, com "gastou diferente?"; lote para estoque na Fila no lugar do cliente 📦 Estoque da empresa).
+- 1.43.1: busca do ＋ Vários produtos consertada (`.vrLin[hidden]`); o que já está no orçamento vem marcado com a quantidade e desmarcar tira (`edO.trocar`); saiu o ＋ Adicionar produto.
+- Proposta ao dono (respondeu “agora não” em 2026-11-28): refazer criar/produzir (ficha do produto feita uma vez em Produtos; 🏭 Produzi só com mesas e peças boas, com "gastou diferente?"; lote para estoque na Fila no lugar do cliente 📦 Estoque da empresa).
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -399,3 +400,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.41.1 | 2026-11-27 | Fila de produção: tempo de impressão pela frente em dd:hh:mm |
 | 1.42.0 | 2026-11-27 | Orçamento: Produto/Qtd/Preço num cabeçalho só e itens mais juntos; aviso ✅ de preço acima do sugerido |
 | 1.43.0 | 2026-11-28 | Orçamento e Fila contam as peças prontas (tempo e filamento só do que falta imprimir); ＋ Vários produtos com busca; entrega sugerida; enviar orçamento como imagem com fotos |
+| 1.43.1 | 2026-11-28 | ＋ Vários produtos: busca consertada, itens do orçamento já vêm marcados; sai o ＋ Adicionar produto |
