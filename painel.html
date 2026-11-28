@@ -335,7 +335,7 @@ nav .ct{display:none}
       <div style="grid-column:1/-1">
         <div id="oItens"></div>
         <div class="row" style="margin-top:8px;justify-content:space-between">
-          <span class="row" style="gap:6px"><button type="button" class="btn sm sec2" id="oAddItem">＋ Adicionar produto</button><button type="button" class="btn sm sec2" id="oNovoProd">＋ Cadastrar produto novo</button></span>
+          <span class="row" style="gap:6px"><button type="button" class="btn sm" id="oVarios">＋ Vários produtos</button><button type="button" class="btn sm sec2" id="oAddItem">＋ Adicionar produto</button><button type="button" class="btn sm sec2" id="oNovoProd">＋ Cadastrar produto novo</button></span>
           <span class="muted" id="oSub"></span>
         </div>
         <div class="calc" id="oTempo" hidden style="margin-top:8px"></div>
@@ -690,6 +690,7 @@ nav .ct{display:none}
       <label>Perda / falhas padrão (%)<input data-c="falhaPct" type="number" step="1" min="0"></label>
       <label>Margem de lucro padrão (%)<input data-c="margemPct" type="number" step="1" min="0"></label>
       <label>Quanto quero sobrar por mês (R$)<input data-c="metaSobra" type="number" step="10" min="0"></label>
+      <label title="Usado para sugerir a data de entrega do orçamento (fila + o pedido). Vazio = 24 h">Horas de impressão por dia<input data-c="horasDia" type="number" step="1" min="1" max="24" placeholder="24"></label>
       <label>Arredondar preço sugerido<select data-c="arredondar">
         <option value="nao">Não arredondar</option><option value="1">Para cima, R$ 1</option><option value="90">Terminar em ,90</option><option value="5">Para cima, R$ 5</option></select></label>
     </form>
@@ -783,7 +784,7 @@ function avisar(msg){return new Promise(r=>{
   $("#confNao").hidden=true;$("#conf").hidden=false;b.onclick=()=>{$("#conf").hidden=true;r()}})}
 
 // Versão do painel: aumentar a cada ajuste (ver MEMORIA.md › Versões).
-const VERSAO="1.42.0";
+const VERSAO="1.43.0";
 document.getElementById("versao").textContent=VERSAO;
 
 let D=null, fonte=null, charts={};
@@ -1467,6 +1468,9 @@ function editorItens(box,aoMudar,catalogo=false){
     adicionar(){itens.push(itemVazio());rowsItens();aoMudar();box.querySelector(".item:last-child :is(select,input)").focus()},
     redesenhar(){rowsItens()},
     travar(b){travado=!!b;rowsItens()},
+    aviso:x=>catalogo?avisoCat(x):fifoItem(x),
+    // 1.43.0: ＋ Vários produtos: tira as linhas vazias e junta os itens escolhidos
+    incluir(L){itens=itens.filter(y=>y.nome.trim()).concat(L);if(!itens.length)itens=[itemVazio()];rowsItens();aoMudar()},
     // põe o produto na linha i (ou na primeira linha vazia, ou numa linha nova)
     colocar(i,p){let x=itens[i];if(!x||x.nome)x=itens.find(y=>!y.nome);if(!x)itens.push(x=itemVazio());
       Object.assign(x,{produtoId:p.id,nome:p.nome,preco:precoDe(p),custo:r2(custoItemProd(p,x.qtd).unit),mat:matDeProduto(p)});delete x.detalhe;rowsItens();aoMudar()},
@@ -1682,17 +1686,49 @@ let retorno=null; // {tipo:"cliente"|"produto", linha}
 function irCadastrar(tipo,linha=-1){retorno={tipo,linha};
   document.querySelector(`#nav [data-s=${tipo==="cliente"?"clientes":"produtos"}]`).click();
   if(tipo==="cliente"){limparCli();fC.nome.focus()}else{limparProduto();fP.nome.focus()}}
+// item do orçamento a partir do catálogo: produto (id) ou embalagem/material ("ins:id")
+function itemDoCatalogo(k,q){if(k.startsWith("ins:")){const u=insumoDe(k.slice(4));return u&&{produtoId:null,insumoId:u.id,nome:u.nome,qtd:q,preco:r2(+u.precoVenda||0),custo:r2(+u.precoUn||0),ins:[{i:u.id,q:1}]}}
+  const p=D.produtos.find(y=>y.id===k);return p&&{produtoId:p.id,nome:p.nome,qtd:q,preco:precoDe(p),custo:r2(custoItemProd(p,q).unit),mat:matDeProduto(p)}}
+$("#oVarios").onclick=()=>{const PE=pecasProntas();
+  const L=[...D.produtos.slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR")).map(p=>({k:p.id,nome:p.nome,foto:p.foto,sub:brl(precoDe(p))+(PE[p.id]>0?` · 📦 ${num(PE[p.id],0)} pronta${PE[p.id]===1?"":"s"}`:"")})),
+    ...(D.insumos||[]).slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR")).map(u=>({k:"ins:"+u.id,nome:u.nome,sub:`📦 embalagem / material · custo ${brl(+u.precoUn||0)}`}))];
+  abrirModal(`<h2>＋ Vários produtos</h2><p class="muted" style="margin-top:0">Marque os produtos e a quantidade de cada um.</p>
+    <input id="vrBusca" type="search" placeholder="🔎 Buscar produto" autocomplete="off" style="width:100%;margin-bottom:8px">
+    <div id="vrLista" style="max-height:52vh;overflow:auto">${L.map(r=>`<div class="vrLin" data-n="${esc(norm(r.nome))}" style="display:flex;align-items:center;gap:10px;padding:6px 2px;border-bottom:1px solid #eef2f7">
+      <input type="checkbox" data-k="${r.k}" aria-label="Marcar ${esc(r.nome)}" style="width:22px;height:22px;min-height:0;flex:none">
+      ${r.foto?`<img src="${r.foto}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:8px;flex:none">`:`<span style="width:40px;height:40px;flex:none;display:grid;place-items:center;background:#f1f5f9;border-radius:8px">${r.k.startsWith("ins:")?"📦":"🧊"}</span>`}
+      <span style="flex:1;min-width:0" data-marca="${r.k}">${esc(r.nome)}<br><small class="muted">${r.sub}</small></span>
+      <input type="number" min="1" step="1" value="1" data-q="${r.k}" aria-label="Quantidade de ${esc(r.nome)}" style="width:64px;flex:none"></div>`).join("")}</div>
+    <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap"><button class="btn" type="button" id="vrOk">Adicionar marcados</button><button class="btn sec2" type="button" id="vrTodos">Marcar todos os da busca</button></div>`);
+  const lista=$("#vrLista"),ck=k=>lista.querySelector(`[data-k="${k}"]`);
+  $("#vrBusca").oninput=e=>{const q=norm(e.target.value);lista.querySelectorAll(".vrLin").forEach(l=>l.hidden=!!q&&!l.dataset.n.includes(q))};
+  lista.addEventListener("input",e=>{const k=e.target.dataset.q;if(k)ck(k).checked=+e.target.value>0});
+  lista.addEventListener("click",e=>{const k=e.target.closest("[data-marca]")?.dataset.marca;if(k){const c=ck(k);c.checked=!c.checked}});
+  $("#vrTodos").onclick=()=>lista.querySelectorAll(".vrLin:not([hidden]) [data-k]").forEach(c=>c.checked=true);
+  $("#vrOk").onclick=()=>{const it=[...lista.querySelectorAll("[data-k]:checked")].map(c=>itemDoCatalogo(c.dataset.k,Math.max(1,Math.round(+lista.querySelector(`[data-q="${c.dataset.k}"]`).value||1)))).filter(Boolean);
+    if(!it.length)return avisar("Marque pelo menos um produto.");
+    $("#modal").hidden=true;edO.incluir(it);status(`${it.length} produto${it.length>1?"s":""} no orçamento`)};
+  setTimeout(()=>$("#vrBusca").focus(),50)};
 window.voltarOrc=()=>document.querySelector("#nav [data-s=orcamentos]").click();
 function calcOrc(){
   const sub=r2(soma(edO.itens,x=>x.qtd*x.preco)), custo=r2(soma(edO.itens,x=>x.qtd*x.custo)), frete=+fO.frete.value||0;
   if(!valorManual)fO.valor.value=r2(sub+frete);
   const lucro=r2((+fO.valor.value||0)-custo);
-  const T=edO.itens.map(x=>({x,t:tempoInfo(x)})).filter(y=>y.t), th=soma(T,y=>y.t.h),
-    gt=soma(edO.itens,x=>soma(matDoItem(x),m=>+m.g||0)*Math.max(1,+x.qtd||1));
+  // 1.43.0: peças prontas livres (as da fila já estão reservadas) saem do tempo e do filamento
+  const est=fO.cliente.value===CLI_EST, P=est?{}:{...reservaProntas(fO.id.value).livre};
+  const inf=edO.itens.map(x=>{const q=Math.max(0,+x.qtd||0),t=est?0:Math.max(0,P[x.produtoId]||0),u=x.produtoId?Math.min(q,t):0;if(u)P[x.produtoId]=t-u;return{t,u,falta:q-u}});
+  const T=edO.itens.filter(x=>tempoInfo(x)), th=edO.itens.reduce((s,x,i)=>s+hImprimir(x,inf[i].falta),0),
+    gt=edO.itens.reduce((s,x,i)=>s+soma(matDoItem(x),m=>+m.g||0)*inf[i].falta,0), pr=soma(inf,y=>y.u), pq=soma(edO.itens.filter(x=>x.produtoId),x=>+x.qtd||0);
+  edO.itens.forEach((x,i)=>{const el=$(`#oItens .item[data-i="${i}"] .fifo`);if(!el)return;const y=inf[i];
+    el.textContent=[y.u?`📦 ${num(y.t,0)} pronta${y.t===1?"":"s"} no estoque`+(y.falta>0?` · imprimir ${num(y.falta,0)}`:" · não precisa imprimir"):"",edO.aviso(x)].filter(Boolean).join(" · ")});
   $("#oSub").innerHTML=`Itens <b>${brl(sub)}</b> · Custo <b>${brl(custo)}</b> · Lucro previsto <b class="${lucro>=0?"lucro":"taxa"}">${brl(lucro)}</b>`;
   const hms=m=>{const t=Math.round(m*60);return`${Math.floor(t/3600)}:${String(Math.floor(t/60)%60).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`};
   $("#oTempo").hidden=!T.length&&!(gt>0); // 1.41.0: só os dois totais
-  $("#oTempo").innerHTML=`⏱️ Tempo total: <b>${hms(th*60)}</b><br>🧵 Filamento total: <b>${fmtG(gt)}</b>`;
+  const hd=Math.min(24,Math.max(1,+D.config.horasDia||24)), hf=est?0:horasFila(fO.id.value), sug=maisDias(Math.ceil((hf+th)/hd)+1);
+  $("#oTempo").innerHTML=`⏱️ Tempo total: <b>${hms(th*60)}</b><br>🧵 Filamento total: <b>${fmtG(gt)}</b>`+
+    (pr?`<br>📦 Já prontas: <b>${num(pr,0)} de ${num(pq,0)} peças</b> <span class="muted">(o tempo e o filamento são só do que falta imprimir)</span>`:"")+
+    (est?"":`<br>📅 Entrega sugerida: <b>${fmtData(sug)}</b> <button type="button" class="btn sm sec2" onclick="fO.prazo.value='${sug}'" style="margin-left:6px">Usar</button>
+      <br><span class="muted">fila ${ddhhmm(hf)} + este pedido ${ddhhmm(th)} (dd:hh:mm), ${hd} h de impressão por dia + 1 dia de folga</span>`);
   return{custo};
 }
 fO.addEventListener("input",e=>{if(e.target.name==="valor")valorManual=true;if(e.target.name==="valor"||e.target.name==="frete")calcOrc()});
@@ -1758,7 +1794,7 @@ window.concluirProd=async id=>{const o=D.orcamentos.find(x=>x.id===id);
   $("#vOrc").hidden=false;
   $("#vOrc").innerHTML=`🏭 Produção concluída: pedido de <b>${esc(o.cliente)}</b> (orçamento de ${fmtData(o.data)}). Confira a data e a forma de pagamento e toque em <b>Salvar venda</b>. Os gastos de produção entram em Despesas.`+
     (+o.sinal?` <br>💰 O cliente já pagou <b>${brl(o.sinal)}</b> de sinal; falta receber <b>${brl(r2(o.valor-o.sinal))}</b>. Se ele ainda não pagou o resto, desmarque “Já recebi tudo”.`:"");
-  fV.usaEst.checked=false; // pedido impresso para o cliente: não tira das peças prontas (marque se usou as prontas)
+  fV.usaEst.checked=(reservaProntas().res[o.id]||[]).some(u=>u>0); // 1.43.0: o pedido usou peças prontas → saem do estoque
   calcVenda();scrollTo({top:0,behavior:"smooth"})};
 /* "O que a impressão gastou" (1.37.0): ao guardar um pedido no estoque, informa peças boas, tempos e materiais da mesa (do fatiador).
    O custo sai pelas mesmas contas do produto (custoProduto) com esses números; vira o custo das peças desse lote. */
@@ -1881,14 +1917,50 @@ window.registrarProducao=pid=>{
 window.verVendaOrc=id=>{const o=D.orcamentos.find(x=>x.id===id),v=D.vendas.find(x=>x.id===o.vendaId);if(!v)return;
   document.querySelector("#nav [data-s=vendas]").click();$("#vMes").value=v.data.slice(0,7);renderVendas();editarVenda(v.id)};
 // Texto do orçamento para mandar ao cliente (WhatsApp): abre o compartilhar do celular ou copia.
+/* Imagem do orçamento (1.43.0): foto de cada peça, quantidade, preço e total, para mandar ao cliente. */
+async function imagemOrc(o){const W=1080,PAD=56,RH=170,IT=o.itens||[],F="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif";
+  const fotos=await Promise.all(IT.map(async x=>{const f=D.produtos.find(y=>y.id===x.produtoId)?.foto;if(!f)return null;try{const im=new Image();im.src=f;await im.decode();return im}catch{return null}}));
+  const H=250+IT.length*RH+(o.frete?60:0)+230,c=document.createElement("canvas");c.width=W;c.height=H;const g=c.getContext("2d");
+  const rr=(x,y,w,h,r)=>{g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()};
+  const corta=(t,w)=>{if(g.measureText(t).width<=w)return t;while(t.length>1&&g.measureText(t+"…").width>w)t=t.slice(0,-1);return t+"…"};
+  g.fillStyle="#fff";g.fillRect(0,0,W,H);g.fillStyle="#6d28d9";g.fillRect(0,0,W,200);
+  g.fillStyle="#fff";g.font=`700 64px ${F}`;g.fillText("Orçamento",PAD,100);g.font=`400 34px ${F}`;g.fillText(corta(`${o.cliente} · ${fmtData(o.data)}`,W-2*PAD),PAD,155);
+  let y=250;IT.forEach((x,i)=>{const im=fotos[i],S=130;
+    g.save();rr(PAD,y,S,S,20);g.clip();
+    if(im){const k=Math.max(S/im.width,S/im.height),w=im.width*k,h=im.height*k;g.drawImage(im,PAD+(S-w)/2,y+(S-h)/2,w,h)}else{g.fillStyle="#f1f5f9";g.fillRect(PAD,y,S,S)}
+    g.restore();if(!im){g.font=`60px ${F}`;g.textAlign="center";g.fillText(x.insumoId?"📦":"🧊",PAD+S/2,y+S/2+22);g.textAlign="left"}
+    const tx=PAD+S+30,tw=W-PAD-tx-230;
+    g.fillStyle="#0f172a";g.font=`600 40px ${F}`;g.fillText(corta(x.nome,tw),tx,y+52);
+    g.fillStyle="#64748b";g.font=`400 32px ${F}`;g.fillText(`${num(x.qtd,0)} × ${brl(x.preco)}`,tx,y+100);
+    g.fillStyle="#0f172a";g.font=`700 40px ${F}`;g.textAlign="right";g.fillText(brl(x.qtd*x.preco),W-PAD,y+80);g.textAlign="left";
+    y+=RH;g.fillStyle="#e2e8f0";g.fillRect(PAD,y-20,W-2*PAD,2)});
+  g.textAlign="right";
+  if(o.frete){g.fillStyle="#475569";g.font=`400 34px ${F}`;g.fillText(`Frete / entrega: ${brl(o.frete)}`,W-PAD,y+20);y+=60}
+  g.fillStyle="#6d28d9";g.font=`700 60px ${F}`;g.fillText(`Total ${brl(o.valor)}`,W-PAD,y+60);
+  g.fillStyle="#64748b";g.font=`400 30px ${F}`;g.fillText(`Válido até ${fmtData(venceEm(o))}${o.prazo?` · entrega até ${fmtData(o.prazo)}`:""}`,W-PAD,y+115);
+  g.textAlign="left";
+  return await new Promise(r=>c.toBlob(r,"image/png"))}
 window.enviarOrc=async id=>{const o=D.orcamentos.find(x=>x.id===id);
   const txt=`*Orçamento*\nCliente: ${o.cliente}\nData: ${fmtData(o.data)}\n\n`+o.itens.map(x=>{const p=D.produtos.find(y=>y.id===x.produtoId),d=p&&detalhesProd(p).replace("📏 ","");return`${num(x.qtd,0)}× ${x.nome}: ${brl(x.preco*x.qtd)}`+(d?`\n   ${d}`:"")}).join("\n")+
     (o.frete?`\nFrete: ${brl(o.frete)}`:"")+`\n\n*Total: ${brl(o.valor)}*\nVálido até ${fmtData(venceEm(o))}.`+(o.obs?`\n\n${o.obs}`:"");
+  abrirModal(`<h2>📤 Enviar orçamento</h2><p class="muted" style="margin-top:0">A imagem leva a foto de cada peça, os preços e o total.</p>
+    <img id="eoImg" alt="Imagem do orçamento" style="width:100%;border-radius:12px;border:1px solid #e2e8f0;min-height:80px">
+    <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn" type="button" id="eoImgBtn" disabled>📷 Enviar imagem</button><button class="btn sec2" type="button" id="eoTxtBtn">💬 Enviar só o texto</button></div>`);
+  $("#eoTxtBtn").onclick=()=>{$("#modal").hidden=true;enviarTextoOrc(o,txt)};
+  let blob;try{blob=await imagemOrc(o)}catch(e){$("#eoImg").replaceWith(Object.assign(document.createElement("p"),{className:"muted",textContent:"Não deu para montar a imagem neste aparelho. Use “Enviar só o texto”."}));return}
+  const url=URL.createObjectURL(blob),arq=new File([blob],`orcamento-${(o.cliente.replace(/[^\w]+/g,"-")||"cliente")}.png`,{type:"image/png"});
+  $("#eoImg").src=url;$("#eoImgBtn").disabled=false;
+  $("#eoImgBtn").onclick=async()=>{
+    if(navigator.canShare?.({files:[arq]})){try{await navigator.share({files:[arq],text:txt});$("#modal").hidden=true;return}catch(e){if(e.name==="AbortError")return}}
+    const a=document.createElement("a");a.href=url;a.download=arq.name;document.body.append(a);a.click();a.remove();
+    let copiou=false;try{await navigator.clipboard.writeText(txt);copiou=true}catch{}
+    avisar(`Imagem baixada${copiou?" e texto copiado":""}. No WhatsApp, anexe a imagem${copiou?" e cole o texto":""} para o cliente.`)}};
+async function enviarTextoOrc(o,txt){
   const cli=D.clientes.find(c=>c.id===o.clienteId)||clientePorNome(o.cliente);
   if(cli?.telefone){window.open(linkZap(cli.telefone)+"?text="+encodeURIComponent(txt),"_blank");return}
   if(navigator.share){try{await navigator.share({text:txt});return}catch(e){if(e.name==="AbortError")return}}
   try{await navigator.clipboard.writeText(txt);avisar("Texto do orçamento copiado. Cole no WhatsApp para mandar ao cliente.")}
-  catch{avisar(txt)}};
+  catch{avisar(txt)}}
 
 /* ---------- fila de produção ----------
    Orçamentos com status "producao", na ordem de aprovação. etapa: fila → imprimindo → pronto (falta lançar a venda).
@@ -1903,7 +1975,17 @@ function tempoInfo(x){const p=x.produtoId&&D.produtos.find(q=>q.id===x.produtoId
   return{mesas,h,txt:`preparar ${fmtHMS(c.prep*60)} (1 vez) + ${num(q,0)} × modelo ${fmtHMS(c.tPeca*60)}`+(mp?` + ${num(q,0)} × manual ${fmtHMS(mp*60)}`:"")+
     ` = ${fmtHMS(c.prep*60)} + ${fmtHMS(q*c.tPeca*60)}`+(mp?` + ${fmtHMS(q*mp*60)}`:"")}}
 // 1.41.1: horas → "dd:hh:mm" (ex.: 99h53 = 04:03:53)
-const ddhhmm=h=>{const m=Math.round((+h||0)*60),p=n=>String(n).padStart(2,"0");return`${p(Math.floor(m/1440))}:${p(Math.floor(m/60)%24)}:${p(m%60)}`};
+function ddhhmm(h){const m=Math.round((+h||0)*60),p=n=>String(n).padStart(2,"0");return`${p(Math.floor(m/1440))}:${p(Math.floor(m/60)%24)}:${p(m%60)}`}
+/* Peças prontas nos pedidos (1.43.0): os pedidos da fila, na ordem, reservam as peças prontas que existem; o que sobra fica livre
+   para o orçamento novo. Só o que não está pronto entra no tempo de impressão e nos gramas. */
+function usoProntas(itens,PE){return itens.map(x=>{const t=Math.max(0,PE[x.produtoId]||0),u=x.produtoId?Math.min(Math.max(0,+x.qtd||0),t):0;if(u)PE[x.produtoId]=t-u;return u})}
+function reservaProntas(exceto){const PE={...pecasProntas()},res={};
+  filaProd().forEach(o=>{if(o.id!==exceto&&!ehEstoqueOrc(o))res[o.id]=usoProntas(o.itens||[],PE)});return{livre:PE,res}}
+function hImprimir(x,q){return q>0?(tempoInfo({...x,qtd:q})?.h||0):0}
+function hPedido(o,u){return(o.itens||[]).reduce((s,x,i)=>s+hImprimir(x,(+x.qtd||0)-((u||[])[i]||0)),0)}
+// horas que faltam imprimir na fila (pedidos que ainda não estão prontos), sem as peças prontas
+function horasFila(exceto){const {res}=reservaProntas(exceto);return soma(filaProd().filter(o=>o.id!==exceto&&o.etapa!=="pronto"),o=>hPedido(o,res[o.id]))}
+function maisDias(n){const d=new Date(hoje()+"T12:00");d.setDate(d.getDate()+n);return d.toLocaleDateString("sv-SE")}
 function tempoItem(x){return tempoInfo(x)?.h||0}
 // ordem da fila: "ordem" (▲▼), depois a data de aprovação
 const filaProd=()=>D.orcamentos.filter(o=>o.status==="producao").sort((a,b)=>(a.ordem??1e9)-(b.ordem??1e9)||(a.aprovadoEm||a.data).localeCompare(b.aprovadoEm||b.data)||a.id.localeCompare(b.id,"pt-BR",{numeric:true}));
@@ -1920,10 +2002,10 @@ function renderProdEstoque(){
       <td style="white-space:nowrap"><button class="btn sm sec2" onclick="gastosEstoque('${o.id}')">✏️ Corrigir</button> <button class="btn sm del" onclick="apagar('orcamentos','${o.id}')">✕</button></td></tr>`).join("")+`</table></div>`
     :'<p class="muted">Nenhuma produção para o estoque ainda.</p>'}
 function renderProducao(){renderProdEstoque();
-  const L=filaProd(), E=estoques(), precisa={}, hj=hoje(), PE=pecasProntas();
+  const L=filaProd(), E=estoques(), precisa={}, hj=hoje(), {res}=reservaProntas();
   const cards=L.map((o,n)=>{
-    const h=soma(o.itens||[],tempoItem), g={};
-    (o.itens||[]).forEach(x=>matDoItem(x).forEach(m=>{g[m.f]=(g[m.f]||0)+m.g*(+x.qtd||0)}));
+    const u=res[o.id]||[], h=hPedido(o,u), g={}; // 1.43.0: só o que não está pronto entra no tempo e no material
+    (o.itens||[]).forEach((x,i)=>matDoItem(x).forEach(m=>{g[m.f]=(g[m.f]||0)+m.g*Math.max(0,(+x.qtd||0)-(u[i]||0))}));
     if(o.etapa!=="pronto")for(const f in g)precisa[f]=(precisa[f]||0)+g[f];
     const mats=Object.entries(g).map(([f,q])=>`${fmtG(q)} ${esc(nomeFil(filamentoDe(f)))}`).join(" + ");
     const et=o.etapa||"fila", atras=!!o.prazo&&o.prazo<hj, falta=r2(o.valor-(+o.sinal||0));
@@ -1931,7 +2013,9 @@ function renderProducao(){renderProdEstoque();
     <div class="l1"><b>${n+1}. ${esc(o.cliente)}</b><span class="tag ${ETAPA[et][1]}">${ETAPA[et][0]}</span></div>
     <div class="l3">Aprovado em ${fmtData(o.aprovadoEm||o.data)}${o.prazo?` · <span class="${atras?"taxa":""}">📅 entrega ${fmtData(o.prazo)}${atras?" · atrasado":""}</span>`:""}</div>
     <div class="l3">${esc(descItens(o))}</div>
-    ${(()=>{const T=(o.itens||[]).filter(x=>!ehEstoqueOrc(o)&&PE[x.produtoId]>0);return T.length?`<div class="l3">📦 Já tem pronto: ${T.map(x=>`${num(PE[x.produtoId],0)}× ${esc(x.nome)}`).join(", ")}</div>`:""})()}
+    ${(()=>{const I=o.itens||[],S=I.map((x,i)=>[x,u[i]||0]).filter(y=>y[1]>0),F=I.map((x,i)=>[x,(+x.qtd||0)-(u[i]||0)]).filter(y=>y[1]>0);
+      return S.length?`<div class="l3">📦 Separar das prontas: <b>${S.map(([x,q])=>`${num(q,0)}× ${esc(x.nome)}`).join(", ")}</b></div>`+
+        `<div class="l3">${F.length?`🖨️ Imprimir: <b>${F.map(([x,q])=>`${num(q,0)}× ${esc(x.nome)}`).join(", ")}</b>`:"✅ Tudo já está pronto: é só separar"}</div>`:""})()}
     <div class="l3">${h?`⏱️ ${fmtTempo(h)} de impressão`:""}${h&&mats?" · ":""}${mats?`🧵 ${mats}`:""}</div>
     <div class="nums"><div><small>Valor</small><b>${brl(o.valor)}</b></div><div><small>Custo</small><b>${brl(o.custo)}</b></div><div><small>Lucro</small><b class="lucro">${brl(o.valor-(o.custo||0))}</b></div></div>
     ${+o.sinal?`<div class="l3">💰 Sinal recebido ${brl(o.sinal)} · falta <b>${brl(falta)}</b> na entrega</div>`:""}
@@ -1951,7 +2035,7 @@ function renderProducao(){renderProdEstoque();
       <button class="btn sm sec2" onclick="tirarProd('${o.id}')">Tirar da produção</button></div></div>`});
   $("#prLista").innerHTML=cards.join("")||'<p class="muted">Nada na fila. Aprove um orçamento (aba Orçamentos › ✅ Aprovar) e ele aparece aqui.</p>';
   const falta=Object.entries(precisa).filter(([f,q])=>E[f]?.registrado&&E[f].saldo<q).map(([f,q])=>`${esc(nomeFil(filamentoDe(f)))} (precisa ${fmtG(q)}, tem ${fmtG(E[f].saldo)})`);
-  const H=soma(L.filter(o=>o.etapa!=="pronto"),o=>soma(o.itens||[],tempoItem)), atrasados=L.filter(o=>o.prazo&&o.prazo<hj).length;
+  const H=soma(L.filter(o=>o.etapa!=="pronto"),o=>hPedido(o,res[o.id])), atrasados=L.filter(o=>o.prazo&&o.prazo<hj).length;
   $("#prResumo").innerHTML=L.length?`${L.length} ${L.length>1?"pedidos":"pedido"} · ⏱️ ${ddhhmm(H)} <span class="muted">(dd:hh:mm)</span> de impressão pela frente`+
     (atrasados?` · <span class="taxa">📅 ${atrasados} ${atrasados>1?"atrasados":"atrasado"}</span>`:"")+(falta.length?` · <span class="taxa">⚠️ falta material: ${falta.join(", ")}</span>`:""):"";
   $("#prResumo").hidden=!L.length;
@@ -2803,6 +2887,15 @@ function render(){
    - Depois de cada atualização: mostra uma vez as novidades das versões que o aparelho ainda não viu.
    Fica guardado só no aparelho (localStorage "p3d.versaoVista" e "p3d.passosVistos"). */
 const NOVIDADES=[
+  {v:"1.43.0",data:"2026-11-28",titulo:"Orçamento mais esperto",itens:[
+    {novo:"O orçamento olha as peças prontas: cada item mostra quantas já tem no estoque, e o Tempo total e o Filamento total contam só o que falta imprimir. Na Fila, cada pedido mostra o que separar das prontas e o que imprimir.",
+     uso:"Orçamentos › escolha os produtos: veja “📦 9 prontas no estoque”. Produção › Fila: “📦 Separar das prontas” e “🖨️ Imprimir”."},
+    {novo:"＋ Vários produtos: uma lista com busca para marcar vários produtos (e embalagens) de uma vez, cada um com a quantidade.",
+     uso:"Orçamentos › ＋ Vários produtos › marque e toque em Adicionar marcados."},
+    {novo:"Entrega sugerida: o painel soma o que falta imprimir na fila com este pedido e sugere a data de entrega.",
+     uso:"Orçamentos › embaixo do Tempo total › Usar. As horas de impressão por dia ficam em Config (vazio = 24 h)."},
+    {novo:"📤 Enviar orçamento manda uma imagem com a foto de cada peça, os preços e o total (ou só o texto, como antes).",
+     uso:"Orçamentos › 📤 Enviar › 📷 Enviar imagem. No celular abre o compartilhar (escolha o WhatsApp); no computador a imagem é baixada e o texto copiado."}]},
   {v:"1.42.0",data:"2026-11-27",titulo:"Itens do orçamento mais juntos",itens:[
     {novo:"No orçamento, os nomes Produto, Qtd e Preço un. aparecem uma vez só, no topo da lista, e os itens ficam mais juntos (no celular cada item continua com os nomes).",
      uso:"Orçamentos › lista de produtos."},

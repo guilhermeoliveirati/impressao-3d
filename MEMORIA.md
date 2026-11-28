@@ -59,7 +59,7 @@ Igual à Oficina: código e dados na mesma pasta do Google Drive; o git só leva
 {
   "versao": 1, "atualizado": "…", "proximoId": 10,     // ids: v vendas, d despesas, p produtos, i impressoras, f filamentos, o orçamentos, c clientes, e estoque, pc parcelamentos
   "taxas": { "Pix": 0, "Débito": 0.0137, "Crédito 1x": 0.0315, … },
-  "config": { "energiaKwh": 0.95, "maoDeObraHora": 25, "falhaPct": 10, "margemPct": 100, "arredondar": "90", "estoqueMinimoG": 200, "metaSobra": 0,
+  "config": { "energiaKwh": 0.95, "maoDeObraHora": 25, "horasDia": 24 /* entrega sugerida (1.43.0) */, "falhaPct": 10, "margemPct": 100, "arredondar": "90", "estoqueMinimoG": 200, "metaSobra": 0,
               "comprador": "Gui" /* compra o material e paga a luz */, "socios": "Gui, Luan, Caique" /* vazio = pessoas do parcelamento da impressora */,
               "guardarPct": 40, "reinvestirPct": 30, "sociosPct": 30, "minReinvestir": 400 /* valor de 4 filamentos (1.17.0) */ },   // dividasPct saiu na 1.13.0
   "insumos": [ { "id" /* u… */, "nome", "marca", "precoUn" /* custo de 1 un */, "precoVenda" /* venda de 1 un (1.30.0, só informativo) */ } ],   // materiais por unidade: chaveiro, ímã, embalagem (1.24.0)
@@ -241,7 +241,7 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
   Se o GitHub Pages ficar em outra conta do GitHub, adicionar a nova origem no cliente e na chave.
 - Chave "Picker - Painel Impressao 3D": restrita à Picker API e aos sites acima (o console incluiu também a Service Management API, que não dá acesso a dados).
 
-## Estado atual (2026-11-27, versão 1.42.0)
+## Estado atual (2026-11-28, versão 1.43.0)
 
 - Em uso: computador (pasta do Drive) e celular (app instalado, abre pelo Google Drive). Login e sincronização funcionando.
 - Dados reais: Bambu Lab A1 e energia em Config; parcelamento da A1 (3 sócios) a partir de dez/2026; ainda sem vendas.
@@ -322,6 +322,10 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 - 1.41.0: orçamento mostra só ⏱️ Tempo total (h:mm:ss) e 🧵 Filamento total (`#oTempo`); a linha do item só tem avisos (`avisoCat`); lista do item com optgroup 📦 Embalagens e materiais (`ins:<id>` → item sem produto com `insumoId`, `custo`=`precoUn`, `preco`=`precoVenda`||0, `ins:[{i,q:1}]`).
 - 1.41.1: Fila de produção mostra o tempo pela frente em dd:hh:mm (`ddhhmm`).
 - 1.42.0: orçamento com cabeçalho único dos itens (`.itensCab`; rótulos `.lb` só no celular) e itens mais juntos; `avisoPreco` também avisa ✅ preço acima do sugerido.
+- 2026-11-28: orçamento o213 (Fabiana, 7 itens, preços do dono, R$ 97) gravado direto no dados.json; preços fixos testados nos produtos e desfeitos (o dono quer o sugerido no catálogo e ajusta o valor no orçamento). Cópias em `backup/`.
+- 1.43.0: peças prontas no orçamento e na Fila (`reservaProntas`: a fila, na ordem, reserva as prontas; `usoProntas`, `hImprimir`, `hPedido`); tempo/filamento só do que falta imprimir; venda vinda da Produção marca "Tirar das peças prontas" se o pedido usou;
+  ＋ Vários produtos (janela com busca, `itemDoCatalogo`, `edO.incluir`); entrega sugerida (`horasFila` + pedido ÷ `config.horasDia` (vazio = 24) + 1 dia, botão Usar); 📤 Enviar com imagem (`imagemOrc` em canvas com as fotos; `enviarTextoOrc` = o envio antigo).
+- Proposta ao dono, sem resposta ainda: refazer criar/produzir (ficha do produto feita uma vez em Produtos; 🏭 Produzi só com mesas e peças boas, com "gastou diferente?"; lote para estoque na Fila no lugar do cliente 📦 Estoque da empresa).
 - Nenhuma tarefa de código pendente. Próximas ideias só quando o dono pedir.
 
 
@@ -394,3 +398,4 @@ Conferir sintaxe extraindo o `<script>` e rodando `node --check`.
 | 1.41.0 | 2026-11-27 | Orçamento: só Tempo total e Filamento total embaixo dos itens; embalagens e materiais por unidade na lista de produtos (entram no custo e no estoque) |
 | 1.41.1 | 2026-11-27 | Fila de produção: tempo de impressão pela frente em dd:hh:mm |
 | 1.42.0 | 2026-11-27 | Orçamento: Produto/Qtd/Preço num cabeçalho só e itens mais juntos; aviso ✅ de preço acima do sugerido |
+| 1.43.0 | 2026-11-28 | Orçamento e Fila contam as peças prontas (tempo e filamento só do que falta imprimir); ＋ Vários produtos com busca; entrega sugerida; enviar orçamento como imagem com fotos |
